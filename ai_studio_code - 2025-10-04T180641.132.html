@@ -79,7 +79,7 @@
   .rail-btn:active{ transform:scale(0.92); }
   .rail-btn.active{ background:var(--ui-acc); border-color:var(--ui-acc); box-shadow:0 4px 20px rgba(10,132,255,0.6); }
   
-  #mode-pill{ position:fixed; right:env(safe-area-inset-right,10px); bottom:env(safe-area-inset-bottom,90px); z-index:35; background:rgba(0,0,0,0.8); color:#fff; border-radius:12px; padding:10px 12px; font-size:10px; letter-spacing:.3px; backdrop-filter:blur(14px); box-shadow:0 4px 16px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); max-width:140px; }
+  #mode-pill{ position:fixed; right:env(safe-area-inset-right,10px); bottom:env(safe-area-inset-bottom,140px); z-index:35; background:rgba(0,0,0,0.8); color:#fff; border-radius:12px; padding:10px 12px; font-size:10px; letter-spacing:.3px; backdrop-filter:blur(14px); box-shadow:0 4px 16px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); max-width:140px; }
 
   /* Media Library Modal */
   #media-upload{ position:fixed; inset:0; display:grid; place-items:center; z-index:50; pointer-events:none; opacity:0; transition:.25s ease; }
@@ -304,7 +304,7 @@ function initMediaLibrary() {
 
   const videosData = [
     {
-      url: 'https://www.youtube.com/watch?v=uDUoMnp1_g',
+      url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g',
       title: 'WHERE YOU GO WHEN YOU LEAVE (CODEX) | POEMS BY MARK ANTHONY THOMAS',
       segments: [
         { name: 'Out of Life', start: '00:00', end: '02:15', tags: ['poem', 'intro'] },
@@ -563,16 +563,24 @@ window.onYouTubeIframeAPIReady = function() {
 
   // Refreshes all video iframes to restart playback (critical for layout changes)
   function refreshAllVideos() {
-    tvs.forEach(tv => {
-      if (tv.iframe && tv.mediaItem && tv.mediaItem.type === 'youtube') {
-        const currentSrc = tv.iframe.src;
-        tv.iframe.src = ''; // Clear
-        setTimeout(() => {
-          tv.iframe.src = currentSrc; // Reload
-        }, 50);
+    setTimeout(() => {
+      let refreshedCount = 0;
+      tvs.forEach((tv, index) => {
+        if (tv.iframe && tv.mediaItem && tv.mediaItem.type === 'youtube') {
+          // Stagger the refreshes to avoid overwhelming the browser
+          setTimeout(() => {
+            const currentSrc = tv.iframe.src;
+            if (currentSrc) {
+              tv.iframe.src = currentSrc + '&t=' + Date.now(); // Force reload with timestamp
+            }
+          }, index * 30); // 30ms between each refresh
+          refreshedCount++;
+        }
+      });
+      if (refreshedCount > 0) {
+        console.log(`🔄 Refreshed ${refreshedCount} video screens`);
       }
-    });
-    console.log(`🔄 Refreshed ${tvs.length} video screens`);
+    }, 200); // Wait 200ms after layout change before refreshing
   }
 
   // Creates a new TV unit with physics and CSS3D screen
@@ -801,7 +809,8 @@ window.onYouTubeIframeAPIReady = function() {
     const wallHeight = (rows - 1) * spacingY;
 
     const startX = -wallWidth / 2;
-    const startY = TV.h / 2 + 0.1; // Base height
+    // Center the wall vertically - start from middle and build up/down
+    const startY = wallHeight / 2 + TV.h / 2 + 0.5; // Lift it up so bottom row is visible
     const startZ = 0;
 
     let tvIndex = 0;
@@ -2040,7 +2049,7 @@ window.onYouTubeIframeAPIReady = function() {
     
     setEnvironment('CALM');
 
-    setupFlatLayout(); // Default layout on load
+    setupVideoWallLayout(); // Default layout on load
     updateHUD(); 
     
     // Print keyboard shortcuts

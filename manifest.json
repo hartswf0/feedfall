@@ -18,6 +18,13 @@
       "tags": ["launcher", "menu"]
     },
     {
+      "title": "AI Studio Code",
+      "url": "./ai_studio_code - 2025-10-04T180641.132.html",
+      "description": "AI Studio with 6 layouts (Flat, Wall, Pyramid, Triangle, Dense Grid, Temple), mobile controls, and Mark Anthony Thomas poetry collection",
+      "category": "stacker",
+      "tags": ["ai-studio", "featured", "mobile", "layouts", "poetry", "mark-anthony-thomas"]
+    },
+    {
       "title": "VIDEO_STACKER_PLUS",
       "url": "./vs-plu.html",
       "description": "3D video stacker with mobile feed mode, cinematic controls, and poetry collection",
@@ -237,6 +244,6 @@
     "navigation": "Navigation and launcher pages",
     "production": "Production versions"
   },
-  "generated": "2025-10-04T17:53:00-04:00",
-  "total_items": 33
+  "generated": "2025-10-04T18:30:00-04:00",
+  "total_items": 34
 }
