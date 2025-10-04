@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VIDEO_STACKER_∞ — Choose Your Experience</title>
+<style>
+:root {
+  --bg: #0a0b0f;
+  --panel: #121521;
+  --ink: #e9f0ff;
+  --muted: #a8b5c7;
+  --accent: #51e0c1;
+  --warn: #ff5a5f;
+  --border: rgba(255,255,255,.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: radial-gradient(120% 140% at 50% 0%, #121521 0%, #0a0b0f 50%, #07080c 100%);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+.header { text-align: center; margin-bottom: 60px; }
+.header h1 { font-size: clamp(32px, 5vw, 56px); letter-spacing: 2px; margin-bottom: 12px; background: linear-gradient(135deg, #51e0c1, #86d1ff); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .tagline { font-size: 18px; color: var(--muted); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 60px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,.4);
+  border-color: var(--accent);
+}
+.card.primary { border-color: var(--accent); background: linear-gradient(180deg, rgba(81,224,193,.08), transparent); }
+.card.youtube { border-color: #ff0033; background: linear-gradient(180deg, rgba(255,0,51,.06), transparent); }
+.card.mobile { border-color: #65f28a; background: linear-gradient(180deg, rgba(101,242,138,.06), transparent); }
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.badge.rec { background: var(--accent); color: #000; }
+.badge.yt { background: #ff0033; color: #fff; }
+.badge.mobile { background: #65f28a; color: #000; }
+.badge.proto { background: var(--muted); color: #000; }
+
+.card h2 { font-size: 20px; margin-bottom: 12px; }
+.card .desc { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+.card .features { list-style: none; }
+.card .features li { font-size: 13px; color: var(--ink); padding: 6px 0; padding-left: 20px; position: relative; }
+.card .features li:before { content: "▹"; position: absolute; left: 0; color: var(--accent); }
+
+.docs {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+.docs h3 { font-size: 24px; margin-bottom: 16px; }
+.docs .links { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.docs .btn {
+  display: inline-block;
+  padding: 12px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: all 0.2s;
+  font-weight: 600;
+}
+.docs .btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+
+.footer { text-align: center; margin-top: 60px; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+  .header h1 { font-size: 36px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>VIDEO_STACKER_∞</h1>
+    <p class="tagline">Stack TVs. Watch videos. Don't let it collapse.</p>
+  </div>
+
+  <div class="grid">
+    <!-- Primary: Production Build -->
+    <a href="video_stacker_∞_index.html" style="text-decoration:none; color:inherit;" class="card primary">
+      <span class="badge rec">Recommended</span>
+      <h2>Production Build</h2>
+      <p class="desc">The most polished version with local video support, modern architecture, and exhibition-ready features.</p>
+      <ul class="features">
+        <li>ES Modules (Three.js 0.160)</li>
+        <li>Local MP4 videos</li>
+        <li>Next video preview</li>
+        <li>Idle "hiss mode"</li>
+        <li>5 camera presets</li>
+        <li>Self-test harness</li>
+      </ul>
+    </a>
+
+    <!-- Advanced: YouTube + Controls -->
+    <a href="vs-stacker.html" style="text-decoration:none; color:inherit;" class="card youtube">
+      <span class="badge yt">YouTube</span>
+      <h2>Advanced Controls</h2>
+      <p class="desc">Power user edition with YouTube integration, per-TV controls, and extensive customization options.</p>
+      <ul class="features">
+        <li>YouTube IFrame API</li>
+        <li>Remote control panel</li>
+        <li>Focus system (tap to select)</li>
+        <li>Playlist editor</li>
+        <li>Theme switcher</li>
+        <li>Unit tests</li>
+      </ul>
+    </a>
+
+    <!-- Mobile: Touch Optimized -->
+    <a href="video_stacker_∞_mobile_swipe_right_edge_controls_haptics_audio_index.html" style="text-decoration:none; color:inherit;" class="card mobile">
+      <span class="badge mobile">Mobile</span>
+      <h2>Touch Optimized</h2>
+      <p class="desc">Mobile-first design with swipe gestures, haptic feedback, and ergonomic right-edge controls.</p>
+      <ul class="features">
+        <li>Swipe gestures (↑ drop, ◀▶ nudge, ↓ cull)</li>
+        <li>Haptic vocabulary</li>
+        <li>Procedural audio synth</li>
+        <li>Auto-fade UI</li>
+        <li>CRT glass shaders</li>
+      </ul>
+    </a>
+
+    <!-- YouTube: Platform Focus -->
+    <a href="video_stacker_∞_you_tube_css_3_d_edition.html" style="text-decoration:none; color:inherit;" class="card youtube">
+      <span class="badge yt">YouTube</span>
+      <h2>YouTube CSS3D</h2>
+      <p class="desc">Pure CSS3D rendering for YouTube videos with exhibit mode and auto-play features.</p>
+      <ul class="features">
+        <li>CSS3D-only rendering</li>
+        <li>Exhibit mode (camera drift)</li>
+        <li>Auto-drop interval</li>
+        <li>Player throttling (6 max)</li>
+        <li>Async API handling</li>
+      </ul>
+    </a>
+
+    <!-- Prototype: Local Video -->
+    <a href="video-02.html" style="text-decoration:none; color:inherit;" class="card">
+      <span class="badge proto">Prototype</span>
+      <h2>Local Video Prototype</h2>
+      <p class="desc">ES Modules testbed with local video support, minimal UI, and shader experiments.</p>
+      <ul class="features">
+        <li>Import maps</li>
+        <li>Noise shader fallback</li>
+        <li>OrbitControls</li>
+        <li>Toast notifications</li>
+      </ul>
+    </a>
+
+    <!-- Simplified: Core Demo -->
+    <a href="video_full.html" style="text-decoration:none; color:inherit;" class="card">
+      <span class="badge proto">Demo</span>
+      <h2>Simplified Core</h2>
+      <p class="desc">Stripped-down version showing essential mechanics—great for learning or embedding.</p>
+      <ul class="features">
+        <li>Minimal UI</li>
+        <li>YouTube support</li>
+        <li>No extra panels</li>
+        <li>5 camera presets</li>
+      </ul>
+    </a>
+  </div>
+
+  <div class="docs">
+    <h3>📚 Documentation</h3>
+    <p style="color:var(--muted); margin-bottom:8px;">Deep dive into the architecture, philosophy, and technical details.</p>
+    <div class="links">
+      <a href="README.md" class="btn">📖 User Guide</a>
+      <a href="MANIFEST.md" class="btn">📋 Project Manifest</a>
+      <a href="ANALYSIS.md" class="btn">🔬 Deep Analysis</a>
+      <a href="SUMMARY.md" class="btn">📝 Summary</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>VIDEO_STACKER_∞ — An exploration of verticality in digital media</p>
+    <p style="margin-top:8px; opacity:.6;">Built with Three.js · Cannon.js · Web Audio API · Love</p>
+  </div>
+</div>
+</body>
+</html>

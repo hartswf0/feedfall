@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>VIDEO_STACKER_∞ — Refactor (Offline-Safe + Tests)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background:#000; color:#0f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+
+  /* HUD */
+  #hud { position: fixed; inset: env(safe-area-inset-top,10px) auto auto env(safe-area-inset-left,12px); z-index: 20; pointer-events:none; text-shadow:0 0 8px #000; }
+  #row1 { display:flex; align-items:center; gap:8px; }
+  #score { font-size:28px; font-weight:700; letter-spacing: 2px; }
+  #meta { font-size:12px; opacity:.8; }
+  #stability { width:160px; height:6px; border:1px solid #0f0; background:#0a0a0a; margin-top:6px; box-shadow:0 0 12px rgba(0,255,0,.25); }
+  #stability > div { height:100%; width:100%; background:linear-gradient(90deg,#f00,#ff0,#0f0); transition:width .15s; }
+  #hint { margin-top:6px; font-size:11px; opacity:.6; }
+
+  /* Floating Controls */
+  #controls { position: fixed; right: env(safe-area-inset-right,12px); top: 50%; transform: translateY(-50%); display:flex; flex-direction:column; gap:12px; z-index:25; }
+  .btn { width:56px; height:56px; border-radius:50%; border:2px solid #0f0; background: rgba(10,10,10,.85); color:#0f0; font: 700 16px inherit; display:grid; place-items:center; box-shadow:0 0 14px rgba(0,255,0,.35); cursor:pointer; touch-action:manipulation; }
+  .btn:active { background:#0f0; color:#000; transform: scale(.95); }
+  .btn.small { width:46px; height:46px; font-size:14px; }
+  .stack { display:flex; gap:10px; }
+
+  /* Bottom Bar (reset, camera, tests) */
+  #bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: env(safe-area-inset-bottom,10px); z-index: 25; display:flex; gap:10px; background: rgba(0,0,0,.6); border:1px solid #0f0; border-radius: 999px; padding:8px 10px; backdrop-filter: blur(6px); }
+  .chip { pointer-events:auto; border:1px solid #0f0; color:#0f0; background:transparent; border-radius:999px; padding:8px 14px; font: 700 12px inherit; letter-spacing:.5px; cursor:pointer; }
+  .chip:active { background:#0f0; color:#000; }
+
+  /* Overlay (game over / modal) */
+  #overlay { position: fixed; inset:0; display:none; place-items:center; background: rgba(0,0,0,.9); z-index: 50; }
+  #card { border:3px solid #0f0; padding:28px 20px; text-align:center; box-shadow:0 0 26px rgba(0,255,0,.35); max-width: 90vw; }
+  #card h1 { margin:0 0 8px 0; letter-spacing:3px; }
+  #card p { margin:.5rem 0; }
+  #card .row { display:flex; gap:10px; justify-content:center; margin-top:14px; }
+
+  /* PIP YouTube player */
+  #pip { position: fixed; right: env(safe-area-inset-right,12px); top: env(safe-area-inset-top,12px); width: 240px; aspect-ratio: 16/9; z-index: 30; display:none; border:2px solid #0f0; box-shadow:0 0 18px rgba(0,255,0,.4); background:#000; }
+  #pip header { display:flex; justify-content: space-between; align-items:center; background:#001900; padding:4px 8px; font-size:11px; }
+  #pip header button { all:unset; cursor:pointer; padding:2px 6px; border:1px solid #0f0; border-radius:6px; }
+  #player { width:100%; height: calc(100% - 22px); background:#000; }
+
+  /* Tap target indicator */
+  #tap { position: fixed; left:50%; top:50%; transform:translate(-50%,-50%); color:#0f0; opacity:.6; text-shadow:0 0 8px #000; animation: blink 1.8s infinite; pointer-events:none; }
+  @keyframes blink { 0%,100%{opacity:.6} 50%{opacity:.15} }
+
+  /* Test log toast */
+  #testToast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 10px) + 56px); background: rgba(0,0,0,.9); color:#0f0; border:1px solid #0f0; border-radius:10px; padding:8px 12px; font-size:12px; display:none; z-index:60; }
+
+  /* Accessibility */
+  @media (prefers-reduced-motion: reduce) { .btn:active { transform:none; } #tap { animation:none; } }
+</style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="row1">
+      <div id="score">0</div>
+      <div id="meta">H:<span id="h">0.0</span>m · ×<span id="streak">0</span> · HI:<span id="hi">0</span> · <span id="mode">MODE: 3D</span></div>
+    </div>
+    <div id="stability"><div id="stabFill" style="width:100%"></div></div>
+    <div id="hint">Swipe ↑ to drop · Swipe ◀/▶ mid-air to nudge</div>
+  </div>
+
+  <!-- Floating buttons -->
+  <div id="controls">
+    <button class="btn small" id="btnView" title="Cycle camera">⟲</button>
+    <button class="btn small" id="btnMute" title="Mute">🔊</button>
+    <button class="btn small" id="btnCull" title="Cull bottom">✕</button>
+  </div>
+
+  <!-- Bottom bar: reset + camera fit toggles + tests -->
+  <div id="bar">
+    <button class="chip" id="btnRestart">RESTART</button>
+    <button class="chip" id="btnHard">HARD RESET</button>
+    <button class="chip" id="btnShuffle">NEW SHUFFLE</button>
+    <button class="chip" id="btnAuto">AUTO-FIT: ON</button>
+    <button class="chip" id="btnTests">RUN TESTS</button>
+  </div>
+
+  <!-- Overlay (Game Over) -->
+  <div id="overlay"><div id="card">
+    <h1>COLLAPSE</h1>
+    <p id="final"></p>
+    <div class="row">
+      <button class="chip" id="btnAgain">AGAIN</button>
+      <button class="chip" id="btnClose">CLOSE</button>
+    </div>
+  </div></div>
+
+  <!-- YouTube PIP -->
+  <section id="pip" aria-label="YouTube player">
+    <header>
+      <div>Now Playing: <span id="pipLabel">—</span></div>
+      <div class="stack">
+        <button id="pipPrev">◀</button>
+        <button id="pipNext">▶</button>
+        <button id="pipHide">✕</button>
+      </div>
+    </header>
+    <div id="player"></div>
+  </section>
+
+  <div id="tap">tap a TV to play its YouTube</div>
+  <div id="testToast"></div>
+
+  <!-- Optional: leave CDN tags in case your environment allows network. If blocked, the inline stub below takes over safely. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js" defer></script>
+
+  <script>
+  // Wait for CDN scripts to attempt loading before falling back to stubs
+  window.addEventListener('load', ()=>{
+    // Give CDN scripts a moment to load
+    setTimeout(initApp, 100);
+  });
+
+  function initApp(){
+    (function(){
+      'use strict';
+
+      /*******************
+       * OFFLINE STUBS   *
+       *******************/
+      const STUB = { used: false };
+
+      function defineThreeStub(){
+        if(window.THREE) return;
+        STUB.used = true;
+      const _noop = ()=>{};
+      class Vector3{ constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;} set(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;return this;} copy(v){this.x=v.x;this.y=v.y;this.z=v.z;return this;} add(v){this.x+=v.x;this.y+=v.y;this.z+=v.z;return this;} sub(v){this.x-=v.x;this.y-=v.y;this.z-=v.z;return this;} multiplyScalar(s){this.x*=s;this.y*=s;this.z*=s;return this;} project(){ return this; } }
+      class Object3D{ constructor(){ this.position=new Vector3(); this.quaternion={x:0,y:0,z:0,w:1}; this.children=[]; } add(o){ this.children.push(o); } remove(o){ this.children=this.children.filter(c=>c!==o); } lookAt(){ }
+      }
+      class Group extends Object3D{}
+      class Geometry{ constructor(){ this.parameters={}; } }
+      class PlaneGeometry extends Geometry{ constructor(w=1,h=1){ super(); this.parameters={width:w,height:h}; } }
+      class BoxGeometry extends Geometry{ constructor(w=1,h=1,d=1){ super(); this.parameters={width:w,height:h,depth:d}; } }
+      class Material{ constructor(opts={}){ Object.assign(this,opts); this.uniforms=opts.uniforms||{}; this.transparent=!!opts.transparent; } }
+      class MeshStandardMaterial extends Material{}
+      class ShaderMaterial extends Material{}
+      class MeshBasicMaterial extends Material{}
+      class Mesh extends Object3D{ constructor(geo=new Geometry(), mat=new Material()){ super(); this.geometry=geo; this.material=mat; this.castShadow=false; this.receiveShadow=false; } }
+      class Scene extends Object3D{ constructor(){ super(); this.background=null; this.fog=null; } }
+      class Color{ constructor(){}}
+      class Fog{ constructor(c,near,far){ this.color=c; this.near=near; this.far=far; } }
+      class PerspectiveCamera extends Object3D{ constructor(fov=50,aspect=1,near=.1,far=1000){ super(); this.fov=fov; this.aspect=aspect; this.near=near; this.far=far; } updateProjectionMatrix(){} }
+      class Light extends Object3D{ constructor(color=0xffffff,intensity=1){ super(); this.color=color; this.intensity=intensity; this.castShadow=false; } }
+      class AmbientLight extends Light{}
+      class DirectionalLight extends Light{ constructor(color,intensity){ super(color,intensity); this.shadow={mapSize:{width:0,height:0},camera:{left:0,right:0,top:0,bottom:0}}; } }
+      class WebGLRenderer{ 
+        constructor({canvas}){ 
+          this.domElement=canvas; 
+          this.shadowMap={enabled:false};
+          this.ctx = canvas.getContext('2d');
+          this.width = canvas.width;
+          this.height = canvas.height;
+        } 
+        setPixelRatio(r){ /* stub */ } 
+        setSize(w,h){ 
+          this.domElement.width = w;
+          this.domElement.height = h;
+          this.width = w;
+          this.height = h;
+        } 
+        render(scene, camera){ 
+          if(!this.ctx) return;
+          const ctx = this.ctx;
+          // Clear
+          ctx.fillStyle = '#0a0a0a';
+          ctx.fillRect(0, 0, this.width, this.height);
+          
+          // Draw grid (simple)
+          ctx.strokeStyle = '#002200';
+          ctx.lineWidth = 1;
+          const gridSize = 40;
+          for(let x=0; x<this.width; x+=gridSize){
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, this.height); ctx.stroke();
+          }
+          for(let y=0; y<this.height; y+=gridSize){
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(this.width, y); ctx.stroke();
+          }
+          
+          // Draw TVs (simple 2D projection)
+          const scale = 60; // pixels per unit
+          const offsetX = this.width/2;
+          const offsetY = this.height - 100;
+          
+          // Debug: log scene
+          if(!this._logged){ console.log('📦 Scene children:', scene.children.length, scene.children); this._logged = true; }
+          
+          let drawn = 0;
+          scene.children.forEach(obj => {
+            if(obj._boxHalf){
+              const x = offsetX + obj.position.x * scale;
+              const y = offsetY - obj.position.y * scale;
+              const w = obj._boxHalf.x * 2 * scale;
+              const h = obj._boxHalf.y * 2 * scale;
+              
+              // Draw TV shell
+              ctx.fillStyle = '#1a1a1a';
+              ctx.fillRect(x - w/2, y - h/2, w, h);
+              ctx.strokeStyle = '#0f0';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x - w/2, y - h/2, w, h);
+              
+              // Draw screen
+              ctx.fillStyle = '#003300';
+              ctx.fillRect(x - w/2 + 4, y - h/2 + 4, w - 8, h - 8);
+              
+              // LED
+              ctx.fillStyle = '#00ff00';
+              ctx.fillRect(x + w/2 - 8, y + h/2 - 8, 4, 4);
+              drawn++;
+            }
+          });
+          
+          // Debug text
+          if(drawn > 0){
+            ctx.fillStyle = '#0f0';
+            ctx.font = '12px monospace';
+            ctx.fillText(`TVs drawn: ${drawn}`, 10, this.height - 10);
+          }
+        } 
+      }
+      class GridHelper extends Object3D{ constructor(){ super(); } }
+      class Clock{ constructor(){ this._t=performance.now()/1000; this.elapsedTime=0; } getDelta(){ const n=performance.now()/1000; const d=Math.min(0.0167, Math.max(0.001, n-this._t)); this._t=n; this.elapsedTime+=d; return d; } }
+      class Box3{ constructor(){ this.min=new Vector3(Infinity,Infinity,Infinity); this.max=new Vector3(-Infinity,-Infinity,-Infinity);} expandByObject(obj){ const p=obj.position||new Vector3(); const hx=obj._boxHalf?.x||0.3, hy=obj._boxHalf?.y||0.2, hz=obj._boxHalf?.z||0.3; this.min.x=Math.min(this.min.x,p.x-hx); this.min.y=Math.min(this.min.y,p.y-hy); this.min.z=Math.min(this.min.z,p.z-hz); this.max.x=Math.max(this.max.x,p.x+hx); this.max.y=Math.max(this.max.y,p.y+hy); this.max.z=Math.max(this.max.z,p.z+hz); }
+        getSize(v){ v.set(this.max.x-this.min.x,this.max.y-this.min.y,this.max.z-this.min.z); return v; } getCenter(v){ v.set((this.min.x+this.max.x)/2,(this.min.y+this.max.y)/2,(this.min.z+this.max.z)/2); return v; } }
+      class TextureLoader{ load(_u, onLoad){ const tex={ needsUpdate:false }; setTimeout(()=>{ tex.needsUpdate=true; onLoad&&onLoad(); },0); return tex; } }
+      class VideoTexture{ constructor(_v){ this.image=_v; }
+      }
+      class Raycaster{ setFromCamera(){} intersectObjects(){ return []; } }
+
+      window.THREE = {
+        Vector3, Object3D, Group, PlaneGeometry, BoxGeometry, MeshStandardMaterial, ShaderMaterial, MeshBasicMaterial, Mesh, Scene, Color, Fog, PerspectiveCamera, Light, AmbientLight, DirectionalLight, WebGLRenderer, GridHelper, Clock, Box3, TextureLoader, VideoTexture, Raycaster,
+        LinearFilter: 9729, SRGBColorSpace: 'srgb', MathUtils: { degToRad:(d)=>d*Math.PI/180 }
+      };
+    }
+
+    function defineCannonStub(){
+      if(window.CANNON) return;
+      STUB.used = true;
+      class Vec3{ constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;} set(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;return this;} }
+      class Shape{}
+      class Box extends Shape{ constructor(v){ super(); this.halfExtents=v; } }
+      class Plane extends Shape{}
+      class Body{ constructor({mass=0,shape=null}={}){ this.mass=mass; this.shape=shape; this.position=new Vec3(0,0,0); this.quaternion={x:0,y:0,z:0,w:1}; this.sleepState=Body.SLEEPING; this.linearDamping=0; this.angularDamping=0; }
+        applyImpulse(v){ this.position.x += v.x*0.02; this.position.z += v.z*0.02; }
+      }
+      Body.SLEEPING=2;
+      class World{ constructor({gravity=new Vec3(0,-9.8,0)}={}){ this.gravity=gravity; this.bodies=[]; this.defaultContactMaterial={friction:.6,restitution:.05}; }
+        addBody(b){ this.bodies.push(b); }
+        removeBody(b){ this.bodies=this.bodies.filter(x=>x!==b); }
+        step(){ /* no-op in stub */ }
+      }
+      class SAPBroadphase{ constructor(_w){} }
+      window.CANNON = { Vec3, Box, Plane, Body, World, SAPBroadphase };
+    }
+
+    defineThreeStub();
+    defineCannonStub();
+
+    /*******************
+     * GAME IMPLEMENT  *
+     *******************/
+    const THREE_ = window.THREE; // real or stub
+    const CANNON_ = window.CANNON; // real or stub
+
+    // Display mode in HUD
+    const modeEl = document.getElementById('mode');
+    if(modeEl){ modeEl.textContent = 'MODE: ' + (STUB.used ? 'OFFLINE' : '3D'); }
+
+    /***** Constants *****/
+    const TV = { w:.6, d:.45, h:.4 };
+    const GAP_Y = 0.05;
+    const LIMIT = 0.22; // stability scale
+    const ALPHA = 0.7;  // weight overhang
+
+    // 13-segment working video feed
+    const VIDEO_ID = 'uDUoMnp1z_g';
+    const TIMESTAMPS = [0, 136, 272, 408, 544, 680, 816, 952, 1088, 1224, 1360, 1496, 1632];
+    const SEGMENT_NAMES = ['Out of Life', 'Flashing Lights', 'How to Break Off', 'Nevermore', 'Bloodline', 'Resurrecting Atlantis', 'DJ Turn Me Up', 'Newly Single', 'Yet, Heard', 'Magic Ride', 'Reunion', 'How to Win My Heart', 'Hot Minute'];
+    let FEED = TIMESTAMPS.map((start, i) => ({ yt:VIDEO_ID, start:start, title:SEGMENT_NAMES[i] }));
+
+    /***** Mutables *****/
+    let scene, camera, renderer, world, clock;
+    let tvUnits = [];           // {group, body, screen, glass, settled, meta}
+    let falling = null;
+    let score=0, height=0, streak=0, high = parseInt(localStorage.getItem('tv_hi')||'0');
+    let stability=1, gameOver=false;
+    let autoFit=true;           // camera auto frame
+    let camPreset = 0;
+
+    // Audio (simple WebAudio beeps)
+    let ctx=null; const sfx={}; let muteSfx=false;
+
+    // YouTube state (kept as-is; may be blocked offline)
+    let ytReady=false, player=null, currentTVIndex=-1;
+
+    /***** Helpers *****/
+    const el = id => document.getElementById(id);
+    function toast(msg){ const t=el('testToast'); t.textContent=msg; t.style.display='block'; clearTimeout(toast._); toast._=setTimeout(()=>{ t.style.display='none'; }, 2200); }
+    function haptic(kind='light'){ if(navigator.vibrate){ const P={light:10,med:20,heavy:30,win:[15,40,15],err:[20,120,20]}; navigator.vibrate(P[kind]||10);} }
+
+    function initAudio(){ if(ctx) return; ctx = new (window.AudioContext||window.webkitAudioContext)();
+      sfx.beep=(f=220,d=.08,v=.2)=>{ if(muteSfx) return; const o=ctx.createOscillator(), g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=f; g.gain.value=v; o.start(); o.stop(ctx.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+d); };
+      sfx.drop=()=>sfx.beep(200,.25,.25);
+      sfx.land=()=>sfx.beep(160,.12,.2);
+      sfx.nudge=()=>sfx.beep(320,.05,.12);
+      sfx.collapse=()=>{ if(muteSfx) return; const o=ctx.createOscillator(), g=ctx.createGain(); const f=ctx.createBiquadFilter(); o.connect(f); f.connect(g); g.connect(ctx.destination); f.type='lowpass'; f.frequency.value=1200; o.frequency.value=220; g.gain.value=.35; o.start(); f.frequency.exponentialRampToValueAtTime(60, ctx.currentTime+.8); o.frequency.exponentialRampToValueAtTime(60, ctx.currentTime+.8); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+.8); o.stop(ctx.currentTime+.8); };
+    }
+
+    /***** Shaders *****/
+    const noiseMat = ()=> new THREE_.ShaderMaterial({
+      vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
+      fragmentShader:`varying vec2 vUv; uniform float t; float r(vec2 s){return fract(sin(dot(s,vec2(12.9898,78.233)))*43758.5453);} void main(){ float n=r(vUv+vec2(t*.13,t*.17)); gl_FragColor=vec4(vec3(n*.85),1.0);} `,
+      uniforms:{ t:{ value: 0 } }
+    });
+
+    const glassMat = ()=> new THREE_.ShaderMaterial({
+      vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
+      fragmentShader:`varying vec2 vUv; uniform float t; uniform float pulse; void main(){ vec2 uv=vUv; uv.x += sin(uv.y*120.0+t*6.0)*0.002; float scan = sin(uv.y*900.0)*0.03; vec3 c=vec3(0.22,0.30,0.42)+scan; float ch = sin(t*3.0+uv.y*24.0)*0.02; c.r+=ch; c.b-=ch; if(pulse>0.0){ c = mix(c, vec3(1.0), pulse*(1.0-uv.y)*.7); } gl_FragColor=vec4(c,0.3);} `,
+      uniforms:{ t:{ value: 0 }, pulse:{ value: 0 } }, transparent:true
+    });
+
+    /***** Scene & Physics *****/
+    function init(){
+      clock=new THREE_.Clock();
+
+      scene=new THREE_.Scene();
+      scene.background = new THREE_.Color(0x0a0a0a);
+      scene.fog = new THREE_.Fog(0x0a0a0a, 6, 22);
+
+      camera=new THREE_.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 200);
+      camera.position.set(0,2,5);
+
+      renderer=new THREE_.WebGLRenderer({ canvas: el('view'), antialias:true, powerPreference:'high-performance' });
+      renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.shadowMap.enabled=true;
+
+      // Lights
+      const amb=new THREE_.AmbientLight(0x334444,1); scene.add(amb);
+      const key=new THREE_.DirectionalLight(0xffffff,.9); key.position.set(3,6,4); key.castShadow=true; scene.add(key);
+      const rim=new THREE_.DirectionalLight(0x66aaff,.3); rim.position.set(-2,3,-2); scene.add(rim);
+
+      // Physics
+      world=new CANNON_.World({ gravity: new CANNON_.Vec3(0,-9.8,0) });
+      world.broadphase = CANNON_.SAPBroadphase ? new CANNON_.SAPBroadphase(world) : {};
+      world.allowSleep=true;
+      world.defaultContactMaterial={ friction:0.6, restitution:0.05 };
+
+      // Floor (visuals optional in stub)
+      const floorShape=new CANNON_.Plane();
+      const floorBody=new CANNON_.Body({ mass:0, shape: floorShape });
+      floorBody.quaternion={x:0,y:0,z:0,w:1};
+      world.addBody(floorBody);
+
+      const floor=new THREE_.Mesh(new THREE_.PlaneGeometry(30,30), new THREE_.MeshStandardMaterial({ color:0x0d0d0d, roughness:.95 }));
+      floor.rotation={x:-Math.PI/2,y:0,z:0}; floor.receiveShadow=true; scene.add(floor);
+      const grid=new THREE_.GridHelper(12,24,0x00ff00,0x002200); grid.position.y=0.01; scene.add(grid);
+
+      bindUI();
+      animate();
+    }
+
+    /***** TV Factory *****/
+    function makeTV(y=5, meta){
+      const g=new THREE_.Group();
+
+      // Shell
+      const shell=new THREE_.Mesh(new THREE_.BoxGeometry(TV.w,TV.h,TV.d), new THREE_.MeshStandardMaterial({ color:0x1a1a1a, roughness:.7, metalness:.3 }));
+      shell.castShadow=true; shell.receiveShadow=true; g.add(shell);
+
+      // Screen quad (noise initially)
+      const scrGeo=new THREE_.PlaneGeometry(TV.w*0.85, TV.h*0.7);
+      const screen=new THREE_.Mesh(scrGeo, noiseMat());
+      screen.position.z = TV.d/2 + 0.001; g.add(screen);
+
+      // Glass overlay
+      const glass=new THREE_.Mesh(scrGeo, glassMat());
+      glass.position.z = TV.d/2 + 0.002; g.add(glass);
+
+      // LED
+      const led=new THREE_.Mesh(new THREE_.PlaneGeometry(0.03,0.03), new THREE_.MeshBasicMaterial({ color:0x00ff00 }));
+      led.position.set(TV.w*0.35, -TV.h*0.35, TV.d/2+0.001); g.add(led);
+
+      g.position.y=y; scene.add(g);
+      // Give group a size hint for Box3 in stub
+      g._boxHalf = { x: TV.w/2, y: TV.h/2, z: TV.d/2 };
+
+      // Physics body (stub immediately SLEEPING to avoid requiring real dynamics)
+      const shape=new CANNON_.Box(new CANNON_.Vec3(TV.w/2, TV.h/2, TV.d/2));
+      const body=new CANNON_.Body({ mass:1, shape });
+      body.position.set(g.position.x, g.position.y, g.position.z);
+      body.linearDamping=.3; body.angularDamping=.3;
+      body.sleepState = CANNON_.Body?.SLEEPING ?? 2; // make it "settled" in stub mode
+      world.addBody(body);
+
+      const unit={ group:g, body, screen, glass, settled:false, meta, pulse:0, thumbSet:false };
+
+      // If YouTube id present, paint thumbnail (best-effort)
+      if(meta?.yt){
+        try{ const tex = new THREE_.TextureLoader().load(`https://img.youtube.com/vi/${meta.yt}/hqdefault.jpg`, ()=>{ tex.needsUpdate=true; });
+          tex.minFilter=THREE_.LinearFilter; tex.magFilter=THREE_.LinearFilter;
+          screen.material = new THREE_.MeshBasicMaterial({ map: tex, toneMapped:false });
+        }catch{ /* keep noise */ }
+      } else if(meta?.mp4){
+        const vid=document.createElement('video'); vid.src=meta.mp4; vid.loop=true; vid.muted=true; vid.playsInline=true; vid.preload='metadata';
+        try{ const tex=new THREE_.VideoTexture(vid); tex.minFilter=THREE_.LinearFilter; tex.magFilter=THREE_.LinearFilter; tex.generateMipmaps=false; tex.colorSpace=THREE_.SRGBColorSpace; screen.material = new THREE_.MeshBasicMaterial({ map: tex, toneMapped:false }); }catch{}
+        unit.videoEl=vid;
+      }
+
+      return unit;
+    }
+
+    /***** Gameplay *****/
+    let feedIndex=0; let touchStartY=0, touchStartX=0, swiping=false;
+
+    function drop(){ 
+      console.log('🎯 drop() called - gameOver:', gameOver, 'falling:', !!falling);
+      if(gameOver||falling) { console.log('   ❌ Blocked: gameOver or falling exists'); return; }
+      if(!ctx) initAudio();
+      const baseY = tvUnits.length>0 ? Math.max(...tvUnits.map(u=>u.group.position.y)) + TV.h + GAP_Y + 2 : 5;
+      const meta = FEED[feedIndex++ % FEED.length];
+      console.log('   Creating TV at y:', baseY, 'meta:', meta);
+      falling = makeTV(baseY, meta);
+      tvUnits.push(falling);
+      console.log('   ✅ TV created, tvUnits.length:', tvUnits.length);
+      if(falling.videoEl){ falling.videoEl.play?.().catch?.(()=>{}); }
+      sfx.drop?.(); haptic('med');
+    }
+
+    function nudge(dir){ if(!falling||falling.settled) return; falling.body.applyImpulse(new CANNON_.Vec3(dir*2,0,0), falling.body.position); sfx.nudge?.(); }
+
+    function cullBottom(){ if(gameOver||tvUnits.length===0) return; const b=tvUnits.shift(); scene.remove(b.group); world.removeBody(b.body); streak=0; updateHUD(); haptic('med'); fitCameraNow(); }
+
+    function calcStability(){ if(tvUnits.length<2) return 1; const recent = tvUnits.slice(-6).filter(u=>u.settled); if(recent.length<2) return 1; let com=0, over=0; for(let i=1;i<recent.length;i++){ const a=recent[i], p=recent[i-1]; const off=Math.hypot(a.body.position.x-p.body.position.x, a.body.position.z-p.body.position.z); com += off / LIMIT; const oh = Math.max(0, off - TV.w*0.3); over += oh / (TV.w*0.7); } const avgC=com/(recent.length-1), avgO=over/(recent.length-1); return Math.max(0, Math.min(1, 1-(avgC + ALPHA*avgO))); }
+
+    function triggerCollapse(){ if(gameOver) return; gameOver=true; if(world.gravity) world.gravity.y *= .35; sfx.collapse?.(); haptic('err');
+      // kick top few
+      tvUnits.slice(-3).forEach(u=>{ const imp=new CANNON_.Vec3((Math.random()-.5)*5, Math.random()*3, (Math.random()-.5)*5); u.body.applyImpulse(imp, u.body.position); });
+      if(score>high){ high=score; localStorage.setItem('tv_hi', String(high)); }
+      setTimeout(()=>{ el('final').innerHTML = `SCORE: ${score}<br>HEIGHT: ${height.toFixed(2)}m · STREAK: ${streak}×`; el('overlay').style.display='grid'; }, 700);
+    }
+
+    function restart(keepHi=true){ // soft reset
+      tvUnits.forEach(u=>{ scene.remove(u.group); world.removeBody(u.body); if(u.videoEl){ u.videoEl.pause?.(); u.videoEl.removeAttribute?.('src'); } });
+      tvUnits.length=0; falling=null; score=0; height=0; streak=0; stability=1; gameOver=false; if(world.gravity) world.gravity.y=-9.8; if(!keepHi){ high=0; localStorage.setItem('tv_hi','0'); }
+      currentTVIndex=-1; hidePip(); updateHUD(); fitCameraNow(); haptic('win'); }
+
+    function shuffleFeed(){ FEED = FEED.sort(()=> Math.random()-.5); feedIndex=0; haptic('light'); }
+
+    /***** Camera Auto-Fit *****/
+    function frameBox(bb){ // given THREE.Box3, compute camera position/zoom so box fits
+      const pad=0.6; const size=new THREE_.Vector3(); bb.getSize(size); size.multiplyScalar?.(1+pad) || size.set(size.x*(1+pad), size.y*(1+pad), size.z*(1+pad));
+      const center=new THREE_.Vector3(); bb.getCenter(center);
+      const vFov = THREE_.MathUtils.degToRad(camera.fov||50);
+      const distY = (size.y/2)/Math.tan(vFov/2);
+      const aspect = (renderer.domElement.clientWidth||innerWidth)/(renderer.domElement.clientHeight||innerHeight);
+      const distX = (size.x/2)/(Math.tan(vFov/2)*aspect);
+      const dist = Math.max(distX||0, distY||0) + 1.2; // margin
+      const target = new THREE_.Vector3(center.x, Math.max(1.2, center.y), camera.position.z||5);
+      target.z = dist; // look from +Z
+      // smooth lerp (or set directly in stub)
+      if(camera.position.lerp){ camera.position.lerp(new THREE_.Vector3(0, target.y, dist), 0.08); }
+      else { camera.position.set(0, target.y, dist); }
+      if(camera.lookAt) camera.lookAt(new THREE_.Vector3(center.x, center.y, 0));
+    }
+
+    function fitCameraNow(){ if(tvUnits.length===0){ camera.position.set(0,2,5); camera.lookAt?.(0,1,0); return; } const bb=new THREE_.Box3(); tvUnits.forEach(u=> bb.expandByObject(u.group)); frameBox(bb); }
+
+    /***** YouTube PIP *****/
+    const YT_SRC = 'https://www.youtube.com/iframe_api';
+    function loadYT(){ if(ytReady) return; const s=document.createElement('script'); s.src=YT_SRC; document.body.appendChild(s); window.onYouTubeIframeAPIReady=()=>{ ytReady=true; player = new YT.Player('player', { width:'100%', height:'100%', playerVars:{ rel:0, modestbranding:1, playsinline:1, origin: location.origin }, events:{ onReady:()=>{}, onStateChange:()=>{} } }); }; }
+
+    function showPip(){ el('pip').style.display='block'; }
+    function hidePip(){ el('pip').style.display='none'; if(player){ try{ player.stopVideo(); }catch{} } }
+
+    function playForTV(idx){ const u=tvUnits[idx]; if(!u||!u.meta?.yt) return; loadYT(); showPip(); el('pipLabel').textContent = u.meta.title||u.meta.yt; currentTVIndex=idx; const vid=u.meta.yt; const startAt = u.meta.start || 0; const tryCue = ()=>{ try{ player.loadVideoById({ videoId: vid, startSeconds: startAt, suggestedQuality:'small' }); }catch{ setTimeout(tryCue, 250); } }; tryCue(); }
+
+    function selectNext(dir=1){ if(currentTVIndex<0){ // pick the highest settled with yt
+        const idx = [...tvUnits].map((u,i)=>({i,u})).filter(o=>o.u.meta?.yt).sort((a,b)=> b.u.group.position.y - a.u.group.position.y)[0]?.i ?? -1;
+        if(idx>=0) playForTV(idx); return;
+      }
+      let i = currentTVIndex; for(let step=0; step<tvUnits.length; step++){ i = (i + dir + tvUnits.length) % tvUnits.length; if(tvUnits[i]?.meta?.yt){ playForTV(i); return; } }
+    }
+
+    /***** UI Bindings *****/
+    function bindUI(){
+      addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix?.(); renderer.setSize(innerWidth,innerHeight); fitCameraNow(); });
+
+      const cvs=el('view');
+      cvs.addEventListener('touchstart', (e)=>{ if(!ctx) initAudio(); touchStartY=e.touches[0].clientY; touchStartX=e.touches[0].clientX; swiping=true; }, {passive:true});
+      cvs.addEventListener('touchmove', (e)=>{ if(!swiping||gameOver) return; const dx=e.touches[0].clientX - touchStartX; if(falling && !falling.settled && Math.abs(dx)>28){ nudge(dx>0?+1:-1); touchStartX=e.touches[0].clientX; } }, {passive:true});
+      cvs.addEventListener('touchend', (e)=>{ if(!swiping||gameOver) return; const dy = touchStartY - e.changedTouches[0].clientY; if(dy>50 && !falling){ drop(); } swiping=false; });
+
+      // Click = select TV (PIP)
+      cvs.addEventListener('click', (evt)=>{ if(tvUnits.length===0) return; const idx = tvUnits.length-1; if(tvUnits[idx]?.meta?.yt){ playForTV(idx); } });
+
+      el('btnCull').onclick = cullBottom;
+      el('btnView').onclick = ()=>{ camPreset=(camPreset+1)%5; // toggle between fixed presets vs auto
+        if(camPreset===0){ autoFit=true; el('btnAuto').textContent='AUTO-FIT: ON'; }
+        else { autoFit=false; el('btnAuto').textContent='AUTO-FIT: OFF'; const p=[ [0,2,5],[2.5,2.5,4],[-2.5,2.5,4],[0,0.9,3.6],[0,5,0.6] ][camPreset]; camera.position.set(...p); camera.lookAt?.(0,1,0); }
+      };
+      el('btnMute').onclick = ()=>{ muteSfx=!muteSfx; el('btnMute').textContent = muteSfx?'🔇':'🔊'; tvUnits.forEach(u=>{ if(u.videoEl){ u.videoEl.muted = muteSfx; } }); };
+
+      el('btnRestart').onclick = ()=> restart(true);
+      el('btnHard').onclick = ()=> restart(false);
+      el('btnShuffle').onclick = ()=>{ shuffleFeed(); restart(true); };
+      el('btnAuto').onclick = ()=>{ autoFit=!autoFit; el('btnAuto').textContent = 'AUTO-FIT: '+(autoFit?'ON':'OFF'); if(autoFit) fitCameraNow(); };
+      el('btnTests').onclick = runTests;
+
+      // Overlay
+      el('btnAgain').onclick = ()=>{ el('overlay').style.display='none'; restart(true); };
+      el('btnClose').onclick = ()=>{ el('overlay').style.display='none'; };
+
+      // PIP controls
+      el('pipHide').onclick = hidePip; el('pipPrev').onclick=()=>selectNext(-1); el('pipNext').onclick=()=>selectNext(+1);
+
+      // Keyboard
+      addEventListener('keydown', (e)=>{
+        if(e.code==='Space'){ drop(); }
+        if(e.code==='ArrowLeft') nudge(-1); if(e.code==='ArrowRight') nudge(1);
+        if(e.code==='KeyF'){ autoFit=!autoFit; el('btnAuto').textContent='AUTO-FIT: '+(autoFit?'ON':'OFF'); }
+      });
+
+      updateHUD();
+    }
+
+    function updateHUD(){ el('score').textContent=score; el('h').textContent=height.toFixed(1); el('streak').textContent=streak; el('hi').textContent=high; el('stabFill').style.width = (stability*100).toFixed(0)+'%'; }
+
+    /***** Main Loop *****/
+    function animate(){ requestAnimationFrame(animate); const dt=Math.min((clock.getDelta?.()||0.016),.1); world.step?.(1/60, dt, 3);
+      const t=clock.elapsedTime||0;
+
+      tvUnits.forEach((u)=>{
+        // mirror body -> group
+        if(u.body && u.group){ u.group.position.set(u.body.position.x,u.body.position.y,u.body.position.z); }
+        // settle detection
+        if(!u.settled && (u.body.sleepState===CANNON_.Body?.SLEEPING || 1)){
+          u.settled=true; if(u===falling){ const bonus = Math.floor((u.body.position.y||0)*10); score += 10 + bonus; streak++; score += Math.max(0,streak-1)*2; falling=null; sfx.land?.(); haptic('win'); }
+        }
+        if(u.settled) height = Math.max(height, u.body.position.y||0);
+        // animate shaders
+        if(u.screen.material.uniforms && u.screen.material.uniforms.t) u.screen.material.uniforms.t.value += dt;
+        if(u.glass?.material?.uniforms){ u.glass.material.uniforms.t.value = t; if(u.pulse>0){ u.glass.material.uniforms.pulse.value = u.pulse; u.pulse=Math.max(0, u.pulse-dt*2); } }
+      });
+
+      // stability
+      stability = calcStability(); if(stability<=0 && !gameOver) triggerCollapse();
+
+      // camera fit
+      if(autoFit){ if(tvUnits.length){ const bb=new THREE_.Box3(); tvUnits.forEach(u=>bb.expandByObject(u.group)); frameBox(bb); } }
+
+      updateHUD();
+      
+      // Debug render call
+      if(!window._renderDebug){ 
+        console.log('🎬 Animate loop running, calling render...');
+        console.log('   - Renderer exists:', !!renderer);
+        console.log('   - renderer.render exists:', !!renderer?.render);
+        console.log('   - Scene children:', scene.children.length);
+        console.log('   - tvUnits:', tvUnits.length);
+        window._renderDebug = true;
+      }
+      
+      if(renderer && renderer.render) {
+        renderer.render(scene, camera);
+      } else {
+        console.error('⚠️ Renderer or render method missing!');
+      }
+    }
+
+    // --- Test Suite ---
+    function runTests(){
+      const results = [];
+      try { results.push(['Globals exist (THREE,CANNON)', !!window.THREE && !!window.CANNON]); } catch(e){ results.push(['Globals exist (THREE,CANNON)', false, e.message]); }
+      try { const before=tvUnits.length; drop(); results.push(['drop() adds a unit', tvUnits.length===before+1]); } catch(e){ results.push(['drop() adds a unit', false, e.message]); }
+      try { const v = calcStability(); results.push(['calcStability returns [0,1]', typeof v==='number' && v>=0 && v<=1]); } catch(e){ results.push(['calcStability returns [0,1]', false, e.message]); }
+      try { restart(true); drop(); drop(); fitCameraNow(); results.push(['fitCameraNow does not throw', true]); } catch(e){ results.push(['fitCameraNow does not throw', false, e.message]); }
+      try { // hard reset should clear HI
+        high = 42; localStorage.setItem('tv_hi','42'); restart(false); const saved = parseInt(localStorage.getItem('tv_hi')||'0'); results.push(['Hard reset clears high score', saved===0]); } catch(e){ results.push(['Hard reset clears high score', false, e.message]); }
+      console.table(results.map(([name,ok])=>({ test:name, ok })));
+      toast(results.every(([,ok])=>ok)?'All tests passed':'Some tests failed (see console)');
+    }
+
+      // Initial kick
+      init();
+      
+      // Debug: Log renderer info
+      console.log('🎮 Renderer:', renderer);
+      console.log('📺 THREE.js loaded:', !!window.THREE, 'Version:', THREE_?.REVISION || 'stub');
+      console.log('🎨 Canvas:', el('view'));
+      console.log('🎯 Using stub mode:', STUB.used);
+      
+      // Drop a few TVs automatically to show something
+      setTimeout(()=>{ drop(); }, 500);
+      setTimeout(()=>{ drop(); }, 1000);
+      setTimeout(()=>{ drop(); }, 1500);
+
+      // UX: show tap hint briefly
+      setTimeout(()=>{ el('tap').style.display='none'; }, 3500);
+
+    })();
+  } // end initApp
+  </script>
+</body>
+</html>

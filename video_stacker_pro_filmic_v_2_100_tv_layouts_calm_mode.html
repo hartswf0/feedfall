@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>VIDEO_STACKER_PRO — filmic v2</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ui-bg: rgba(12,12,12,0.92);
+    --ui-acc:#0a84ff; --ui-fg:#f2f2f2; --glass: rgba(255,255,255,0.06);
+    --film-haze: #0a0b0e; --film-fog: #0c1016; --film-glow: rgba(255,255,255,0.06);
+  }
+  body{font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#000; color:var(--ui-fg); overflow:hidden}
+  #stage{position:fixed; inset:0}
+  #webgl,#css3d{position:absolute; inset:0; touch-action:none}
+  #hud{position:fixed; top:10px; left:10px; z-index:30; font-size:12px; line-height:1.5; pointer-events:none; opacity:.9; text-shadow:0 1px 2px #000}
+  /* right rail */
+  #rail{position:fixed; right:10px; top:10px; z-index:35; display:flex; flex-direction:column; gap:10px}
+  .rail-btn{width:46px;height:46px;border:none;border-radius:14px;display:grid;place-items:center;font-size:22px;color:#fff;background:var(--glass);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer}
+  .rail-btn:active{transform:scale(.96)}
+  .rail-btn.active{background:var(--ui-acc)}
+  #mode-pill{position:fixed; right:10px; bottom:10px; z-index:35; background:var(--glass); color:#fff; border-radius:999px; padding:10px 14px; font-size:12px; letter-spacing:.3px; backdrop-filter: blur(14px); box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  /* bottom shelf (layout + populate) */
+  #shelf{position:fixed; left:0; right:0; bottom:8px; z-index:34; display:flex; gap:8px; justify-content:center}
+  .chip{border:none; padding:10px 12px; border-radius:999px; background:var(--glass); color:#fff; font-size:12px; letter-spacing:.3px; box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer}
+  .chip.active{background:var(--ui-acc)}
+
+  /* Media drawer */
+  #media-upload{position:fixed; inset:0; display:grid; place-items:center; z-index:50; pointer-events:none; opacity:0; transition:.25s ease}
+  #media-upload.open{pointer-events:auto; opacity:1}
+  .sheet{width:min(92vw,460px); max-height:88vh; overflow:auto; background:var(--ui-bg); border-radius:20px; padding:18px; box-shadow: 0 20px 60px rgba(0,0,0,.6)}
+  .sheet h2{margin:.2rem 0 .6rem; text-align:center; font-size:18px}
+  .upload-area{border:2px dashed rgba(255,255,255,0.25); border-radius:14px; padding:24px; text-align:center; margin:10px 0; cursor:pointer}
+  .upload-area.dragover{border-color:var(--ui-acc); background:rgba(10,132,255,0.15)}
+  input[type=file]{display:none}
+  textarea{width:100%; min-height:96px; background:rgba(255,255,255,0.08); border:none; border-radius:12px; padding:12px; color:#fff; font-size:14px; resize:vertical; margin:10px 0}
+  .btn{width:100%; padding:12px; border-radius:12px; border:none; background:var(--ui-acc); color:#fff; font-size:15px; font-weight:700; cursor:pointer; margin:8px 0}
+  .btn.secondary{background:rgba(255,255,255,0.12); font-weight:600}
+  .close-x{position:absolute; top:8px; right:10px; width:34px; height:34px; border:none; border-radius:10px; background:rgba(255,255,255,0.08); color:#fff; font-size:18px; cursor:pointer}
+  #library{max-height:220px; overflow-y:auto; margin:8px 0}
+  .lib-item{padding:10px; background:rgba(255,255,255,0.06); border-radius:10px; margin:8px 0; display:flex; justify-content:space-between; align-items:center; font-size:13px; gap:8px}
+  .lib-item button{padding:6px 10px; background:rgba(255,255,255,0.14); border:none; color:#fff; border-radius:8px; font-size:12px; cursor:pointer}
+
+  /* Loading */
+  #loading{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; font-size:14px; z-index:60; background:#000; color:#999}
+  #loading .row{display:flex; gap:6px}
+  #loading .dot{width:8px; height:8px; border-radius:50%; background:#444; animation:b 1s infinite alternate}
+  #loading .dot:nth-child(2){animation-delay:.2s}
+  #loading .dot:nth-child(3){animation-delay:.4s}
+  @keyframes b{to{background:#888; transform:translateY(-3px)}}
+
+  /* Fallback */
+  #fallback{position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:70px 16px 90px; gap:8px}
+  .f-tv{width:140px;height:90px;background:#0b0b0b;border:2px solid #2a2a2a;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.45), inset 0 0 0 6px #000;display:flex;align-items:center;justify-content:center;color:#666;font-weight:700;letter-spacing:.4px}
+  .f-base{width:220px;height:16px;background:#141414;border:1px solid #242424;border-radius:8px;margin-top:4px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+  <div id="loading">
+    <div>LOADING 3D ENGINE</div>
+    <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div style="font-size:11px;opacity:.7">If this hangs, we drop to a 2D fallback.</div>
+  </div>
+  <div id="stage"><div id="webgl"></div><div id="css3d"></div></div>
+  <div id="hud">TVs <span id="tv-count">0</span> • Height <span id="height">0.0</span> m • Cam <span id="cam-label">TOP</span> • Layout <span id="layout-label">STACK</span></div>
+
+  <!-- Edge controls (kept off content) -->
+  <div id="rail">
+    <button class="rail-btn" id="btn-add" title="Drop TV">➕</button>
+    <button class="rail-btn" id="btn-select" title="Select / Gizmo">◎</button>
+    <button class="rail-btn" id="btn-freeze" title="Freeze Physics">❄</button>
+    <button class="rail-btn" id="btn-gravity" title="Gravity Mode">⚖</button>
+    <button class="rail-btn" id="btn-media" title="Media Library">📁</button>
+    <button class="rail-btn" id="btn-view" title="Camera Mode">🎥</button>
+    <button class="rail-btn" id="btn-mood" title="Scene Mood">🌫️</button>
+    <button class="rail-btn" id="btn-reset" title="Reset">↺</button>
+  </div>
+  <div id="shelf">
+    <button class="chip" id="chip-stack">STACK</button>
+    <button class="chip" id="chip-wall">WALL</button>
+    <button class="chip" id="chip-spiral">SPIRAL</button>
+    <button class="chip" id="chip-ring">RING</button>
+    <button class="chip" id="chip-pop100" title="Populate up to 100">POP ×100</button>
+  </div>
+  <div id="mode-pill">GRAVITY: Normal • TRACK: Top • MOOD: Filmic</div>
+
+  <!-- Media Library -->
+  <div id="media-upload">
+    <div class="sheet">
+      <button class="close-x" id="close-upload">✕</button>
+      <h2>Media Library</h2>
+      <div class="upload-area" id="drop-zone">
+        <div style="font-size:42px;margin-bottom:8px">📁</div>
+        <div>Drop files or tap to upload</div>
+        <div style="font-size:11px;opacity:.7;margin-top:6px">Video, Image, or Text · Add YouTube links below</div>
+      </div>
+      <input type="file" id="file-input" multiple accept="video/*,image/*,.txt" />
+      <textarea id="text-input" placeholder="Paste YouTube URL, playlist (one per line), or text…"></textarea>
+      <button class="btn" id="add-text-btn">Add to Library</button>
+      <div id="library"></div>
+      <button class="btn secondary" id="done-btn">Done</button>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+
+<script>
+(function(){
+  // === Constants & types ===
+  const TV={ w:0.60, d:0.45, h:0.40 };
+  const SCREEN={ w:TV.w*0.84, h:TV.h*0.68 };
+  const CAM = { TOP:"TOP", WIDE:"WIDE", FREE:"FREE" };
+  const GRAV = { NORMAL:0, SOFT:1, OFF:2 };
+  const LAYOUT = { STACK:'STACK', WALL:'WALL', SPIRAL:'SPIRAL', RING:'RING' };
+  const CAMERA_PRESETS=[
+    {pos:[0,3.0,6.5],look:[0,1.5,0]},
+    {pos:[-4,4.0,5.5],look:[0,2.0,0]},
+    {pos:[4,4.0,5.5],look:[0,2.0,0]}
+  ];
+  const MAX_ACTIVE_SCREENS = 8; // performance: only nearest N screens render as live (others poster)
+
+  // === State ===
+  let scene, cssScene, camera, renderer, cssRenderer, world, clock;
+  let FALLBACK=false, fallbackRoot=null;
+  let tvs=[]; // {group, body, cssPivot, cssObj, mediaItem, settled, live}
+  let selectedTV=null, gizmoGroup=null;
+  let mediaLibrary=[];
+  let height=0;
+  let gravMode=GRAV.NORMAL;
+  let camMode=CAM.TOP;
+  let layoutMode=LAYOUT.STACK;
+  let moodIndex=0; // 0 filmic, 1 darkroom, 2 neon
+
+  // DOM
+  const $ = sel => document.querySelector(sel);
+  const hudTV = $('#tv-count');
+  const hudH  = $('#height');
+  const camLbl= $('#cam-label');
+  const layoutLbl= $('#layout-label');
+  const pill  = $('#mode-pill');
+
+  // Boot (robust)
+  let tries=0; const MAX_TRIES=20;
+  const boot = () => {
+    if (window.THREE && window.CANNON) { try { init(); return; } catch(e){ console.error(e); showFatal(e); } }
+    if (++tries <= MAX_TRIES) return setTimeout(boot, 100);
+    activateFallback('3D libraries blocked — running in 2D fallback.');
+  };
+  if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(boot, 0); else window.addEventListener('load', boot);
+
+  // Utils
+  function parseYouTubeUrl(url){
+    const idMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    return idMatch? idMatch[1] : null;
+  }
+  function addYouTubeLine(line){
+    const videoId = parseYouTubeUrl(line.trim());
+    if (!videoId) return false;
+    mediaLibrary.push({type:'youtube', name:'YouTube '+videoId, videoId, url:line.trim()});
+    return true;
+  }
+  function seedLibrary(){
+    const seeds = [
+      'https://youtu.be/fWMhuF_JKIE',
+      'https://youtu.be/MT3snSsqcHs',
+      'https://youtu.be/8I4oqkyTC3o',
+      'https://youtu.be/ibNr-jk_GTg',
+      'https://youtu.be/OGp5NDpYV6Y',
+      'https://youtu.be/dQw4w9WgXcQ',
+      'https://youtu.be/2vjPBrBU-TM',
+      'https://youtu.be/kXYiU_JCYtU',
+      'https://youtu.be/tAGnKpE4NCI',
+      'https://youtu.be/e-ORhEE9VVg'
+    ];
+    seeds.forEach(s=> addYouTubeLine(s));
+    // Also add calm text panels
+    mediaLibrary.push({type:'text', name:'Poem A', content:'A small, quiet room. A flicker of blue. The stack breathes.'});
+    mediaLibrary.push({type:'text', name:'Poem B', content:'Between channels, a hush. We listen for ghosts of tape.'});
+  }
+
+  // Init
+  function init(){
+    clock=new THREE.Clock();
+    scene=new THREE.Scene();
+    cssScene=new THREE.Scene();
+
+    // Filmic background & fog
+    scene.background = new THREE.Color(0x0a0b0e);
+    scene.fog = new THREE.Fog(0x0a0b0e, 14, 36);
+
+    camera=new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 300);
+    camera.position.set(0,3,6.5);
+
+    renderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    $('#webgl').appendChild(renderer.domElement);
+
+    const CSS3D = (THREE.CSS3DRenderer? THREE.CSS3DRenderer : (window.CSS3DRenderer||null));
+    if (CSS3D){ cssRenderer=new CSS3D(); cssRenderer.setSize(window.innerWidth,window.innerHeight); cssRenderer.domElement.style.pointerEvents='none'; $('#css3d').appendChild(cssRenderer.domElement); }
+
+    // Lighting: filmic trio + haze
+    const amb = new THREE.AmbientLight(0x3a3f55, 0.8); scene.add(amb);
+    const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(6,10,5); key.castShadow=true; key.shadow.mapSize.set(2048,2048); key.shadow.camera.left=-10; key.shadow.camera.right=10; key.shadow.camera.top=10; key.shadow.camera.bottom=-10; scene.add(key);
+    const rim = new THREE.DirectionalLight(0x89a7ff, 0.4); rim.position.set(-5,3,-4); scene.add(rim);
+
+    // Ground + soft reflection fake
+    const floorGeo=new THREE.PlaneGeometry(120,120);
+    const floorMat=new THREE.MeshStandardMaterial({color:0x111316, roughness:0.98, metalness:0.02});
+    const floor=new THREE.Mesh(floorGeo,floorMat); floor.receiveShadow=true; floor.rotation.x=-Math.PI/2; scene.add(floor);
+    const haze = new THREE.Mesh(new THREE.CircleGeometry(8,64), new THREE.MeshBasicMaterial({color:0x0f141c, transparent:true, opacity:.28}));
+    haze.rotation.x = -Math.PI/2; haze.position.y = 0.01; scene.add(haze);
+
+    // Physics world
+    world=new CANNON.World(); world.gravity.set(0,-9.82,0); world.broadphase=new CANNON.SAPBroadphase(world); world.allowSleep=true;
+    const groundShape=new CANNON.Plane();
+    const groundBody=new CANNON.Body({mass:0, shape:groundShape}); groundBody.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(groundBody);
+
+    // Events
+    const target=$('#webgl');
+    target.addEventListener('pointerdown',onPointerDown);
+    target.addEventListener('pointermove',onPointerMove);
+    target.addEventListener('pointerup',onPointerUp);
+    target.addEventListener('click',onClick);
+    window.addEventListener('resize',onResize);
+
+    // UI hooks
+    $('#btn-add').onclick = addTV;
+    $('#btn-select').onclick = ()=>{ selectMode=!selectMode; $('#btn-select').classList.toggle('active', selectMode); if(!selectMode) deselectTV(); };
+    $('#btn-freeze').onclick = toggleFreeze;
+    $('#btn-gravity').onclick = cycleGravity;
+    $('#btn-media').onclick = openMedia;
+    $('#btn-view').onclick = cycleCameraMode;
+    $('#btn-mood').onclick = cycleMood;
+    $('#btn-reset').onclick = resetAll;
+
+    $('#chip-stack').onclick = ()=>setLayout(LAYOUT.STACK);
+    $('#chip-wall').onclick  = ()=>setLayout(LAYOUT.WALL);
+    $('#chip-spiral').onclick= ()=>setLayout(LAYOUT.SPIRAL);
+    $('#chip-ring').onclick  = ()=>setLayout(LAYOUT.RING);
+    $('#chip-pop100').onclick= populate100;
+
+    $('#close-upload').onclick = closeMedia;
+    $('#done-btn').onclick = closeMedia;
+    $('#drop-zone').onclick = ()=> $('#file-input').click();
+    $('#file-input').addEventListener('change', handleFileUpload);
+    $('#add-text-btn').onclick = addTextToLibrary;
+    const dz=$('#drop-zone');
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('dragover')});
+    dz.addEventListener('dragleave', ()=> dz.classList.remove('dragover'));
+    dz.addEventListener('drop', handleFileDrop);
+
+    // Seed media + seed a few TVs
+    seedLibrary();
+    setWorldGravity(gravMode);
+
+    // initial drop for instant feedback
+    setTimeout(()=>{ addTV(); setTimeout(addTV,250); setTimeout(addTV,500); }, 200);
+
+    // Start
+    $('#loading').style.display='none';
+    updateHUD();
+    animate();
+  }
+
+  // === Media ===
+  function openMedia(){ $('#media-upload').classList.add('open'); renderLibrary(); }
+  function closeMedia(){ $('#media-upload').classList.remove('open'); }
+  function handleFileDrop(e){ e.preventDefault(); e.stopPropagation(); $('#drop-zone').classList.remove('dragover'); processFiles(e.dataTransfer.files); }
+  function handleFileUpload(e){ processFiles(e.target.files); e.target.value=''; }
+  function processFiles(files){ for (let f of files){ const url = URL.createObjectURL(f); if(f.type.startsWith('video/')) mediaLibrary.push({type:'video', name:f.name, url}); else if(f.type.startsWith('image/')) mediaLibrary.push({type:'image', name:f.name, url}); else if(f.type==='text/plain'){ const r=new FileReader(); r.onload=ev=>{ mediaLibrary.push({type:'text', name:f.name, content:ev.target.result}); renderLibrary(); }; r.readAsText(f); continue; } } renderLibrary(); }
+  function addTextToLibrary(){ const raw=$('#text-input').value.trim(); if(!raw) return; const lines=raw.split(/\n|,|;/).map(s=>s.trim()).filter(Boolean); let added=false; lines.forEach(line=>{ added = addYouTubeLine(line) || added; if(!added && line) mediaLibrary.push({type:'text', name:'Text '+(mediaLibrary.length+1), content:line}); added=false; }); $('#text-input').value=''; renderLibrary(); }
+  function renderLibrary(){ const c=$('#library'); c.innerHTML=''; if(mediaLibrary.length===0){ c.innerHTML='<div style="opacity:.65;text-align:center;padding:14px">No media yet</div>'; return; } mediaLibrary.forEach((item,idx)=>{ const div=document.createElement('div'); div.className='lib-item'; const name=document.createElement('span'); name.textContent=item.name; name.style.flex='1'; name.style.overflow='hidden'; name.style.textOverflow='ellipsis'; name.style.whiteSpace='nowrap'; const use=document.createElement('button'); use.textContent='Use'; use.onclick=()=>{ const y = tvs.length? Math.max(...tvs.map(t=> t.body.position.y))+TV.h+0.7 : 3.0; createTV(y, item); updateHUD(); }; const del=document.createElement('button'); del.textContent='✕'; del.onclick=()=>{ if(item.url) URL.revokeObjectURL(item.url); mediaLibrary.splice(idx,1); renderLibrary(); }; div.append(name,use,del); c.appendChild(div); }); }
+
+  // === Physics / gravity ===
+  function setWorldGravity(mode){ gravMode=mode; world.gravity.y = (mode===GRAV.NORMAL? -9.82 : mode===GRAV.SOFT? -3.0 : 0); pill.textContent = `GRAVITY: ${ mode===GRAV.NORMAL? 'Normal' : mode===GRAV.SOFT? 'Soft' : 'Off' } • TRACK: ${camMode} • MOOD: ${['Filmic','Darkroom','Neon'][moodIndex]}`; }
+  function cycleGravity(){ setWorldGravity((gravMode+1)%3); $('#btn-gravity').classList.toggle('active', gravMode!==GRAV.NORMAL); }
+  function toggleFreeze(){ const freeze=!$('#btn-freeze').classList.contains('active'); $('#btn-freeze').classList.toggle('active', freeze); tvs.forEach(t=>{ t.body.mass = freeze? 0 : 1; t.body.updateMassProperties(); if(!freeze) t.body.wakeUp(); }); }
+
+  // === Camera ===
+  function cycleCameraMode(){ camMode = camMode===CAM.TOP? CAM.WIDE : camMode===CAM.WIDE? CAM.FREE : CAM.TOP; camLbl.textContent=camMode; pill.textContent = `GRAVITY: ${ gravMode===GRAV.NORMAL? 'Normal' : gravMode===GRAV.SOFT? 'Soft' : 'Off' } • TRACK: ${camMode} • MOOD: ${['Filmic','Darkroom','Neon'][moodIndex]}`; }
+  function frameCamera(){ const topY = tvs.length? Math.max(...tvs.map(t=>t.body.position.y)) : 0; const m=1.2; if (camMode===CAM.TOP){ const desired=new THREE.Vector3(0, Math.max(2.5, topY+m), Math.max(6.2, 6.2+topY*0.15)); camera.position.lerp(desired,0.08); camera.lookAt(new THREE.Vector3(0, Math.max(1.4, topY*0.8), 0)); } else if (camMode===CAM.WIDE){ const desired=new THREE.Vector3(5.5, Math.max(3.5, topY*0.5+2),  9.0+topY*0.18); camera.position.lerp(desired,0.06); camera.lookAt(new THREE.Vector3(0, Math.max(2.0, topY*0.7), 0)); } }
+
+  // === Mood presets ===
+  function cycleMood(){ moodIndex=(moodIndex+1)%3; const modes=[
+    {bg:0x0a0b0e, fog:0x0a0b0e, amb:[0x3a3f55,0.8], rim:[0x89a7ff,0.4]},
+    {bg:0x060708, fog:0x060708, amb:[0x222222,0.6], rim:[0x335577,0.25]},
+    {bg:0x0a070a, fog:0x0a070a, amb:[0x553355,0.75], rim:[0xff66aa,0.45]},
+  ][moodIndex];
+    scene.background.setHex(modes.bg); scene.fog.color.setHex(modes.fog);
+    // adjust ambient & rim intensities
+    scene.traverse(o=>{ if(o.isAmbientLight){ o.color.setHex(modes.amb[0]); o.intensity=modes.amb[1]; }
+                        if(o.isDirectionalLight && o!==undefined && o!==null){ /* leave key light */ } });
+    pill.textContent = `GRAVITY: ${ gravMode===GRAV.NORMAL? 'Normal' : gravMode===GRAV.SOFT? 'Soft' : 'Off' } • TRACK: ${camMode} • MOOD: ${['Filmic','Darkroom','Neon'][moodIndex]}`;
+  }
+
+  // === TVs ===
+  function createTV(y, mediaItem){
+    // shell
+    const group=new THREE.Group();
+    const shell=new THREE.Mesh(new THREE.BoxGeometry(TV.w,TV.h,TV.d), new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.62, metalness:0.38}));
+    shell.castShadow=true; shell.receiveShadow=true; group.add(shell);
+    // bezel
+    const bezel=new THREE.Mesh(new THREE.PlaneGeometry(SCREEN.w*1.08, SCREEN.h*1.08), new THREE.MeshBasicMaterial({color:0x0a0a0a}));
+    bezel.position.set(0,0,TV.d/2+0.001); group.add(bezel);
+
+    // physics
+    const body=new CANNON.Body({ mass:1, shape:new CANNON.Box(new CANNON.Vec3(TV.w/2, TV.h/2, TV.d/2)), sleepSpeedLimit:0.1, sleepTimeLimit:0.5 });
+    body.position.set(0, y, 0); body.linearDamping=0.3; body.angularDamping=0.3; world.addBody(body);
+
+    // screen element
+    const screenEl=document.createElement('div');
+    screenEl.style.width=(SCREEN.w*320)+'px';
+    screenEl.style.height=(SCREEN.h*320)+'px';
+    screenEl.style.pointerEvents='none';
+    screenEl.style.background='#000';
+    screenEl.style.display='flex'; screenEl.style.alignItems='center'; screenEl.style.justifyContent='center'; screenEl.style.overflow='hidden';
+
+    // start as poster; activate later when near
+    makePoster(screenEl, mediaItem);
+
+    let cssObj=null, cssPivot=null;
+    if (cssRenderer){
+      cssObj = new THREE.CSS3DObject(screenEl);
+      cssObj.position.set(0,0,TV.d/2+0.002);
+      cssObj.scale.set(1/320, 1/320, 1);
+      cssPivot=new THREE.Object3D(); cssPivot.position.copy(body.position); cssPivot.add(cssObj); cssScene.add(cssPivot);
+    }
+
+    const unit={ group, body, cssPivot, cssObj, mediaItem, settled:false, live:false, posterEl:screenEl };
+    scene.add(group); tvs.push(unit); updateHUD();
+    return unit;
+  }
+
+  function makePoster(el, media){ el.innerHTML=''; const cap=document.createElement('div'); cap.style.color='#777'; cap.style.fontSize='12px'; cap.style.letterSpacing='.3px'; cap.style.textAlign='center'; cap.style.padding='8px'; cap.style.opacity='0.85'; cap.textContent = media? (media.name||media.type) : 'EMPTY'; el.appendChild(cap); }
+
+  function activateScreen(unit){ if (unit.live) return; const el = unit.cssObj? unit.cssObj.element : unit.posterEl; if(!el) return; el.innerHTML=''; if(!unit.mediaItem){ makePoster(el, null); unit.live=false; return; }
+    if(unit.mediaItem.type==='text'){ const div=document.createElement('div'); div.style.color='#fff'; div.style.fontSize='14px'; div.style.padding='16px'; div.style.lineHeight='1.55'; div.style.overflow='auto'; div.textContent=unit.mediaItem.content; el.appendChild(div); }
+    else if(unit.mediaItem.type==='image'){ const img=document.createElement('img'); img.src=unit.mediaItem.url; img.style.maxWidth='100%'; img.style.maxHeight='100%'; img.style.objectFit='contain'; el.appendChild(img); }
+    else if(unit.mediaItem.type==='youtube'){ const iframe=document.createElement('iframe'); iframe.src=`https://www.youtube.com/embed/${unit.mediaItem.videoId}?autoplay=1&mute=1&loop=1&playlist=${unit.mediaItem.videoId}&controls=1&modestbranding=1`; iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='none'; iframe.setAttribute('allow','autoplay; encrypted-media'); iframe.setAttribute('allowfullscreen','true'); el.appendChild(iframe); }
+    else if(unit.mediaItem.type==='video'){ const vid=document.createElement('video'); vid.src=unit.mediaItem.url; vid.autoplay=true; vid.loop=true; vid.muted=true; vid.playsInline=true; vid.style.width='100%'; vid.style.height='100%'; vid.style.objectFit='cover'; el.appendChild(vid); vid.play().catch(()=>{}); }
+    unit.live=true;
+  }
+  function deactivateScreen(unit){ if(!unit.live) return; const el = unit.cssObj? unit.cssObj.element : unit.posterEl; if(!el) return; el.innerHTML=''; makePoster(el, unit.mediaItem); unit.live=false; }
+
+  function addTV(){ if(FALLBACK){ const tv = document.createElement('div'); tv.className='f-tv'; tv.textContent='TV '+(tvs.length+1); const fake={ height:(tvs.length+1)*0.45 }; height=Math.max(height, fake.height); fallbackRoot.appendChild(tv); tvs.push({}); updateHUD(); return; }
+    const topY = tvs.length ? Math.max(...tvs.map(t=> t.body.position.y)) + TV.h + 0.7 : 3.0;
+    const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+    createTV(topY, media);
+  }
+
+  function populate100(){ const target=100; let n=target - tvs.length; n=Math.max(0, Math.min(100, n)); let i=0; const drop=()=>{ if(i++>=n) return; addTV(); setTimeout(drop, 40); }; drop(); }
+
+  // === Selection gizmo ===
+  const raycaster=new THREE.Raycaster(); const mouse=new THREE.Vector2(); let selectMode=false; let dragging=false, dragAxis=null, dragStart=new THREE.Vector2();
+  function createGizmo(tv){ if(gizmoGroup){ scene.remove(gizmoGroup); } gizmoGroup=new THREE.Group(); const L=0.8; const ax=(dir,col)=>{ const a=new THREE.ArrowHelper(dir.clone().normalize(), new THREE.Vector3(0,0,0), L, col, 0.2, 0.16); a.userData.axis = dir.x? 'x' : dir.y? 'y' : 'z'; return a; }; gizmoGroup.add(ax(new THREE.Vector3(1,0,0),0xff5555)); gizmoGroup.add(ax(new THREE.Vector3(0,1,0),0x55ff55)); gizmoGroup.add(ax(new THREE.Vector3(0,0,1),0x5599ff)); const ring=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.02,16,32), new THREE.MeshBasicMaterial({color:0xffff66})); ring.rotation.x=Math.PI/2; ring.userData.axis='rotate'; gizmoGroup.add(ring); gizmoGroup.position.copy(tv.body.position); scene.add(gizmoGroup); }
+  function removeGizmo(){ if(gizmoGroup){ scene.remove(gizmoGroup); gizmoGroup=null; } }
+  function selectTV(tv){ if(selectedTV){ selectedTV.group.children[0].material.emissive = new THREE.Color(0x000000); } selectedTV=tv; tv.group.children[0].material.emissive=new THREE.Color(0x0a84ff); tv.group.children[0].material.emissiveIntensity=0.45; createGizmo(tv); }
+  function deselectTV(){ if(selectedTV){ selectedTV.group.children[0].material.emissive=new THREE.Color(0x000000); selectedTV=null; } removeGizmo(); }
+
+  function ndc(e){ const rect = renderer.domElement.getBoundingClientRect(); mouse.x = ((e.clientX-rect.left)/rect.width)*2-1; mouse.y = -((e.clientY-rect.top)/rect.height)*2+1; }
+  function raycast(objs){ raycaster.setFromCamera(mouse, camera); return raycaster.intersectObjects(objs, true); }
+  function onPointerDown(e){ if(!selectMode||!selectedTV) return; ndc(e); if(!gizmoGroup) return; const objs=[]; gizmoGroup.traverse(c=>{ if(c.userData && c.userData.axis) objs.push(c); }); const hits=raycast(objs); if(hits.length){ dragging=true; dragAxis=hits[0].object.userData.axis || hits[0].object.parent.userData.axis; dragStart.set(mouse.x,mouse.y); e.preventDefault(); } }
+  function onPointerMove(e){ if(!dragging||!selectedTV) return; ndc(e); const dX=(mouse.x-dragStart.x)*5; const dY=(mouse.y-dragStart.y)*5; const b=selectedTV.body; if(dragAxis==='x'){ b.position.x += dX; } else if(dragAxis==='y'){ b.position.y -= dY; } else if(dragAxis==='z'){ b.position.z -= dY; } else if(dragAxis==='rotate'){ const eul=new CANNON.Vec3(); b.quaternion.toEuler(eul); eul.y += dX; b.quaternion.setFromEuler(eul.x,eul.y,eul.z); } b.velocity.set(0,0,0); b.angularVelocity.set(0,0,0); b.wakeUp(); if(gizmoGroup){ gizmoGroup.position.copy(b.position); } dragStart.set(mouse.x,mouse.y); }
+  function onPointerUp(){ dragging=false; dragAxis=null; }
+  function onClick(e){ if(dragging) return; if(!selectMode) return; ndc(e); const meshes=tvs.map(t=>t.group.children[0]); const hits=raycast(meshes); if(hits.length){ const mesh=hits[0].object; const tv=tvs.find(t=>t.group.children[0]===mesh); if(tv) selectTV(tv); } else { deselectTV(); } }
+
+  // === Layouts ===
+  function setLayout(mode){ layoutMode=mode; layoutLbl.textContent=mode; Array.from(document.querySelectorAll('.chip')).forEach(ch=>ch.classList.remove('active')); if(mode===LAYOUT.STACK) $('#chip-stack').classList.add('active'); if(mode===LAYOUT.WALL) $('#chip-wall').classList.add('active'); if(mode===LAYOUT.SPIRAL) $('#chip-spiral').classList.add('active'); if(mode===LAYOUT.RING) $('#chip-ring').classList.add('active');
+    if(mode===LAYOUT.STACK){ // restore physics
+      tvs.forEach(t=>{ if(t.body.mass===0){ t.body.mass=1; t.body.updateMassProperties(); t.body.wakeUp(); } });
+    } else { // freeze and place
+      tvs.forEach((t,i)=>{ t.body.mass=0; t.body.updateMassProperties(); const p = layoutPosition(mode, i); t.body.position.set(p.x,p.y,p.z); t.body.quaternion.setFromEuler(0,p.ry||0,0); });
+    }
+  }
+  function layoutPosition(mode, i){ const n=tvs.length; if(mode===LAYOUT.WALL){ const cols=6, gap=0.2; const r=Math.floor(i/cols), c=i%cols; return {x:(c-(cols/2-0.5))*(TV.w+gap), y:1.2 + r*(TV.h+gap), z:-1.6, ry:0}; }
+    if(mode===LAYOUT.SPIRAL){ const rev = i*0.35; const r=1.2 + i*0.02; return {x:Math.cos(rev)*r, y:0.8 + i*(TV.h*0.6), z:Math.sin(rev)*r, ry:rev}; }
+    if(mode===LAYOUT.RING){ const R=3.2; const a = (i/n)*Math.PI*2; return {x:Math.cos(a)*R, y:1.0 + (i%5)*0.02, z:Math.sin(a)*R, ry: -a + Math.PI}; }
+    // default stack: physics handles
+    return {x:0,y:3+ i*(TV.h+0.5), z:0, ry:0};
+  }
+
+  // === Reset ===
+  function resetAll(){ tvs.forEach(t=>{ if(t.group) scene.remove(t.group); if(t.cssPivot) cssScene.remove(t.cssPivot); if(t.body) world.removeBody(t.body); }); tvs=[]; deselectTV(); height=0; updateHUD(); }
+
+  // === Animate ===
+  function animate(){ requestAnimationFrame(animate); const dt=Math.min(clock.getDelta(),0.1); world.step(1/60, dt, 3);
+    // sync transforms
+    for(const t of tvs){ if(!t.group||!t.body) continue; t.group.position.copy(t.body.position); t.group.quaternion.copy(t.body.quaternion); if(!t.settled && t.body.sleepState===CANNON.Body.SLEEPING) t.settled=true; if(t.settled) height = Math.max(height, t.body.position.y); if(t.cssPivot){ t.cssPivot.position.copy(t.group.position); t.cssPivot.quaternion.copy(t.group.quaternion); } }
+
+    if(camMode!==CAM.FREE) frameCamera();
+    updateHUD();
+
+    // Live-screen budget: activate nearest N, others poster
+    if(cssRenderer){
+      const withDist = tvs.map(t=>({t, d: t.group? camera.position.distanceTo(t.group.position) : Infinity}));
+      withDist.sort((a,b)=>a.d-b.d);
+      withDist.forEach((wd,idx)=>{ if(idx<MAX_ACTIVE_SCREENS) activateScreen(wd.t); else deactivateScreen(wd.t); });
+    }
+
+    renderer.render(scene,camera);
+    if (cssRenderer) cssRenderer.render(cssScene,camera);
+  }
+
+  // === HUD & resize ===
+  function updateHUD(){ hudTV.textContent=String(tvs.length); hudH.textContent=height.toFixed(1); }
+  function onResize(){ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); if(cssRenderer) cssRenderer.setSize(window.innerWidth,window.innerHeight); }
+
+})();
+
+// === FATAL & FALLBACK (global) ===
+function showFatal(msg){ const el=document.getElementById('loading'); el.style.display='flex'; el.style.color='#f66'; el.innerHTML = '<div>Engine Error</div><div style="font-size:12px;opacity:.8">'+(msg && msg.message? msg.message : msg)+'</div>'; }
+function activateFallback(note){ try{ window.FALLBACK=true; const loading=document.getElementById('loading'); loading.style.display='none'; const pill=document.getElementById('mode-pill'); if(pill) pill.textContent='FALLBACK MODE • '+(note||''); const root=document.createElement('div'); root.id='fallback'; const base=document.createElement('div'); base.className='f-base'; document.getElementById('stage').appendChild(root); document.getElementById('stage').appendChild(base); const add=()=>{ const tv=document.createElement('div'); tv.className='f-tv'; tv.textContent='TV '+(document.querySelectorAll('.f-tv').length+1); root.appendChild(tv); }; setTimeout(()=>{ add(); setTimeout(add,150); setTimeout(add,300); }, 60); }catch(e){ showFatal(e); } }
+</script>
+</body>
+</html>

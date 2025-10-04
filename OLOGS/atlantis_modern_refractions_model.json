@@ -1,0 +1,230 @@
+{
+  "step1": {
+    "entities": [
+      {
+        "id": "talokan_mcu_polity",
+        "type": "polity",
+        "name": "Talokan",
+        "stance": "MCU_canon",
+        "definition": "Underwater kingdom inspired by indigenous Latin American cultures, named after Aztec legend of Tl\u0101l\u014dc\u0101n",
+        "evidence": {
+          "quote": "took inspiration from indigenous Latin American cultures when building Talokan with the name itself inspired by the Aztec legend of 'Tl\u0101l\u014dc\u0101n'",
+          "loc": "Article body \u00a7 Cultural inspiration",
+          "source": "SR_Coogler_Talokan"
+        }
+      },
+      {
+        "id": "coogler_rationale_agent",
+        "type": "agent",
+        "name": "Ryan Coogler's Creative Decision",
+        "stance": "MCU_meta",
+        "definition": "Director's explanation for avoiding Greco-Roman Atlantis concept in favor of creating unique underwater kingdom",
+        "evidence": {
+          "quote": "I wanted to make something that could stand in a cinematic pantheon beside those films and be different, but still truthful",
+          "loc": "Exclusive interview quote",
+          "source": "SR_Coogler_Talokan"
+        }
+      },
+      {
+        "id": "comics_namor_atlantis",
+        "type": "polity",
+        "name": "Comics Atlantis",
+        "stance": "reference",
+        "definition": "Marvel Comics version where Namor rules the sovereign undersea nation of Atlantis",
+        "evidence": {
+          "quote": "In Marvel Comics, Namor is the ruler of Atlantis",
+          "loc": "Background comparison section",
+          "source": "SR_Coogler_Talokan"
+        }
+      },
+      {
+        "id": "project_atlantis_platform",
+        "type": "platform",
+        "name": "Project Atlantis",
+        "stance": "AI_platform",
+        "definition": "Open world sandbox for generative LLM agents pursuing Artificial Super Intelligence capabilities",
+        "evidence": {
+          "quote": "Building an open world sandbox for generative LLM agents",
+          "loc": "Company description \u00a7 F6S profile",
+          "source": "F6S_AI_Companies_Estonia"
+        }
+      },
+      {
+        "id": "reelmind_atlantis_tool",
+        "type": "tool",
+        "name": "ReelMind Atlantis Visualization",
+        "stance": "AI_blog",
+        "definition": "AI platform enabling creators to visualize ancient civilizations like Atlantis with unprecedented detail",
+        "evidence": {
+          "quote": "Platforms like ReelMind.ai enable creators to visualize Atlantis with astonishing detail, bringing its mythical architecture, advanced technologies",
+          "loc": "Blog introduction \u00a7 Lost Atlantis Legends",
+          "source": "ReelMind_Atlantis_AI_Visualization"
+        }
+      },
+      {
+        "id": "deep_dream_atlantis_gallery",
+        "type": "artifact",
+        "name": "Deep Dream Atlantis Gallery",
+        "stance": "AI_demo",
+        "definition": "AI-generated image collections using Atlantis tags to create underwater cityscapes and mythological scenes",
+        "evidence": {
+          "quote": "Explore stunning images of Atlantis. View a variety of captivating pictures showcasing the beauty of this mythical underwater city",
+          "loc": "Gallery description \u00a7 Atlantis tag page",
+          "source": "DDG_Atlantis_Gallery"
+        }
+      },
+      {
+        "id": "las_vegas_atlantis_show",
+        "type": "work",
+        "name": "Las Vegas Atlantis Show AI",
+        "stance": "AI_blog",
+        "definition": "AI-created mythical visuals for entertainment shows visualizing Atlantis epic rise and fall",
+        "evidence": {
+          "quote": "For a show about Atlantis, AI can help visualize the epic rise and fall, the exploration of ancient ruins",
+          "loc": "Blog section \u00a7 AI Creates Mythical Visuals",
+          "source": "ReelMind_Atlantis_Show_AI"
+        }
+      },
+      {
+        "id": "drexciya_ai_project",
+        "type": "project",
+        "name": "Drexciya AI Curriculum",
+        "stance": "Afrofuturism_adjacent",
+        "definition": "Afrofuturist undersea worldbuilding project using AI art and sound for deep sea dwelling creation stories",
+        "evidence": {
+          "quote": "Deep Sea Dwelling Creation Stories Wave Patterns A",
+          "loc": "Project title \u00a7 Instructables",
+          "source": "Instructables_Drexciya_AI"
+        }
+      }
+    ]
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "talokan_mcu_polity",
+        "to": "comics_namor_atlantis",
+        "relation": "substitutes",
+        "statement": "MCU Talokan replaces traditional comics Atlantis to create cultural distinctiveness",
+        "evidence": {
+          "quote": "Coogler's version of Namor's home in Black Panther: Wakanda Forever is not quite the same as in the comics",
+          "loc": "Background comparison",
+          "source": "SR_Coogler_Talokan"
+        }
+      },
+      {
+        "from": "coogler_rationale_agent",
+        "to": "talokan_mcu_polity",
+        "relation": "reframes",
+        "statement": "Director consciously avoided Greco-Roman mythology to create truthful cultural representation",
+        "evidence": {
+          "quote": "I think that because we live in a society that's very much permeated by Western thinking and Western ideas, that Greco-Roman concept of Atlantis, Plato's Concept, [has] permeation of our consciousness",
+          "loc": "Exclusive interview",
+          "source": "SR_Coogler_Talokan"
+        }
+      },
+      {
+        "from": "reelmind_atlantis_tool",
+        "to": "deep_dream_atlantis_gallery",
+        "relation": "worldbuilds",
+        "statement": "AI platforms simulate mythological worlds through automated visual generation",
+        "evidence": {
+          "quote": "enable creators to visualize Atlantis with astonishing detail, bringing its mythical architecture, advanced technologies",
+          "loc": "Blog introduction",
+          "source": "ReelMind_Atlantis_AI_Visualization"
+        }
+      },
+      {
+        "from": "project_atlantis_platform",
+        "to": "talokan_mcu_polity",
+        "relation": "appropriates",
+        "statement": "AI company appropriates Atlantis branding for artificial intelligence sandbox marketing",
+        "evidence": {
+          "quote": "Building an open world sandbox for generative LLM agents",
+          "loc": "Company description",
+          "source": "F6S_AI_Companies_Estonia"
+        }
+      },
+      {
+        "from": "drexciya_ai_project",
+        "to": "deep_dream_atlantis_gallery",
+        "relation": "parallels",
+        "statement": "Afrofuturist undersea mythology parallels mainstream Atlantis through Black Atlantic themes",
+        "evidence": {
+          "quote": "Deep Sea Dwelling Creation Stories Wave Patterns",
+          "loc": "Project title",
+          "source": "Instructables_Drexciya_AI"
+        }
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Atlantis Refractions: Studio \u2192 Tools \u2192 Demos",
+      "axioms": [
+        "Studios reframe myth for cultural distinctiveness and market differentiation",
+        "AI platforms enable rapid myth worldbuilding through automated visual generation",
+        "Corporate branding appropriates canonical myth names for legitimacy",
+        "Afrofuturist projects parallel mainstream mythology through alternative cultural frameworks",
+        "Fan wikis and vendor blogs blur distinction between canonical and speculative content"
+      ],
+      "rules": [
+        "IF studio substitution occurs THEN new canon branches emerge",
+        "IF AI tools simulate worlds THEN audiences read generated content as myth resurrection",
+        "IF platforms appropriate myth names THEN branding gains cultural authority",
+        "IF alternative cultural frameworks emerge THEN parallel mythological systems develop"
+      ],
+      "evidence": [
+        {
+          "quote": "I wanted to make something that could stand in a cinematic pantheon beside those films and be different, but still truthful",
+          "loc": "Exclusive interview",
+          "source": "SR_Coogler_Talokan"
+        },
+        {
+          "quote": "enable creators to visualize Atlantis with astonishing detail, bringing its mythical architecture, advanced technologies",
+          "loc": "Blog introduction",
+          "source": "ReelMind_Atlantis_AI_Visualization"
+        },
+        {
+          "quote": "Building an open world sandbox for generative LLM agents",
+          "loc": "Company description",
+          "source": "F6S_AI_Companies_Estonia"
+        }
+      ]
+    }
+  },
+  "step4": {
+    "critique": {
+      "marketing_claims": [
+        "ReelMind blog contains promotional language about 'unprecedented detail' and 'revolutionary' capabilities without independent verification",
+        "Project Atlantis presents ambitious goals (ASI, nuclear datacenters) that appear speculative rather than implemented features",
+        "F6S startup profiles may inflate capabilities during fundraising phase"
+      ],
+      "fan_wiki_risk": [
+        "MCU Wiki accessed but returned limited content, creating gap in canonical source verification",
+        "Marvel Database references unavailable, preventing comparison between comics canon and MCU adaptation"
+      ],
+      "speculation": [
+        "Drexciya AI project reference too limited to establish substantial parallel with Atlantis mythology",
+        "Las Vegas show AI application represents hypothetical use case rather than implemented system"
+      ],
+      "corrections": [
+        {
+          "issue": "Replace vendor blog sources with academic or journalistic analysis of AI myth visualization",
+          "proposed_source": "Media studies scholarship on AI-generated mythology",
+          "rationale": "Higher credibility than marketing content"
+        },
+        {
+          "issue": "Supplement MCU analysis with film criticism rather than fan wiki content",
+          "proposed_source": "Academic film studies on cultural adaptation in superhero cinema",
+          "rationale": "More rigorous than fandom documentation"
+        },
+        {
+          "issue": "Add concrete examples of AI-generated Atlantis content rather than platform capabilities",
+          "proposed_source": "Specific AI artwork analysis with technical specifications",
+          "rationale": "Evidence-based rather than promotional claims"
+        }
+      ]
+    }
+  }
+}

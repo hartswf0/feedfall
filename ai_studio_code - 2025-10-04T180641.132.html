@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>VIDEO_STACKER_PLUS — Cinematic Gallery (100 TVs)</title>
+<style>
+  /* Base Styles */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --ui-bg: rgba(20,20,20,0.9);
+    --ui-acc: #0a84ff;
+    --ui-fg: #fff;
+    --glass: rgba(255,255,255,0.08);
+  }
+  body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#000; overflow:hidden; color:var(--ui-fg); }
+  #stage{ position:fixed; inset:0; }
+  #webgl{ position:absolute; inset:0; touch-action:none; }
+  #css3d{ position:absolute; inset:0; touch-action:none; pointer-events:none; } /* Don't block clicks! */
+  #css3d > *{ pointer-events:auto; } /* But allow video interactions */
+  
+  /* Placement Grid */
+  #placement-grid{ position:absolute; inset:0; pointer-events:none; z-index:20; display:none; }
+  #placement-grid.active{ display:block; }
+  #placement-grid canvas{ width:100%; height:100%; }
+  
+  /* Cinematic Mode */
+  .cinematic-mode #stage{ filter:saturate(1.2) contrast(1.05); }
+  .cinematic-mode #letterbox{ display:block; }
+  #letterbox{ display:none; position:fixed; inset:0; pointer-events:none; z-index:15; }
+  #letterbox::before, #letterbox::after{ content:''; position:absolute; left:0; right:0; height:15vh; background:linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%); backdrop-filter:blur(4px); }
+  #letterbox::before{ top:0; }
+  #letterbox::after{ bottom:0; transform:rotate(180deg); }
+  
+  /* Status Overlay */
+  #status-overlay{ position:fixed; top:env(safe-area-inset-top,80px); left:50%; transform:translateX(-50%); z-index:25; background:rgba(0,0,0,0.85); padding:12px 20px; border-radius:20px; backdrop-filter:blur(12px); border:2px solid rgba(255,255,255,0.1); font-size:13px; font-weight:600; display:none; min-width:200px; text-align:center; }
+  #status-overlay.active{ display:block; animation:statusFadeIn 0.3s ease; }
+  @keyframes statusFadeIn{ from{ opacity:0; transform:translateX(-50%) translateY(-10px); } to{ opacity:1; transform:translateX(-50%) translateY(0); } }
+  
+  /* Ghost Lines */
+  #ghost-canvas{ position:absolute; inset:0; pointer-events:none; z-index:18; }
+  
+  /* HUD */
+  #hud{ position:fixed; top:env(safe-area-inset-top,12px); left:12px; font-size:11px; font-weight:600; z-index:30; opacity:0.85; pointer-events:none; text-shadow:0 2px 4px rgba(0,0,0,0.8); line-height:1.4; background:rgba(0,0,0,0.6); padding:8px 10px; border-radius:8px; backdrop-filter:blur(8px); transition:opacity 0.3s, transform 0.3s; }
+  #hud.hidden{ opacity:0; transform:translateY(-20px); }
+  
+  /* Mobile Camera Controls (Left Side) */
+  #mobile-camera{ position:fixed; left:env(safe-area-inset-left,12px); top:50%; transform:translateY(-50%); z-index:35; display:none; flex-direction:column; gap:8px; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); }
+  #mobile-camera.active{ display:flex; }
+  #mobile-camera.hidden{ opacity:0; transform:translateY(-50%) translateX(-100px); pointer-events:none; }
+  #mobile-camera.collapsed{ transform:translateY(-50%) scale(0.6); opacity:0.4; }
+  #mobile-camera.collapsed:hover{ transform:translateY(-50%) scale(1); opacity:1; }
+  .cam-btn{ width:52px; height:52px; border-radius:12px; border:2px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.8); backdrop-filter:blur(12px); color:#fff; font-size:20px; display:grid; place-items:center; cursor:pointer; transition:all 0.15s; }
+  .cam-btn:active{ transform:scale(0.9); background:rgba(255,255,255,0.2); }
+  .cam-btn.active{ background:var(--ui-acc); border-color:var(--ui-acc); }
+
+  /* Bottom Toolbar (Mobile First) */
+  #bottom-toolbar{ position:fixed; bottom:env(safe-area-inset-bottom,12px); left:50%; transform:translateX(-50%); display:flex; gap:12px; z-index:40; padding:12px; background:rgba(0,0,0,0.85); border-radius:24px; backdrop-filter:blur(16px); border:2px solid rgba(255,255,255,0.1); transition:all 0.3s cubic-bezier(0.4,0,0.2,1); }
+  #bottom-toolbar.hidden{ opacity:0; transform:translateX(-50%) translateY(120%); pointer-events:none; }
+  #bottom-toolbar.collapsed{ transform:translateX(-50%) scale(0.7); opacity:0.5; }
+  #bottom-toolbar.collapsed:hover{ transform:translateX(-50%) scale(1); opacity:1; }
+  
+  .big-btn{ width:64px; height:64px; border-radius:16px; border:none; cursor:pointer; display:grid; place-items:center; font-size:28px; color:#fff; background:rgba(255,255,255,0.12); backdrop-filter:blur(14px); box-shadow:0 4px 16px rgba(0,0,0,0.4); transition:all 0.15s ease; }
+  .big-btn:active{ transform:scale(0.92); background:rgba(255,255,255,0.2); }
+  .big-btn.active{ background:var(--ui-acc); box-shadow:0 4px 20px rgba(10,132,255,0.6); }
+  
+  /* Layout buttons */
+  .layout-btn{ width:38px; height:38px; border-radius:10px; border:none; cursor:pointer; display:grid; place-items:center; font-size:18px; color:#fff; background:rgba(255,255,255,0.1); backdrop-filter:blur(8px); transition:all 0.15s ease; }
+  .layout-btn:active{ transform:scale(0.9); background:rgba(255,255,255,0.2); }
+  .layout-btn.active{ background:var(--ui-acc); box-shadow:0 2px 12px rgba(10,132,255,0.5); }
+  
+  #layout-selector.hidden{ opacity:0; transform:translateX(-50%) translateY(120%); pointer-events:none; }
+  #layout-selector.collapsed{ transform:translateX(-50%) scale(0.7); opacity:0.5; }
+  #layout-selector.collapsed:hover{ transform:translateX(-50%) scale(1); opacity:1; }
+  
+  /* Side Rail (smaller, top right) */
+  #rail{ position:fixed; right:env(safe-area-inset-right,10px); top:env(safe-area-inset-top,70px); display:flex; flex-direction:column; gap:8px; z-index:35; }
+  .rail-btn{ width:52px; height:52px; border-radius:14px; border:2px solid rgba(255,255,255,0.15); cursor:pointer; display:grid; place-items:center; font-size:24px; color:#fff; background:rgba(0,0,0,0.7); backdrop-filter:blur(14px); box-shadow:0 4px 16px rgba(0,0,0,0.4); transition:all 0.15s ease; }
+  .rail-btn:active{ transform:scale(0.92); }
+  .rail-btn.active{ background:var(--ui-acc); border-color:var(--ui-acc); box-shadow:0 4px 20px rgba(10,132,255,0.6); }
+  
+  #mode-pill{ position:fixed; right:env(safe-area-inset-right,10px); bottom:env(safe-area-inset-bottom,90px); z-index:35; background:rgba(0,0,0,0.8); color:#fff; border-radius:12px; padding:10px 12px; font-size:10px; letter-spacing:.3px; backdrop-filter:blur(14px); box-shadow:0 4px 16px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); max-width:140px; }
+
+  /* Media Library Modal */
+  #media-upload{ position:fixed; inset:0; display:grid; place-items:center; z-index:50; pointer-events:none; opacity:0; transition:.25s ease; }
+  #media-upload.open{ pointer-events:auto; opacity:1; }
+  .sheet{ width:min(92vw,420px); max-height:88vh; overflow:auto; background:var(--ui-bg); border-radius:20px; padding:18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .sheet h2{ margin:.2rem 0 0.6rem; text-align:center; font-size:18px; }
+  .upload-area{ border:2px dashed rgba(255,255,255,0.25); border-radius:14px; padding:28px; text-align:center; margin:12px 0; cursor:pointer; transition:all .2s; }
+  .upload-area:hover{ border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.05); }
+  .upload-area.dragover{ border-color:var(--ui-acc); background:rgba(10,132,255,0.15); }
+  input[type="file"]{ display:none; }
+  textarea{ width:100%; min-height:96px; background:rgba(255,255,255,0.08); border:none; border-radius:12px; padding:12px; color:#fff; font-size:14px; font-family:inherit; resize:vertical; margin:10px 0; }
+  .btn{ width:100%; padding:12px; border-radius:12px; border:none; background:var(--ui-acc); color:#fff; font-size:15px; font-weight:700; cursor:pointer; margin:8px 0; }
+  .btn.secondary{ background:rgba(255,255,255,0.12); font-weight:600; }
+  .close-x{ position:absolute; top:8px; right:10px; border:none; width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.08); color:#fff; font-size:18px; cursor:pointer; }
+  #library{ max-height:200px; overflow-y:auto; margin:8px 0; }
+  .lib-item{ padding:10px; background:rgba(255,255,255,0.06); border-radius:10px; margin:8px 0; display:flex; justify-content:space-between; align-items:center; font-size:13px; gap:8px; }
+  .lib-item button{ padding:6px 10px; background:rgba(255,255,255,0.14); border:none; color:#fff; border-radius:8px; font-size:12px; cursor:pointer; }
+
+  /* Loading Overlay */
+  #loading{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; z-index:60; background:#000; color:#888; gap:10px; }
+  #loading .dot{ width:8px; height:8px; border-radius:50%; background:#444; animation:b 1s infinite alternate; }
+  #loading .dot:nth-child(2){ animation-delay:.2s }
+  #loading .dot:nth-child(3){ animation-delay:.4s }
+  @keyframes b{ to{ background:#888; transform: translateY(-3px);} }
+
+  /* Fallback (no external libs) */
+  #fallback{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:70px 16px 90px; gap:8px; }
+  .f-tv{ width:140px; height:90px; background:#0b0b0b; border:2px solid #2a2a2a; border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,.45), inset 0 0 0 6px #000; display:flex; align-items:center; justify-content:center; color:#666; font-weight:700; letter-spacing:.4px; }
+  .f-base{ width:220px; height:16px; background:#141414; border:1px solid #242424; border-radius:8px; margin-top:4px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+</style>
+</head>
+<body>
+  <div id="loading">LOADING 3D ENGINE <div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  <div id="stage">
+    <div id="webgl"></div>
+    <div id="css3d"></div>
+    <div id="placement-grid"><canvas id="grid-canvas"></canvas></div>
+    <canvas id="ghost-canvas"></canvas>
+  </div>
+  
+  <!-- Cinematic letterbox -->
+  <div id="letterbox"></div>
+  
+  <!-- Status overlay -->
+  <div id="status-overlay"></div>
+  
+  <div id="hud">TVs <span id="tv-count">0</span> • Height <span id="height">0.0</span> m • Cam <span id="cam-label">TOP</span></div>
+  
+  <!-- Mobile camera controls -->
+  <div id="mobile-camera">
+    <button class="cam-btn" id="cam-feed" title="Feed Mode">📱</button>
+    <button class="cam-btn" id="cam-close" title="Close-up">📸</button>
+    <button class="cam-btn" id="cam-cinema" title="Cinematic">🎥</button>
+    <button class="cam-btn" id="cam-orbit" title="Orbit">🌐</button>
+    <button class="cam-btn" id="cam-fullscreen" title="Fullscreen">⛶</button>
+  </div>
+
+  <!-- LAYOUT SELECTOR (just above bottom toolbar) -->
+  <div id="layout-selector" style="position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);left:50%;transform:translateX(-50%);z-index:32;display:flex;gap:6px;background:rgba(0,0,0,0.7);padding:8px 12px;border-radius:16px;backdrop-filter:blur(12px);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);">
+    <button class="layout-btn" id="btn-layout-row" title="Flat Row">📏</button>
+    <button class="layout-btn" id="btn-layout-wall" title="Video Wall">🖼️</button>
+    <button class="layout-btn" id="btn-layout-pyramid" title="Pyramid">🔺</button>
+    <button class="layout-btn" id="btn-layout-triangle" title="Triangle">🔺</button>
+    <button class="layout-btn" id="btn-layout-grid" title="Dense Grid">🟦</button>
+    <button class="layout-btn" id="btn-layout-temple" title="Temple">⛩️</button>
+  </div>
+
+  <!-- BOTTOM TOOLBAR - Mobile First! -->
+  <div id="bottom-toolbar">
+    <button class="big-btn" id="btn-select" title="Select TV (Show Gizmo)">◎</button>
+    <button class="big-btn" id="btn-add" title="Add TV">➕</button>
+    <button class="big-btn" id="btn-guide" title="TV Guide">📺</button>
+    <button class="big-btn" id="btn-view" title="Camera">🎥</button>
+  </div>
+  
+  <!-- Side rail (smaller, less critical) -->
+  <div id="rail">
+    <button class="rail-btn" id="btn-mute-all" title="Toggle Global Mute">🔇</button> <!-- NEW MUTE BUTTON -->
+    <button class="rail-btn" id="btn-freeze" title="Freeze">❄</button>
+    <button class="rail-btn" id="btn-gravity" title="Gravity">⚖</button>
+    <button class="rail-btn" id="btn-media" title="Library">📁</button>
+    <button class="rail-btn" id="btn-reset" title="Reset">↺</button>
+  </div>
+  
+  <div id="mode-pill">ENV: Calm • CAM: Default</div>
+  
+  <!-- RETRO TV REMOTE CONTROL - SIMPLIFIED (NO ROTATION) -->
+  <div id="tv-remote" style="position:fixed;right:env(safe-area-inset-right,20px);top:50%;transform:translateY(-50%);z-index:45;display:none;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);">
+    <div style="background:linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%);border-radius:20px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.8),inset 0 2px 4px rgba(255,255,255,0.1);border:3px solid #3a3a3a;min-width:120px;">
+      <div style="text-align:center;color:#0ff;font-size:11px;font-weight:700;margin-bottom:12px;font-family:monospace;letter-spacing:1px;">MOVE</div>
+      
+      <!-- D-PAD for movement -->
+      <div style="display:grid;grid-template:repeat(3,44px)/repeat(3,44px);gap:3px;margin-bottom:12px;">
+        <div></div>
+        <button id="remote-up" class="remote-btn" style="grid-column:2;background:#4a4a4a;">▲</button>
+        <div></div>
+        <button id="remote-left" class="remote-btn" style="grid-row:2;background:#4a4a4a;">◀</button>
+        <div id="remote-center" class="remote-btn" style="background:radial-gradient(circle, #ff3333 0%, #cc0000 100%);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:9px;font-weight:700;box-shadow:0 2px 8px rgba(255,0,0,0.5),inset 0 -2px 4px rgba(0,0,0,0.3);cursor:pointer;border:2px solid #aa0000;">OK</div>
+        <button id="remote-right" class="remote-btn" style="grid-row:2;grid-column:3;background:#4a4a4a;">▶</button>
+        <div></div>
+        <button id="remote-down" class="remote-btn" style="grid-row:3;grid-column:2;background:#4a4a4a;">▼</button>
+        <div></div>
+      </div>
+      
+      <!-- Lift/Drop buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+        <button id="remote-lift" class="remote-btn" style="background:#33aa33;color:#fff;font-weight:700;font-size:14px;">▲ UP</button>
+        <button id="remote-drop" class="remote-btn" style="background:#aa3333;color:#fff;font-weight:700;font-size:14px;">DN ▼</button>
+      </div>
+      
+      <!-- Snap toggle -->
+      <button id="remote-snap" class="remote-btn" style="width:100%;background:#666;color:#fff;font-size:10px;font-weight:700;">🧲 SNAP</button>
+    </div>
+  </div>
+  
+  <!-- UI TOGGLE BUTTON (tap to show/hide UI) -->
+  <button id="ui-toggle" style="position:fixed;top:env(safe-area-inset-top,12px);right:env(safe-area-inset-right,12px);z-index:50;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;display:none;cursor:pointer;transition:all 0.2s;">☰</button>
+  
+  <style>
+    .remote-btn{
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:20px;
+      box-shadow:0 3px 8px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.2);
+      transition:all 0.1s;
+      border:2px solid rgba(255,255,255,0.1);
+    }
+    .remote-btn:active{
+      transform:translateY(2px);
+      box-shadow:0 1px 3px rgba(0,0,0,0.4), inset 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .remote-btn:hover{
+      filter:brightness(1.2);
+    }
+  </style>
+
+  <!-- Media Library -->
+  <div id="media-upload">
+    <div class="sheet">
+      <button class="close-x" id="close-upload">✕</button>
+      <h2>Media Library</h2>
+      <div class="upload-area" id="drop-zone">
+        <div style="font-size:42px;margin-bottom:8px;">📁</div>
+        <div>Drop files or tap to upload</div>
+        <div style="font-size:11px;opacity:0.7;margin-top:6px;">Video, Image, or Text</div>
+      </div>
+      <input type="file" id="file-input" multiple accept="video/*,image/*,.txt" />
+      <textarea id="text-input" placeholder="Paste YouTube URL or text here"></textarea>
+      <button class="btn" id="add-text-btn">Add to Library</button>
+      <div id="library"></div>
+      <button class="btn secondary" id="done-btn">Done</button>
+    </div>
+  </div>
+
+  <!-- TV GUIDE Modal -->
+  <div id="tv-guide" style="position:fixed;inset:0;display:grid;place-items:center;z-index:50;pointer-events:none;opacity:0;transition:.25s ease;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);">
+    <div class="sheet" style="max-width:500px;">
+      <button class="close-x" id="close-guide">✕</button>
+      <h2 style="margin-bottom:16px;">📺 TV GUIDE</h2>
+      <div style="color:#888;font-size:12px;text-align:center;margin-bottom:16px;">Click any TV to tune in</div>
+      <div id="guide-list" style="max-height:60vh;overflow-y:auto;">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- libs (versions kept in sync) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+
+<script>
+// --- Global Flag to prevent re-initialization if script is re-evaluated ---
+// This needs to be truly global to survive multiple <script> tag executions
+if (typeof window._APP_INITIALIZED === 'undefined') {
+  window._APP_INITIALIZED = false;
+}
+if (typeof window._APP_BOOT_ATTEMPTED === 'undefined') {
+  window._APP_BOOT_ATTEMPTED = false;
+}
+if (typeof window.YTPlayers === 'undefined') {
+  window.YTPlayers = {}; // Global container for YouTube Player API objects
+}
+
+// --- Global Helper Functions (Accessible outside the IIFE) ---
+
+// YouTube URL parser
+function parseYouTubeUrl(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/,
+    /youtube\.com\/embed\/([^?\s]+)/
+  ];
+  for (let pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+// Helper to convert MM:SS or HH:MM:SS to seconds
+function timeToSeconds(timeStr) {
+  const parts = timeStr.split(':').map(Number);
+  if (parts.length === 2) { // MM:SS
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 3) { // HH:MM:SS
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return 0; // Invalid format or 0 for 00:00
+}
+
+// Pre-populate with YouTube videos - WHERE YOU GO WHEN YOU LEAVE collection
+let mediaLibrary = []; // Global media library array
+let _mediaLibraryInitialized = false; // Flag to ensure media library is only loaded once
+
+function initMediaLibrary() {
+  if (_mediaLibraryInitialized) {
+    console.warn("Media library already initialized, skipping.");
+    return;
+  }
+  _mediaLibraryInitialized = true;
+
+  const videosData = [
+    {
+      url: 'https://www.youtube.com/watch?v=uDUoMnp1_g',
+      title: 'WHERE YOU GO WHEN YOU LEAVE (CODEX) | POEMS BY MARK ANTHONY THOMAS',
+      segments: [
+        { name: 'Out of Life', start: '00:00', end: '02:15', tags: ['poem', 'intro'] },
+        { name: 'Flashing Lights', start: '02:16', end: '04:31', tags: ['poem'] },
+        { name: 'How to Break Off an Engagement', start: '04:32', end: '06:47', tags: ['poem'] },
+        { name: 'Nevermore', start: '06:48', end: '09:03', tags: ['poem'] },
+        { name: 'Bloodline', start: '09:04', end: '11:19', tags: ['poem'] },
+        { name: 'Resurrecting Atlantis', start: '11:20', end: '13:35', tags: ['poem'] },
+        { name: 'DJ Turn Me Up', start: '13:36', end: '15:51', tags: ['poem'] },
+        { name: 'Newly Single', start: '15:52', end: '18:07', tags: ['poem'] },
+        { name: 'Yet, Heard', start: '18:08', end: '20:23', tags: ['poem'] },
+        { name: 'Magic Ride', start: '20:24', end: '22:39', tags: ['poem'] },
+        { name: 'Reunion', start: '22:40', end: '24:55', tags: ['poem'] },
+        { name: 'How to Win My Heart', start: '24:56', end: '27:11', tags: ['poem'] },
+        { name: 'Hot Minute', start: '27:12', end: '29:32', tags: ['poem', 'outro'] },
+      ]
+    },
+    {
+      url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw',
+      title: 'Where you go when you leave (codex) | poems by Mark Anthony Thomas (v2)',
+      segments: [
+        { name: 'Out of life (v2)', start: '00:00:00', end: '00:02:11', tags: ['poem', 'intro', 'v2'] },
+        { name: 'Flashing Lights (v2)', start: '00:02:11', end: '00:04:22', tags: ['poem', 'v2'] },
+        { name: 'How to break off an engagement (v2)', start: '00:04:22', end: '00:06:33', tags: ['poem', 'v2'] },
+        { name: 'Nevermore (v2)', start: '00:06:33', end: '00:08:44', tags: ['poem', 'v2'] },
+        { name: 'Bloodline (v2)', start: '00:08:44', end: '00:10:55', tags: ['poem', 'v2'] },
+        { name: 'Resurrecting Atlantis (v2)', start: '00:10:55', end: '00:13:06', tags: ['poem', 'v2'] },
+        { name: 'DJ Turn Me Up (v2)', start: '00:13:06', end: '00:15:17', tags: ['poem', 'v2'] },
+        { name: 'Newly Single (v2)', start: '00:15:17', end: '00:17:28', tags: ['poem', 'v2'] },
+        { name: 'Yet Heard (v2)', start: '00:17:28', end: '00:19:39', tags: ['poem', 'v2'] },
+        { name: 'Magic Ride (v2)', start: '00:19:39', end: '00:21:50', tags: ['poem', 'v2'] },
+        { name: 'Reunion (v2)', start: '00:21:50', end: '00:24:01', tags: ['poem', 'v2'] },
+        { name: 'How to Win My Heart (v2)', start: '00:24:01', end: '00:26:12', tags: ['poem', 'v2'] },
+        { name: 'Hot Minute (v2)', start: '00:26:12', end: '00:28:23', tags: ['poem', 'outro', 'v2'] },
+      ]
+    },
+    { name: 'Where You Go When You Leave (Main)', url: 'https://youtu.be/OGp5NDpYV6Y', tags: ['main', 'music', 'visual'] },
+    { name: 'Pro Segments', url: 'https://youtu.be/6AiCk06MgmQ', tags: ['segments'] },
+    { name: 'Where You Go When You Leave Part 2', url: 'https://youtu.be/8I4oqkyTC3o', tags: ['part2', 'poem'] },
+    { name: 'Where You Go When You Leave | A Visual-Poetry Journey (26min)', url: 'https://youtu.be/MT3snSsqcHs', tags: ['journey', 'full'] },
+    { name: 'WhereYouGoWhenYouLeave_DVR_Recording', url: 'https://youtu.be/fWMhuF_JKIE', tags: ['dvr'] },
+    { name: 'Living H20', url: 'https://youtu.be/re72b7VuPbE', tags: ['h2o'] },
+    { name: 'Out of Life — lead clip from Where You Go When You Leave', url: 'https://youtu.be/8NSzLAS_Uz8', tags: ['clip', 'lead'] },
+    { name: 'WGWYL 02', url: 'https://youtu.be/4_aMricPV9c', tags: ['series'] },
+    { name: 'WGWYL 01', url: 'https://youtu.be/L9LFBU8ZMIg', tags: ['series'] },
+    { name: 'WYGWYL 00', url: 'https://youtu.be/FRsRjWLWz9w', tags: ['series'] },
+  ];
+  
+  videosData.forEach((videoEntry) => {
+    if (videoEntry.segments) {
+      const videoId = parseYouTubeUrl(videoEntry.url);
+      if (videoId) {
+        videoEntry.segments.forEach((segment) => {
+          const startSeconds = timeToSeconds(segment.start);
+          const endSeconds = timeToSeconds(segment.end);
+          
+          let embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&controls=1&modestbranding=1`;
+
+          if (startSeconds !== undefined) {
+            embedUrl += `&start=${startSeconds}`;
+          }
+          if (endSeconds !== undefined) {
+            embedUrl += `&end=${endSeconds}`;
+          }
+
+          mediaLibrary.push({
+            type: 'youtube',
+            name: segment.name,
+            videoId: videoId,
+            url: embedUrl,
+            tags: segment.tags || ['poem'], 
+            start: startSeconds,
+            end: endSeconds
+          });
+        });
+      }
+    } else {
+      const videoId = parseYouTubeUrl(videoEntry.url);
+      if (videoId) {
+        let embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1`;
+
+        mediaLibrary.push({
+          type: 'youtube',
+          name: videoEntry.name,
+          videoId: videoId,
+          url: embedUrl,
+          tags: videoEntry.tags || [],
+          start: undefined, 
+          end: undefined
+        });
+      }
+    }
+  });
+  
+  console.log(`📚 Loaded ${mediaLibrary.length} videos (including timestamped segments)`);
+}
+
+// This global function will be called by the YouTube Iframe API when it loads.
+// It's required for the API to work, even if we don't directly create players here
+// (players are created in `createTV` on iframe load).
+window.onYouTubeIframeAPIReady = function() {
+  console.log("YouTube Iframe API script ready (global callback).");
+  // No direct player creation here, handled in createTV/iframe.onload
+};
+
+
+// --- Main Application IIFE ---
+(function(){
+  // If the app has already been initialized, exit this script execution immediately.
+  if (window._APP_INITIALIZED) {
+    console.warn("VIDEO_STACKER_PLUS script already initialized. Exiting redundant execution.");
+    return;
+  }
+  window._APP_INITIALIZED = true; // Set flag to true to prevent future executions
+
+  // --- Constants (remain inside IIFE for encapsulation)
+  const TV={ w:0.60, d:0.45, h:0.40 }; // TV dimensions (width, depth, height)
+  const SCREEN={ w:TV.w*0.84, h:TV.h*0.68 }; // Screen dimensions
+  const MAX_TVS = 100; // Max number of TVs
+
+  const CAM = { TOP:"TOP", WIDE:"WIDE", FREE:"FREE", ORBIT:"ORBIT" };
+  const GRAV = { NORMAL:0, SOFT:1, OFF:2 }; // Gravity modes
+  
+  // Mobile-optimized camera presets
+  const CAMERA_PRESETS=[
+    {name:'Default', pos:[0,3.0,6.5], look:[0,1.5,0]},
+    {name:'Close-up', pos:[0,2.5,4.0], look:[0,1.2,0]},
+    {name:'Overview', pos:[0,8.0,10.0], look:[0,3.0,0]},
+    {name:'Left Side', pos:[-5,3.5,3.0], look:[0,2.0,0]},
+    {name:'Right Side', pos:[5,3.5,3.0], look:[0,2.0,0]},
+    {name:'Top-Down', pos:[0,10.0,1.0], look:[0,0,0]},
+    {name:'Low Angle', pos:[0,1.0,7.0], look:[0,2.5,0]},
+    {name:'Dramatic', pos:[3,2.0,5.0], look:[0,3.0,0]}
+  ];
+  let currentPresetIndex = 0;
+  
+  // Environment presets
+  const ENVIRONMENTS = {
+    CALM: { name:'Calm Water', fog:[0x0a1520,15,40], ambient:0x2a3a4a, water:true, waterSpeed:0.3 },
+    ENERGETIC: { name:'Energetic', fog:[0x2a1010,12,35], ambient:0x4a2a2a, water:false },
+    VOID: { name:'Void', fog:[0x000000,8,25], ambient:0x0a0a0a, water:false },
+    GALLERY: { name:'Gallery', fog:[0x1a1a1a,18,45], ambient:0x3a3a3a, water:false }
+  };
+  
+  // Layout modes (updated to include new ones)
+  const LAYOUTS = {
+    FLAT_ROW: 'Flat Row',
+    VIDEO_WALL: 'Video Wall',
+    PYRAMID: 'Pyramid',
+    TRIANGLE: 'Triangle',
+    DENSE_GRID: 'Dense Grid',
+    TEMPLE: 'Temple'
+  };
+  let currentLayout = LAYOUTS.VIDEO_WALL; // Default to video wall
+
+  // Assembly tools
+  const TOOLS = {
+    SELECT: 'select',
+    MOVE: 'move',
+    SNAP: 'snap',
+    CLONE: 'clone',
+    GROUP: 'group',
+    TAG: 'tag'
+  };
+
+  // --- State Variables (remain inside IIFE for encapsulation)
+  let scene, cssScene, camera, renderer, cssRenderer, world, clock;
+  let FALLBACK=false, fallbackRoot=null;
+  let tvs=[]; // {group, body, cssPivot, cssObj, mediaItem, settled, id, tags[], layers[], metadata, iframe, youtubePlayer}
+  let selectedTV=null, gizmoGroup=null;
+  let height=0;
+  let gravMode=GRAV.NORMAL;
+  let camMode=CAM.TOP;
+  let selectMode=false;
+  let mouse = new THREE.Vector2(); // Mouse position in NDC
+  
+  let currentEnvironment = 'CALM';
+  let waterPlane = null;
+  let waterTime = 0;
+  let tvIdCounter = 1;
+  let tagColors = {}; // tag name -> color mapping
+  let scenes = []; // saved scene configurations
+  let gridSnapSize = 0.5;
+  let showTags = true;
+  let showIDs = true;
+  let muteAllVideos = true; // NEW: Global mute state
+
+  // LEGO assembly system
+  let magneticSnap = true; // Auto-snap to nearby TVs
+  let snapDistance = 0.2; // How close to snap (like LEGO tolerance)
+  let snapIndicators = []; // Visual snap point helpers
+  
+  // CINEMATIC MODE
+  let cinematicMode = false;
+  let focusedTV = null;
+  let ghostCanvas; 
+  let ghostCtx;    
+  let statusOverlay; 
+  const MOBILE_CAMERAS = {
+    CLOSEUP: { distance: 1.5, height: 0.3, fov: 65 },
+    CINEMA: { distance: 2.5, height: 0.5, fov: 50 },
+    ORBIT: { distance: 4.0, height: 1.5, fov: 55 },
+    FEED: { distance: 0.8, height: 0, fov: 70 } // NEW: Mobile feed mode!
+  };
+  let mobileCameraMode = 'ORBIT';
+  
+  // MOBILE FEED MODE (like TikTok/Instagram)
+  let feedMode = false;
+  let currentFeedIndex = 0;
+  let feedTouchStart = 0;
+  let showGhostLines = false; // Ghost lines optional now
+  let feedTransitioning = false;
+  
+  // UI VISIBILITY MODES
+  let uiMode = 'full'; // 'full', 'collapsed', 'hidden'
+  let uiAutoHideTimer = null;
+  let lastInteractionTime = Date.now();
+
+  // --- DOM Element References
+  const hudTV = document.getElementById('tv-count');
+  const hudH  = document.getElementById('height');
+  const camLbl= document.getElementById('cam-label');
+  const pill  = document.getElementById('mode-pill');
+  const $ = sel => document.querySelector(sel); // Convenience selector
+
+  // --- Helper Functions (remain inside IIFE, where they are used)
+
+  // Shows temporary status message overlay
+  function showStatus(message, duration = 2000){
+    if(!statusOverlay) return;
+    statusOverlay.textContent = message;
+    statusOverlay.classList.add('active');
+    clearTimeout(showStatus.timeout);
+    showStatus.timeout = setTimeout(() => { statusOverlay.classList.remove('active'); }, duration);
+  }
+
+  // --- Core 3D/UI Management Functions (defined early for hoisting)
+
+  // Updates the HUD (top-left info) and the mode pill (bottom-right info)
+  function updateHUD(){ 
+    hudTV.textContent = String(tvs.length); 
+    hudH.textContent = height.toFixed(1);
+    camLbl.textContent = camMode;
+    
+    const env = ENVIRONMENTS[currentEnvironment];
+    const gravText = gravMode===GRAV.NORMAL?'Normal':gravMode===GRAV.SOFT?'Soft':'Off';
+    const camPreset = CAMERA_PRESETS[currentPresetIndex];
+    pill.innerHTML = `
+      <div style="font-size:11px;line-height:1.5">
+        <b>ENV:</b> ${env.name} <b>•</b> <b>GRAV:</b> ${gravText}<br>
+        <b>VIEW:</b> ${camPreset.name} <b>•</b> <b>LAYOUT:</b> ${currentLayout}
+        ${selectedTV ? `<br><b>SELECTED:</b> ${selectedTV.id}` : ''}
+      </div>
+    `;
+  }
+
+  // Refreshes all video iframes to restart playback (critical for layout changes)
+  function refreshAllVideos() {
+    tvs.forEach(tv => {
+      if (tv.iframe && tv.mediaItem && tv.mediaItem.type === 'youtube') {
+        const currentSrc = tv.iframe.src;
+        tv.iframe.src = ''; // Clear
+        setTimeout(() => {
+          tv.iframe.src = currentSrc; // Reload
+        }, 50);
+      }
+    });
+    console.log(`🔄 Refreshed ${tvs.length} video screens`);
+  }
+
+  // Creates a new TV unit with physics and CSS3D screen
+  function createTV(x, y, z, mediaItem, isStatic = false){
+    const group=new THREE.Group();
+    // shell
+    const shellGeo=new THREE.BoxGeometry(TV.w,TV.h,TV.d);
+    const shellMat=new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.62, metalness:0.38});
+    const shell=new THREE.Mesh(shellGeo,shellMat); shell.castShadow=true; shell.receiveShadow=true; group.add(shell);
+    // bezel
+    const bezelGeo=new THREE.PlaneGeometry(SCREEN.w*1.08, SCREEN.h*1.08);
+    const bezelMat=new THREE.MeshBasicMaterial({color:0x0a0a0a});
+    const bezel=new THREE.Mesh(bezelGeo,bezelMat); bezel.position.set(0,0,TV.d/2+0.001); group.add(bezel);
+
+    // physics body
+    const shape=new CANNON.Box(new CANNON.Vec3(TV.w/2, TV.h/2, TV.d/2));
+    const body=new CANNON.Body({ mass: (isStatic ? 0 : 1), shape, sleepSpeedLimit:0.1, sleepTimeLimit:0.5 });
+    body.position.set(x, y, z); 
+    body.linearDamping=0.3; 
+    body.angularDamping=0.3; 
+    if (isStatic) body.type = CANNON.Body.STATIC; // Set as static if requested
+    world.addBody(body);
+
+    // CSS screen element
+    const screenEl=document.createElement('div');
+    screenEl.style.width=(SCREEN.w*320)+'px';
+    screenEl.style.height=(SCREEN.h*320)+'px';
+    screenEl.style.pointerEvents='auto'; // Allow interaction with iframe
+    screenEl.style.background='#000';
+    screenEl.style.display='flex'; screenEl.style.alignItems='center'; screenEl.style.justifyContent='center';
+    screenEl.style.overflow='hidden';
+
+    let iframe = null; // Store iframe reference
+    let youtubePlayer = null; // Store YouTube Player API object
+
+    if(!mediaItem){
+      screenEl.innerHTML = '<div style="color:#666;font-size:18px;font-weight:700;letter-spacing:.5px">EMPTY</div>';
+    }else if(mediaItem.type==='text'){
+      const escaped = mediaItem.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      screenEl.innerHTML = '<div style="color:#fff;font-size:14px;padding:16px;overflow:auto;max-height:100%;line-height:1.55">'+escaped+'</div>';
+    }else if(mediaItem.type==='image'){
+      const img=document.createElement('img'); img.src=mediaItem.url; img.style.maxWidth='100%'; img.style.maxHeight='100%'; img.style.objectFit='contain'; screenEl.appendChild(img);
+    }else if(mediaItem.type==='youtube'){
+      iframe=document.createElement('iframe');
+      let src = mediaItem.url;
+      // Ensure mute=1 initially for autoplay compatibility. Volume can be controlled via API later.
+      src = src.includes('?') ? `${src}&mute=1` : `${src}?mute=1`; // Add mute=1 if not present
+      iframe.src=src; 
+      iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='none';
+      iframe.setAttribute('allow', 'autoplay; encrypted-media');
+      iframe.setAttribute('allowfullscreen', 'true');
+      screenEl.appendChild(iframe);
+    }else if(mediaItem.type==='video'){
+      const vid=document.createElement('video'); vid.src=mediaItem.url; vid.autoplay=true; vid.loop=true; vid.muted=true; vid.playsInline=true; vid.style.width='100%'; vid.style.height='100%'; vid.style.objectFit='cover'; screenEl.appendChild(vid);
+      vid.addEventListener('error',()=>{ vid.muted=true; vid.play().catch(()=>{}); });
+      vid.play().catch(()=>{});
+    }
+
+    let cssObj=null, cssPivot=null;
+    if (cssRenderer){
+      cssObj = new THREE.CSS3DObject(screenEl);
+      cssObj.position.set(0,0,TV.d/2+0.002);
+      cssObj.scale.set(1/320, 1/320, 1);
+      cssPivot=new THREE.Object3D();
+      cssPivot.position.copy(body.position);
+      cssPivot.add(cssObj);
+      cssScene.add(cssPivot);
+    }
+
+    // Create ID on bezel frame (bottom edge)
+    const tvId = `TV-${String(tvIdCounter++).padStart(3, '0')}`;
+    const labelCanvas = document.createElement('canvas');
+    labelCanvas.width = 256;
+    labelCanvas.height = 32;
+    const labelCtx = labelCanvas.getContext('2d');
+    labelCtx.fillStyle = '#0a0a0a';
+    labelCtx.fillRect(0, 0, 256, 32);
+    labelCtx.fillStyle = '#00ffff';
+    labelCtx.font = 'bold 18px monospace';
+    labelCtx.textAlign = 'center';
+    labelCtx.textBaseline = 'middle';
+    labelCtx.fillText(tvId, 128, 16);
+    
+    const labelTexture = new THREE.CanvasTexture(labelCanvas);
+    const labelPlaneGeo = new THREE.PlaneGeometry(SCREEN.w * 1.08, 0.08);
+    const labelPlaneMat = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: false });
+    const labelPlane = new THREE.Mesh(labelPlaneGeo, labelPlaneMat);
+    labelPlane.position.set(0, -TV.h/2 + 0.04, TV.d/2 + 0.002); // Bottom of front face
+    labelPlane.visible = showIDs;
+    labelPlane.userData.clickable = true; // Make ID clickable!
+    labelPlane.userData.tvRef = null; // Will be set after unit created
+    group.add(labelPlane);
+    
+    const unit={ 
+      group, body, cssPivot, cssObj, mediaItem, settled:false,
+      id: tvId,
+      tags: mediaItem?.tags || [],
+      layers: mediaItem ? [{ type: mediaItem.type, data: mediaItem, opacity: 1.0, zIndex: 0 }] : [],
+      metadata: {
+        created: Date.now(),
+        modified: Date.now(),
+        notes: '',
+        title: mediaItem?.name || 'Untitled'
+      },
+      labelPlane: labelPlane,
+      locked: false,
+      snapToGrid: false,
+      iframe: iframe, // Store iframe reference
+      youtubePlayer: youtubePlayer // Placeholder for YT player API object
+    };
+    
+    // Link label to TV for clicking
+    labelPlane.userData.tvRef = unit;
+    
+    scene.add(group);
+    tvs.push(unit);
+    
+    // If it's a YouTube video, attempt to create a YT.Player object when the iframe loads
+    if (mediaItem?.type === 'youtube' && iframe) {
+      // YTPlayers is a global object now
+      iframe.onload = () => {
+        if (typeof YT !== 'undefined' && YT.Player) {
+          unit.youtubePlayer = new YT.Player(iframe, {
+            events: {
+              'onReady': (event) => {
+                window.YTPlayers[tvId] = event.target; // Store player instance
+                // Ensure initial mute state is applied
+                if (muteAllVideos) {
+                  event.target.mute();
+                } else {
+                  event.target.unMute();
+                }
+              },
+              'onError': (event) => {
+                console.error(`YouTube Player Error for ${tvId}:`, event.data);
+                // Optionally replace iframe with an error message
+                if (iframe && iframe.parentNode) {
+                  const errorDiv = document.createElement('div');
+                  errorDiv.textContent = `Video Error ${event.data}`;
+                  errorDiv.style.cssText = 'color:red; background:black; padding:10px; font-size:12px;';
+                  iframe.parentNode.replaceChild(errorDiv, iframe);
+                }
+              }
+            }
+          });
+        }
+      };
+    }
+
+    return unit;
+  }
+
+  // Adds a single dynamic TV (dropping from above)
+  function addTV(){
+    if (FALLBACK){
+      const tv = document.createElement('div');
+      tv.className = 'f-tv';
+      tv.textContent = 'TV ' + (tvs.length+1);
+      const fake = { height: (tvs.length+1)*0.45 };
+      height = Math.max(height, fake.height);
+      fallbackRoot.appendChild(tv);
+      tvs.push({}); // Add dummy TV for count
+      updateHUD();
+      return;
+    }
+    const topY = tvs.length ? Math.max(...tvs.map(t=> t.body.position.y)) + TV.h + 0.7 : 3.0;
+    const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+    createTV(0, topY, 0, media, false); // Dynamic TV, not static
+    updateHUD();
+  }
+
+  // --- Layout Functions
+
+  // Layout 1: Flat Row
+  function setupFlatLayout() {
+    resetAll();
+    currentLayout = LAYOUTS.FLAT_ROW;
+    if (mediaLibrary.length === 0) {
+      showStatus("⚠️ Media library is empty, cannot build flat row.", 3000);
+      return;
+    }
+
+    const spacing = TV.w + 0.1; 
+    const totalWidth = mediaLibrary.length * spacing - 0.1;
+    const startX = -totalWidth / 2; 
+
+    for (let i = 0; i < mediaLibrary.length; i++) {
+      const media = mediaLibrary[i];
+      const x = startX + i * spacing;
+      createTV(x, TV.h / 2 + 0.1, 0, media, true); // Create as static
+    }
+    console.log(`Built a flat row with ${tvs.length} TVs.`);
+    updateHUD();
+    camera.position.set(0, TV.h * 1.5, mediaLibrary.length * TV.d * 0.8 + 3);
+    camera.lookAt(0, TV.h / 2, 0);
+    showStatus('📏 Layout: Flat Row');
+    refreshAllVideos();
+  }
+
+  // Layout 2: Video Wall
+  function setupVideoWallLayout() {
+    resetAll();
+    currentLayout = LAYOUTS.VIDEO_WALL;
+    if (mediaLibrary.length === 0) {
+      showStatus("⚠️ Media library is empty, cannot build video wall.", 3000);
+      return;
+    }
+
+    const numTVs = mediaLibrary.length;
+    const aspectRatio = window.innerWidth / window.innerHeight;
+    
+    let cols = Math.ceil(Math.sqrt(numTVs * aspectRatio));
+    let rows = Math.ceil(numTVs / cols);
+
+    // Adjust for better visual balance on small number of TVs
+    if (numTVs <= 4) { cols = numTVs; rows = 1; }
+    else if (numTVs <= 6) { cols = 3; rows = 2; }
+    else if (numTVs <= 9) { cols = 3; rows = 3; }
+    else if (numTVs <= 12) { cols = 4; rows = 3; }
+    else if (numTVs <= 16) { cols = 4; rows = 4; }
+    
+    const spacingX = TV.w + 0.1;
+    const spacingY = TV.h + 0.1;
+
+    const wallWidth = (cols - 1) * spacingX;
+    const wallHeight = (rows - 1) * spacingY;
+
+    const startX = -wallWidth / 2;
+    const startY = TV.h / 2 + 0.1; // Base height
+    const startZ = 0;
+
+    let tvIndex = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (tvIndex >= numTVs) break;
+
+        const media = mediaLibrary[tvIndex];
+        const x = startX + c * spacingX;
+        const y = startY + (rows - 1 - r) * spacingY; // Build from bottom up
+        const z = startZ;
+        
+        createTV(x, y, z, media, true); // Create as static
+        tvIndex++;
+      }
+      if (tvIndex >= numTVs) break;
+    }
+
+    console.log(`Built a video wall (${cols}x${rows}) with ${tvs.length} TVs.`);
+    updateHUD();
+
+    const camDistance = Math.max(wallWidth, wallHeight) * 1.5;
+    camera.position.set(0, wallHeight / 2 + TV.h * 0.5, camDistance + TV.d * 2);
+    camera.lookAt(0, wallHeight / 2, 0);
+    showStatus('🖼️ Layout: Video Wall');
+    refreshAllVideos();
+  }
+
+  // Layout 3: Pyramid (re-using previous logic, ensuring it uses all media)
+  function setupPyramidOfTVs() {
+    resetAll();
+    currentLayout = LAYOUTS.PYRAMID;
+    if (mediaLibrary.length === 0) {
+      showStatus("⚠️ Media library is empty, cannot build pyramid.", 3000);
+      return;
+    }
+
+    const numMedia = mediaLibrary.length;
+    let baseSize = 0;
+    let totalTvsInPyramid = 0;
+    for (let i = 1; ; i++) {
+        totalTvsInPyramid += i * i;
+        if (totalTvsInPyramid >= numMedia || i >= 10) { // Cap max base size at 10 to prevent excessive TVs
+            baseSize = i;
+            break;
+        }
+    }
+    
+    let mediaIndex = 0;
+    
+    for (let layer = 0; layer < baseSize; layer++) {
+      const currentLayerWidth = baseSize - layer;
+      const layerY = TV.h * layer + 0.1; 
+
+      const startX = -((currentLayerWidth - 1) * (TV.w + 0.1)) / 2;
+      const startZ = -((currentLayerWidth - 1) * (TV.d + 0.1)) / 2;
+
+      for (let z = 0; z < currentLayerWidth; z++) {
+        for (let x = 0; x < currentLayerWidth; x++) {
+          if (mediaIndex >= numMedia) break; 
+
+          const media = mediaLibrary[mediaIndex];
+          const posX = startX + (x * (TV.w + 0.1));
+          const posZ = startZ + (z * (TV.d + 0.1));
+          
+          createTV(posX, layerY, posZ, media, true); // Create as static
+          mediaIndex++;
+        }
+        if (mediaIndex >= numMedia) break;
+      }
+      if (mediaIndex >= numMedia) break;
+    }
+    console.log(`Built a pyramid (base ${baseSize}) with ${tvs.length} TVs.`);
+    updateHUD();
+
+    camera.position.set(0, baseSize * TV.h * 0.8, baseSize * TV.d * 2.5);
+    camera.lookAt(0, baseSize * TV.h * 0.5, 0);
+    showStatus('🔺 Layout: Pyramid');
+    refreshAllVideos();
+  }
+
+  // Layout 4: Triangle (2D flat triangle shape)
+  function setupTriangleLayout() {
+    resetAll();
+    currentLayout = LAYOUTS.TRIANGLE;
+    if (mediaLibrary.length === 0) {
+      showStatus("⚠️ Media library is empty, cannot build triangle.", 3000);
+      return;
+    }
+
+    const numMedia = mediaLibrary.length;
+    let mediaIndex = 0;
+    let row = 0;
+    const spacing = TV.w + 0.05; // Tight spacing
+    const y = TV.h / 2 + 0.1; // All on same plane
+
+    // Build triangle: 1, 2, 3, 4, 5... TVs per row
+    while (mediaIndex < numMedia) {
+      const tvsInRow = row + 1;
+      const startX = -(tvsInRow - 1) * spacing / 2;
+      const z = -row * (TV.d + 0.05); // Move back each row
+
+      for (let i = 0; i < tvsInRow && mediaIndex < numMedia; i++) {
+        const media = mediaLibrary[mediaIndex];
+        const x = startX + i * spacing;
+        createTV(x, y, z, media, true);
+        mediaIndex++;
+      }
+      row++;
+    }
+
+    console.log(`Built triangle with ${tvs.length} TVs in ${row} rows.`);
+    updateHUD();
+    camera.position.set(0, row * TV.d * 0.6, row * TV.d * 1.8);
+    camera.lookAt(0, y, -row * TV.d * 0.3);
+    showStatus('🔺 Layout: Triangle');
+    refreshAllVideos();
+  }
+
+  // Layout 5: Dense Grid (Radio Shack - maximum density)
+  function setupDenseGridLayout() {
+    resetAll();
+    currentLayout = LAYOUTS.DENSE_GRID;
+    if (mediaLibrary.length === 0) {
+      showStatus("⚠️ Media library is empty, cannot build dense grid.", 3000);
+      return;
+    }
+
+    const numMedia = mediaLibrary.length;
+    const cols = Math.ceil(Math.sqrt(numMedia * 1.5)); // Slightly wider grid
+    const rows = Math.ceil(numMedia / cols);
+    
+    const spacingX = TV.w + 0.02; // TIGHT spacing
+    const spacingY = TV.h + 0.02;
+    const y = TV.h / 2 + 0.1;
+    
+    const startX = -(cols - 1) * spacingX / 2;
+    const startZ = -(rows - 1) * (TV.d + 0.02) / 2;
+
+    let mediaIndex = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols && mediaIndex < numMedia; c++) {
+        const media = mediaLibrary[mediaIndex];
+        const x = startX + c * spacingX;
+        const z = startZ + r * (TV.d + 0.02);
+        createTV(x, y, z, media, true);
+        mediaIndex++;
+      }
+    }
+
+    console.log(`Built dense grid ${cols}x${rows} with ${tvs.length} TVs.`);
+    updateHUD();
+    camera.position.set(0, rows * TV.h * 0.8, rows * TV.d * 1.5);
+    camera.lookAt(0, y, 0);
+    showStatus('🟦 Layout: Dense Grid (Radio Shack)');
+    refreshAllVideos();
+  }
+
+  // Layout 6: Temple (architectural temple structure)
+  function setupTempleLayout() {
+    resetAll();
+    currentLayout = LAYOUTS.TEMPLE;
+    if (mediaLibrary.length === 0) {
+      showStatus("⚠️ Media library is empty, cannot build temple.", 3000);
+      return;
+    }
+
+    const numMedia = mediaLibrary.length;
+    let mediaIndex = 0;
+
+    // Temple design: Base platform + columns + roof
+    const spacing = TV.w + 0.15;
+    const colHeight = TV.h + 0.05;
+
+    // FLOOR/BASE - horizontal platform
+    const baseSize = Math.min(Math.ceil(Math.sqrt(numMedia * 0.3)), 6);
+    const baseY = 0.1;
+    for (let z = 0; z < baseSize && mediaIndex < numMedia; z++) {
+      for (let x = 0; x < baseSize && mediaIndex < numMedia; x++) {
+        const media = mediaLibrary[mediaIndex];
+        const posX = (x - baseSize / 2) * spacing;
+        const posZ = (z - baseSize / 2) * spacing;
+        createTV(posX, baseY, posZ, media, true);
+        mediaIndex++;
+      }
+    }
+
+    // COLUMNS - 4 corner pillars
+    const pillarHeight = Math.min(Math.floor(numMedia * 0.15), 5);
+    const pillarOffset = baseSize * spacing / 2.2;
+    const corners = [
+      [-pillarOffset, pillarOffset],
+      [pillarOffset, pillarOffset],
+      [-pillarOffset, -pillarOffset],
+      [pillarOffset, -pillarOffset]
+    ];
+
+    for (let corner of corners) {
+      for (let h = 0; h < pillarHeight && mediaIndex < numMedia; h++) {
+        const media = mediaLibrary[mediaIndex];
+        const y = baseY + (h + 1) * colHeight;
+        createTV(corner[0], y, corner[1], media, true);
+        mediaIndex++;
+      }
+    }
+
+    // WALLS - connecting walls between pillars
+    const wallY = baseY + pillarHeight * colHeight;
+    const wallSections = Math.min(baseSize - 1, 4);
+    // Front and back walls
+    for (let i = 0; i < wallSections && mediaIndex < numMedia; i++) {
+      const x = (-wallSections / 2 + i) * spacing;
+      // Front
+      if (mediaIndex < numMedia) {
+        createTV(x, wallY, pillarOffset, mediaLibrary[mediaIndex], true);
+        mediaIndex++;
+      }
+      // Back
+      if (mediaIndex < numMedia) {
+        createTV(x, wallY, -pillarOffset, mediaLibrary[mediaIndex], true);
+        mediaIndex++;
+      }
+    }
+
+    // ROOF/TOP - remaining TVs in smaller grid on top
+    const roofY = wallY + colHeight;
+    const roofSize = Math.ceil(Math.sqrt(numMedia - mediaIndex));
+    for (let z = 0; z < roofSize && mediaIndex < numMedia; z++) {
+      for (let x = 0; x < roofSize && mediaIndex < numMedia; x++) {
+        const media = mediaLibrary[mediaIndex];
+        const posX = (x - roofSize / 2) * (spacing * 0.8);
+        const posZ = (z - roofSize / 2) * (spacing * 0.8);
+        createTV(posX, roofY, posZ, media, true);
+        mediaIndex++;
+      }
+    }
+
+    console.log(`Built temple with ${tvs.length} TVs (base, columns, walls, roof).`);
+    updateHUD();
+    const templeHeight = roofY + TV.h;
+    camera.position.set(baseSize * spacing * 1.2, templeHeight * 0.7, baseSize * spacing * 1.5);
+    camera.lookAt(0, templeHeight * 0.4, 0);
+    showStatus('⛩️ Layout: Temple');
+    refreshAllVideos();
+  }
+
+  // Cycles through defined layouts
+  function cycleLayout() {
+    const layouts = [LAYOUTS.FLAT_ROW, LAYOUTS.VIDEO_WALL, LAYOUTS.PYRAMID, LAYOUTS.TRIANGLE, LAYOUTS.DENSE_GRID, LAYOUTS.TEMPLE];
+    const currentIndex = layouts.indexOf(currentLayout);
+    const nextIndex = (currentIndex + 1) % layouts.length;
+    const nextLayout = layouts[nextIndex];
+
+    if (nextLayout === LAYOUTS.FLAT_ROW) {
+      setupFlatLayout();
+    } else if (nextLayout === LAYOUTS.VIDEO_WALL) {
+      setupVideoWallLayout();
+    } else if (nextLayout === LAYOUTS.PYRAMID) {
+      setupPyramidOfTVs();
+    } else if (nextLayout === LAYOUTS.TRIANGLE) {
+      setupTriangleLayout();
+    } else if (nextLayout === LAYOUTS.DENSE_GRID) {
+      setupDenseGridLayout();
+    } else if (nextLayout === LAYOUTS.TEMPLE) {
+      setupTempleLayout();
+    }
+  }
+  
+  // Resets the entire scene
+  function resetAll(){ 
+    tvs.forEach(t=>{ 
+      scene.remove(t.group); 
+      if(t.cssPivot) cssScene.remove(t.cssPivot); 
+      if(t.iframe) t.iframe.remove(); // Ensure iframe is removed from DOM to prevent ghost players
+      // if youtube player api exists, stop and delete it
+      if (t.youtubePlayer && window.YTPlayers) {
+          try {
+              t.youtubePlayer.stopVideo();
+              delete window.YTPlayers[t.id]; // Remove from global player list
+          } catch (e) {
+              console.warn("Could not stop/delete YouTube player:", e);
+          }
+      }
+      world.removeBody(t.body); 
+    }); 
+    tvs.length=0; deselectTV(); height=0; tvIdCounter=1; updateHUD(); 
+    showStatus('↺ Scene Reset');
+  }
+
+  // Toggles global mute/unmute for all YouTube videos
+  function toggleGlobalMute() {
+    muteAllVideos = !muteAllVideos;
+    const muteButton = $('#btn-mute-all');
+    muteButton.textContent = muteAllVideos ? '🔇' : '🔊';
+    muteButton.classList.toggle('active', !muteAllVideos); // Active when unmuted
+    
+    tvs.forEach(tv => {
+      if (tv.mediaItem?.type === 'youtube' && tv.youtubePlayer && typeof tv.youtubePlayer.mute === 'function' && typeof tv.youtubePlayer.unMute === 'function') {
+        if (muteAllVideos) {
+          tv.youtubePlayer.mute();
+        } else {
+          tv.youtubePlayer.unMute();
+        }
+      }
+    });
+    showStatus(`🔊 All videos ${muteAllVideos ? 'MUTED' : 'UNMUTED'}`);
+  }
+
+  // --- Remote Control Gizmo
+  let stabilityRing = null;
+  
+  function createGizmo(tv){ 
+    $('#tv-remote').style.display = 'block';
+    console.log('🕹️ REMOTE CONTROL ACTIVATED!');
+    createStabilityRing(tv);
+    setupRemoteControls(tv);
+  }
+  
+  function createStabilityRing(tv){
+    if(stabilityRing){ scene.remove(stabilityRing); }
+    const ringGeo = new THREE.RingGeometry(0.5, 0.6, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    stabilityRing = new THREE.Mesh(ringGeo, ringMat);
+    stabilityRing.rotation.x = -Math.PI / 2;
+    stabilityRing.position.set( tv.body.position.x, 0.02, tv.body.position.z );
+    scene.add(stabilityRing);
+    updateStabilityRing(tv);
+  }
+  
+  function updateStabilityRing(tv){
+    if(!stabilityRing || !tv) return;
+    const tilt = Math.abs(tv.body.quaternion.x) + Math.abs(tv.body.quaternion.z);
+    if(tilt < 0.1){ stabilityRing.material.color.setHex(0x00ff00); } 
+    else if(tilt < 0.3){ stabilityRing.material.color.setHex(0xffff00); } 
+    else { stabilityRing.material.color.setHex(0xff0000); }
+    stabilityRing.position.x = tv.body.position.x;
+    stabilityRing.position.z = tv.body.position.z;
+  }
+  
+  function removeGizmo(){ 
+    $('#tv-remote').style.display = 'none';
+    if(stabilityRing){ scene.remove(stabilityRing); stabilityRing=null; }
+  }
+  
+  function setupRemoteControls(tv){
+    const moveSpeed = 0.1;
+    const liftSpeed = 0.15;
+    const buttons = ['remote-up', 'remote-down', 'remote-left', 'remote-right', 'remote-lift', 'remote-drop', 'remote-snap', 'remote-center'];
+    
+    // Crucial: Re-clone to remove old event listeners and prevent duplicates
+    buttons.forEach(id => {
+      const oldBtn = $(`#${id}`);
+      if (oldBtn) {
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+      }
+    });
+
+    // Assign new event listeners
+    $('#remote-up').onclick = () => { tv.body.position.z -= moveSpeed; hapticFeedback('light'); };
+    $('#remote-down').onclick = () => { tv.body.position.z += moveSpeed; hapticFeedback('light'); };
+    $('#remote-left').onclick = () => { tv.body.position.x -= moveSpeed; hapticFeedback('light'); };
+    $('#remote-right').onclick = () => { tv.body.position.x += moveSpeed; hapticFeedback('light'); };
+    $('#remote-lift').onclick = () => { tv.body.position.y += liftSpeed; hapticFeedback('medium'); };
+    $('#remote-drop').onclick = () => { tv.body.position.y -= liftSpeed; hapticFeedback('medium'); };
+    $('#remote-snap').onclick = () => {
+      tv.snapToGrid = !tv.snapToGrid;
+      $('#remote-snap').style.background = tv.snapToGrid ? '#33aa33' : '#666';
+      showStatus(`🧲 Snap: ${tv.snapToGrid ? 'ON' : 'OFF'}`);
+    };
+    $('#remote-center').onclick = () => {
+      if(magneticSnap){ applyMagneticSnap(tv); hapticFeedback('snap'); }
+      showStatus('✅ Snap applied');
+    };
+  }
+  
+  function selectTV(tv){ 
+    if(selectedTV){ 
+      selectedTV.group.children[0].material.emissive = new THREE.Color(0x000000); 
+    } 
+    selectedTV=tv; 
+    tv.group.children[0].material.emissive=new THREE.Color(0x0a84ff); 
+    tv.group.children[0].material.emissiveIntensity=0.45; 
+    createGizmo(tv);
+    console.log(`✅ Selected: ${tv.id}`);
+  }
+  
+  function deselectTV(){ 
+    if(selectedTV){ 
+      selectedTV.group.children[0].material.emissive=new THREE.Color(0x000000); 
+      selectedTV=null; 
+    } 
+    removeGizmo(); 
+  }
+
+  // --- Pointer/Mouse/Touch Handlers
+  function ndc(e){ const rect = renderer.domElement.getBoundingClientRect(); mouse.x = ((e.clientX-rect.left)/rect.width)*2-1; mouse.y = -((e.clientY-rect.top)/rect.height)*2+1; }
+  
+  function onPointerDown(e){
+    if(feedMode){ feedTouchStart = e.clientY; }
+  }
+  function onPointerMove(e){ ndc(e); }
+  
+  // LEGO Assembly: Magnetic snap to nearby TVs
+  function applyMagneticSnap(movingTV){
+    let snapped = false;
+    for(const otherTV of tvs){
+      if(otherTV === movingTV) continue;
+      const dx = movingTV.body.position.x - otherTV.body.position.x;
+      const dy = movingTV.body.position.y - otherTV.body.position.y;
+      const dz = movingTV.body.position.z - otherTV.body.position.z;
+      
+      // Snap to top
+      if(Math.abs(dx) < snapDistance && Math.abs(dz) < snapDistance){
+        const targetY = otherTV.body.position.y + TV.h + 0.02;
+        if(Math.abs(dy - (targetY - otherTV.body.position.y)) < snapDistance){
+          movingTV.body.position.y = targetY;
+          movingTV.body.position.x = otherTV.body.position.x;
+          movingTV.body.position.z = otherTV.body.position.z;
+          snapped = true; break;
+        }
+      }
+      // Snap side-by-side (X-axis)
+      if(Math.abs(dy) < snapDistance && Math.abs(dz) < snapDistance){
+        const targetX = otherTV.body.position.x + TV.w + 0.02;
+        if(Math.abs(dx - (targetX - otherTV.body.position.x)) < snapDistance){
+          movingTV.body.position.x = targetX;
+          movingTV.body.position.y = otherTV.body.position.y;
+          movingTV.body.position.z = otherTV.body.position.z;
+          snapped = true; break;
+        }
+      }
+      // Snap front-to-back (Z-axis)
+      if(Math.abs(dx) < snapDistance && Math.abs(dy) < snapDistance){
+        const targetZ = otherTV.body.position.z + TV.d + 0.02;
+        if(Math.abs(dz - (targetZ - otherTV.body.position.z)) < snapDistance){
+          movingTV.body.position.z = targetZ;
+          movingTV.body.position.x = otherTV.body.position.x;
+          movingTV.body.position.y = otherTV.body.position.y;
+          snapped = true; break;
+        }
+      }
+    }
+    if(snapped && gizmoGroup){
+      gizmoGroup.children.forEach(child => {
+        if(child.material && child.material.color){
+          child.material.color.setHex(0x00ff00);
+          setTimeout(() => { if(child.material.color) child.material.color.setHex(child.userData.originalColor || 0xffffff); }, 200);
+        }
+      });
+    }
+  }
+  function onPointerUp(e){ 
+    if(feedMode && feedTouchStart){
+      const deltaY = e.clientY - feedTouchStart;
+      const swipeThreshold = 50; 
+      if(Math.abs(deltaY) > swipeThreshold){
+        if(deltaY < 0){ nextFeedTV(); } else { prevFeedTV(); }
+      }
+      feedTouchStart = 0;
+    }
+  }
+  function onClick(e){ 
+    if(dragging) return; 
+    ndc(e); 
+    
+    const allMeshes = [];
+    tvs.forEach(t => {
+      allMeshes.push(t.group.children[0]);
+      if(t.labelPlane) allMeshes.push(t.labelPlane);
+    });
+    
+    const hits=raycast(allMeshes); 
+    if(hits.length){ 
+      const hitObj = hits[0].object;
+      if(hitObj.userData.clickable && hitObj.userData.tvRef){
+        const tv = hitObj.userData.tvRef;
+        selectTV(tv);
+        return;
+      }
+      const tv=tvs.find(t=>t.group.children[0]===hitObj); 
+      if(tv) { selectTV(tv); return; }
+    }
+    deselectTV();
+  }
+  function raycast(objs){ raycaster.setFromCamera(mouse, camera); return raycaster.intersectObjects(objs, true); }
+
+  // --- Media Library Functions
+  function openMedia(){ $('#media-upload').classList.add('open'); renderLibrary(); }
+  function closeMedia(){ $('#media-upload').classList.remove('open'); }
+  function handleFileDrop(e){ e.preventDefault(); e.stopPropagation(); $('#drop-zone').classList.remove('dragover'); processFiles(e.dataTransfer.files); }
+  function handleFileUpload(e){ processFiles(e.target.files); e.target.value=''; }
+  function processFiles(files){ for (let f of files){ const url = URL.createObjectURL(f); if(f.type.startsWith('video/')) mediaLibrary.push({type:'video', name:f.name, url}); else if(f.type.startsWith('image/')) mediaLibrary.push({type:'image', name:f.name, url}); else if(f.type==='text/plain'){ const r=new FileReader(); r.onload = ev=>{ mediaLibrary.push({type:'text', name:f.name, content:ev.target.result}); renderLibrary(); }; r.readAsText(f); continue; } } renderLibrary(); }
+  function addTextToLibrary(){
+    const txt = $('#text-input').value.trim();
+    if(!txt) return;
+    const videoId = parseYouTubeUrl(txt);
+    if (videoId) {
+      mediaLibrary.push({type:'youtube', name:'YouTube Video '+(mediaLibrary.length+1), videoId:videoId, url:`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&controls=1&modestbranding=1`});
+    } else {
+      mediaLibrary.push({type:'text', name:'Text '+(mediaLibrary.length+1), content:txt});
+    }
+    $('#text-input').value='';
+    renderLibrary();
+  }
+  function renderLibrary(){ const c=$('#library'); c.innerHTML=''; if(mediaLibrary.length===0){ c.innerHTML='<div style="opacity:.65; text-align:center; padding:14px;">No media yet</div>'; return; } mediaLibrary.forEach((item,idx)=>{ const div=document.createElement('div'); div.className='lib-item'; const name=document.createElement('span'); name.textContent=item.name; name.style.flex='1'; name.style.overflow='hidden'; name.style.textOverflow='ellipsis'; name.style.whiteSpace='nowrap'; const use=document.createElement('button'); use.textContent='Use'; use.onclick=()=>{ createTV(0, TV.h / 2 + 3.0, 0, item, false); updateHUD(); }; const del=document.createElement('button'); del.textContent='✕'; del.onclick=()=>{ if(item.url) URL.revokeObjectURL(item.url); mediaLibrary.splice(idx,1); renderLibrary(); };
+      div.append(name,use,del); c.appendChild(div); }); }
+
+  // --- TV Guide Functions
+  function openTVGuide(){
+    const guide = $('#tv-guide');
+    guide.style.pointerEvents = 'auto';
+    guide.style.opacity = '1';
+    renderTVGuide();
+    showStatus('📺 TV Guide opened');
+  }
+  
+  function closeTVGuide(){
+    const guide = $('#tv-guide');
+    guide.style.pointerEvents = 'none';
+    guide.style.opacity = '0';
+  }
+  
+  function renderTVGuide(){
+    const list = $('#guide-list');
+    list.innerHTML = '';
+    
+    if(tvs.length === 0){
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">No TVs yet. Press + to add one!</div>';
+      return;
+    }
+    
+    tvs.forEach((tv, idx) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin:8px 0;cursor:pointer;transition:all 0.15s;border:2px solid transparent;';
+      
+      const channelNum = idx + 1;
+      const title = tv.metadata.title || 'Untitled';
+      const type = tv.mediaItem?.type || 'empty';
+      const tags = tv.tags.length > 0 ? tv.tags.map(tag => `<span style="background:rgba(10,132,255,0.3);padding:2px 6px;border-radius:6px;margin-right:4px;display:inline-block;font-size:10px;">${tag}</span>`).join('') : '<span style="color:#666;">No tags</span>';
+      
+      item.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:20px;font-weight:700;color:#0ff;">${tv.id}</div>
+          <div style="font-size:11px;color:#888;">Ch ${channelNum}</div>
+        </div>
+        <div style="font-size:14px;margin-bottom:4px;">📺 ${title}</div>
+        <div style="font-size:11px;color:#888;">Type: ${type}</div>
+        <div style="font-size:10px;color:#666;margin-top:6px;">🏷️ ${tags}</div>
+      `;
+      
+      item.onmouseover = () => { item.style.background = 'rgba(10,132,255,0.15)'; item.style.borderColor = '#0a84ff'; };
+      item.onmouseout = () => { item.style.background = 'rgba(255,255,255,0.06)'; item.style.borderColor = 'transparent'; };
+      item.onclick = () => {
+        selectTV(tv);
+        closeTVGuide();
+        camera.position.set( tv.body.position.x + 2, tv.body.position.y + 1, tv.body.position.z + 3 );
+        camera.lookAt(tv.body.position.x, tv.body.position.y, tv.body.position.z);
+        showStatus(`📺 Tuned to ${tv.id}`);
+      };
+      
+      list.appendChild(item);
+    });
+  }
+  
+  // --- Minecraft-style Placement Grid
+  let gridCanvas, gridCtx;
+  function initPlacementGrid(){
+    gridCanvas = $('#grid-canvas');
+    if(!gridCanvas) return;
+    gridCanvas.width = window.innerWidth;
+    gridCanvas.height = window.innerHeight;
+    gridCtx = gridCanvas.getContext('2d');
+  }
+  
+  function drawPlacementGrid(){
+    if(!gridCtx || !selectedTV) return;
+    gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+    const positions = [
+      new THREE.Vector3(selectedTV.body.position.x, selectedTV.body.position.y + TV.h + 0.02, selectedTV.body.position.z),
+      new THREE.Vector3(selectedTV.body.position.x - TV.w - 0.02, selectedTV.body.position.y, selectedTV.body.position.z),
+      new THREE.Vector3(selectedTV.body.position.x + TV.w + 0.02, selectedTV.body.position.y, selectedTV.body.position.z),
+      new THREE.Vector3(selectedTV.body.position.x, selectedTV.body.position.y, selectedTV.body.position.z - TV.d - 0.02),
+      new THREE.Vector3(selectedTV.body.position.x, selectedTV.body.position.y, selectedTV.body.position.z + TV.d + 0.02),
+    ];
+    gridCtx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
+    gridCtx.lineWidth = 2;
+    gridCtx.setLineDash([5, 5]);
+    positions.forEach(pos => {
+      const screenPos = pos.clone().project(camera);
+      const x = (screenPos.x * 0.5 + 0.5) * gridCanvas.width;
+      const y = (-(screenPos.y * 0.5) + 0.5) * gridCanvas.height;
+      if(screenPos.z < 1){ 
+        const boxW = 60; const boxH = 40;
+        gridCtx.strokeRect(x - boxW/2, y - boxH/2, boxW, boxH);
+        gridCtx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+        gridCtx.font = '10px monospace';
+        gridCtx.textAlign = 'center';
+        gridCtx.fillText('SNAP', x, y);
+      }
+    });
+    gridCtx.setLineDash([]);
+  }
+  
+  // --- Ghost Lines & Status System
+  function initGhostCanvas(){
+    ghostCanvas = $('#ghost-canvas');
+    if(!ghostCanvas) return;
+    ghostCanvas.width = window.innerWidth;
+    ghostCanvas.height = window.innerHeight;
+    ghostCtx = ghostCanvas.getContext('2d');
+    statusOverlay = $('#status-overlay');
+  }
+  
+  function drawGhostLines(){
+    if(!ghostCtx || !selectedTV || !showGhostLines) return;
+    ghostCtx.clearRect(0, 0, ghostCanvas.width, ghostCanvas.height);
+    const tv = selectedTV;
+    const tvPos = new THREE.Vector3( tv.body.position.x, tv.body.position.y, tv.body.position.z );
+    ghostCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+    ghostCtx.lineWidth = 2;
+    ghostCtx.setLineDash([8, 8]);
+    tvs.forEach(otherTV => {
+      if(otherTV === tv) return;
+      const dist = Math.sqrt( Math.pow(tv.body.position.x - otherTV.body.position.x, 2) + Math.pow(tv.body.position.y - otherTV.body.position.y, 2) + Math.pow(tv.body.position.z - otherTV.body.position.z, 2) );
+      if(dist < snapDistance * 5){
+        const start = tvPos.clone().project(camera);
+        const end = new THREE.Vector3( otherTV.body.position.x, otherTV.body.position.y, otherTV.body.position.z ).project(camera);
+        const x1 = (start.x * 0.5 + 0.5) * ghostCanvas.width;
+        const y1 = (-(start.y * 0.5) + 0.5) * ghostCanvas.height;
+        const x2 = (end.x * 0.5 + 0.5) * ghostCanvas.width;
+        const y2 = (-(end.y * 0.5) + 0.5) * ghostCanvas.height;
+        if(start.z < 1 && end.z < 1){
+          ghostCtx.beginPath(); ghostCtx.moveTo(x1, y1); ghostCtx.lineTo(x2, y2); ghostCtx.stroke();
+          const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2;
+          ghostCtx.fillStyle = 'rgba(0, 255, 255, 0.6)';
+          ghostCtx.beginPath(); ghostCtx.arc(mx, my, 4, 0, Math.PI * 2); ghostCtx.fill();
+        }
+      }
+    });
+    ghostCtx.setLineDash([]);
+  }
+  
+  // Toggles cinematic mode (letterbox, color adjustments)
+  function toggleCinematicMode(){
+    cinematicMode = !cinematicMode;
+    document.body.classList.toggle('cinematic-mode', cinematicMode);
+    if(cinematicMode){ camera.fov = 45; camera.updateProjectionMatrix(); showStatus('🎥 CINEMATIC MODE'); }
+    else { camera.fov = 55; camera.updateProjectionMatrix(); showStatus('📹 NORMAL MODE'); }
+  }
+
+  // Sets camera to specific mobile-optimized views
+  function setMobileCameraMode(mode){
+    mobileCameraMode = mode; const config = MOBILE_CAMERAS[mode]; if(!config || !selectedTV) return;
+    const tv = selectedTV; const angle = Date.now() * 0.0003;
+    camera.position.set( tv.body.position.x + Math.cos(angle) * config.distance, tv.body.position.y + config.height, tv.body.position.z + Math.sin(angle) * config.distance );
+    camera.lookAt(tv.body.position.x, tv.body.position.y, tv.body.position.z);
+    camera.fov = config.fov; camera.updateProjectionMatrix(); showStatus(`📷 ${mode} VIEW`);
+  }
+
+  // Toggles fullscreen mode
+  function toggleFullscreen(){
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen();
+      showStatus('⛶ FULLSCREEN');
+    } else {
+      document.exitFullscreen();
+      showStatus('💻 WINDOWED');
+    }
+  }
+
+  // Set world gravity based on mode
+  function setWorldGravity(mode){
+    if(!world) return;
+    if(mode === GRAV.NORMAL){
+      world.gravity.set(0, -9.82, 0);
+    } else if(mode === GRAV.SOFT){
+      world.gravity.set(0, -3.0, 0);
+    } else { // GRAV.OFF
+      world.gravity.set(0, 0, 0);
+    }
+  }
+
+  // Cycle through gravity modes
+  function cycleGravity(){
+    const modes = [GRAV.NORMAL, GRAV.SOFT, GRAV.OFF];
+    const idx = modes.indexOf(gravMode);
+    gravMode = modes[(idx + 1) % modes.length];
+    setWorldGravity(gravMode);
+    const text = gravMode === GRAV.NORMAL ? 'Normal' : gravMode === GRAV.SOFT ? 'Soft' : 'Off';
+    showStatus(`🌍 Gravity: ${text}`);
+  }
+
+  // Cycle through camera presets
+  function cycleCameraPreset(){
+    currentPresetIndex = (currentPresetIndex + 1) % CAMERA_PRESETS.length;
+    const preset = CAMERA_PRESETS[currentPresetIndex];
+    camera.position.set(preset.pos[0], preset.pos[1], preset.pos[2]);
+    camera.lookAt(preset.look[0], preset.look[1], preset.look[2]);
+    showStatus(`🎥 Camera: ${preset.name}`);
+  }
+
+  // Toggle physics freeze (pause simulation)
+  function toggleFreeze(){
+    if(!world) return;
+    const paused = world.allowSleep;
+    world.allowSleep = !paused;
+    tvs.forEach(tv => {
+      if(paused){
+        tv.body.type = CANNON.Body.STATIC;
+        tv.body.mass = 0;
+      } else {
+        tv.body.type = CANNON.Body.DYNAMIC;
+        tv.body.mass = 1;
+      }
+    });
+    showStatus(paused ? '⏸️ Frozen' : '▶️ Unfrozen');
+  }
+
+  // Focuses camera on a specific TV
+  function focusOnTV(tv){
+    focusedTV = tv;
+    selectTV(tv);
+    if(cinematicMode){
+      const distance = 2.0; const height = tv.body.position.y + 0.4;
+      camera.position.set( tv.body.position.x + distance, height, tv.body.position.z + distance * 1.2 );
+      camera.lookAt(tv.body.position.x, tv.body.position.y, tv.body.position.z);
+    }
+    showStatus(`🎯 FOCUS: ${tv.id}`);
+  }
+  
+  // --- MOBILE FEED MODE (TikTok-style vertical scrolling)
+  function toggleFeedMode(){
+    feedMode = !feedMode;
+    if(feedMode){
+      currentFeedIndex = tvs.findIndex(t => t === selectedTV) || 0;
+      showStatus('📱 FEED MODE - Swipe up/down'); hapticFeedback('medium');
+      tvs.forEach(t => { t.body.type = CANNON.Body.KINEMATIC; t.body.mass = 0; }); // Make kinematic for smooth transitions
+      focusOnFeedTV(currentFeedIndex);
+      showDiegeticTVInfo(tvs[currentFeedIndex]);
+    } else {
+      showStatus('🎮 BUILDING MODE'); hapticFeedback('light');
+      tvs.forEach(t => {
+        if (t.body.type === CANNON.Body.KINEMATIC) { // Revert only those made kinematic by feed mode
+            t.body.type = CANNON.Body.DYNAMIC;
+            t.body.mass = 1;
+            t.body.updateMassProperties();
+        }
+      });
+      hideDiegeticTVInfo();
+    }
+  }
+  
+  function focusOnFeedTV(index){
+    if(index < 0 || index >= tvs.length) return;
+    const tv = tvs[index]; currentFeedIndex = index; selectTV(tv);
+    const distance = 0.8;
+    camera.position.set( tv.body.position.x, tv.body.position.y, tv.body.position.z + distance );
+    camera.lookAt(tv.body.position.x, tv.body.position.y, tv.body.position.z);
+    camera.fov = 70; camera.updateProjectionMatrix();
+    showDiegeticTVInfo(tv); hapticFeedback('light');
+  }
+  
+  function nextFeedTV(){
+    if(!feedMode || feedTransitioning) return;
+    feedTransitioning = true;
+    const nextIndex = (currentFeedIndex + 1) % tvs.length;
+    focusOnFeedTV(nextIndex); hapticFeedback('light');
+    setTimeout(() => feedTransitioning = false, 300);
+  }
+  
+  function prevFeedTV(){
+    if(!feedMode || feedTransitioning) return;
+    feedTransitioning = true;
+    const prevIndex = (currentFeedIndex - 1 + tvs.length) % tvs.length;
+    focusOnFeedTV(prevIndex); hapticFeedback('light');
+    setTimeout(() => feedTransitioning = false, 300);
+  }
+  
+  function showDiegeticTVInfo(tv){
+    if(!tv) return;
+    const formattedTags = tv.tags.length > 0 ? tv.tags.map(t => `<span style="background:rgba(10,132,255,0.3);padding:4px 8px;border-radius:8px;margin-right:4px;display:inline-block;">${t}</span>`).join('') : 'No tags';
+    const info = `
+      <div id="diegetic-info" style="position:fixed;bottom:env(safe-area-inset-bottom, 120px);left:20px;right:20px;z-index:50;background:rgba(0,0,0,0.8);padding:16px;border-radius:16px;backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,0.1);">
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:#0ff;">${tv.id}</div>
+        <div style="font-size:14px;opacity:0.9;margin-bottom:8px;">${tv.metadata.title || 'Untitled'}</div>
+        <div style="font-size:12px;opacity:0.7;">${formattedTags}</div>
+        <div style="font-size:11px;opacity:0.6;margin-top:8px;">📺 ${currentFeedIndex + 1} / ${tvs.length}</div>
+      </div>
+    `;
+    const old = document.getElementById('diegetic-info');
+    if(old) old.remove();
+    const div = document.createElement('div');
+    div.innerHTML = info;
+    document.body.appendChild(div.firstElementChild);
+  }
+  
+  function hideDiegeticTVInfo(){
+    const info = document.getElementById('diegetic-info');
+    if(info) info.remove();
+  }
+  
+  // --- UI Visibility Management
+  function setUIMode(mode){
+    uiMode = mode;
+    const toolbar = $('#bottom-toolbar'); const rail = $('#rail'); const hud = $('#hud');
+    const mobileCamera = $('#mobile-camera'); const remote = $('#tv-remote'); const toggleButton = $('#ui-toggle');
+    const layoutSelector = $('#layout-selector');
+    [toolbar, rail, mobileCamera, remote, hud, toggleButton, layoutSelector].forEach(el => {
+      if(el){ el.classList.remove('hidden', 'collapsed'); }
+    });
+    if(mode === 'hidden'){
+      [toolbar, rail, mobileCamera, remote, hud, layoutSelector].forEach(el => { if(el) el.classList.add('hidden'); });
+      if(toggleButton) toggleButton.style.opacity = '0.5';
+      showStatus('👁️ UI HIDDEN - Tap ☰ to show');
+    } else if(mode === 'collapsed'){
+      [toolbar, mobileCamera, remote, layoutSelector].forEach(el => { if(el) el.classList.add('collapsed'); });
+      showStatus('👁️ UI COLLAPSED');
+    } else { showStatus('👁️ UI VISIBLE'); }
+  }
+  
+  function cycleUIMode(){
+    const modes = ['full', 'collapsed', 'hidden'];
+    const currentIndex = modes.indexOf(uiMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    setUIMode(nextMode); hapticFeedback('light');
+  }
+  
+  function startUIAutoHide(){
+    if(window.innerWidth > 768) return;
+    clearTimeout(uiAutoHideTimer);
+    if(uiMode !== 'full'){ setUIMode('full'); }
+    uiAutoHideTimer = setTimeout(() => {
+      if(Date.now() - lastInteractionTime > 2500){ setUIMode('collapsed'); }
+    }, 3000);
+  }
+  function trackInteraction(){ lastInteractionTime = Date.now(); startUIAutoHide(); }
+  
+  // --- Camera Tracking
+  function frameCamera(){
+    const topY = tvs.length? Math.max(...tvs.map(t=>t.body.position.y)) : 0;
+    const margin = 1.2;
+    if (camMode === CAM.TOP){
+      const desired = new THREE.Vector3(0, Math.max(2.5, topY + margin),  Math.max(6.2, 6.2 + topY*0.15));
+      camera.position.lerp(desired, 0.08);
+      const look = new THREE.Vector3(0, Math.max(1.4, topY*0.8), 0);
+      camera.lookAt(look);
+    } else if (camMode === CAM.WIDE){
+      const desired = new THREE.Vector3(4.5, Math.max(4.0, topY*0.6+2),  8.5+topY*0.2);
+      camera.position.lerp(desired, 0.06);
+      camera.lookAt(new THREE.Vector3(0, Math.max(2.0, topY*0.7), 0));
+    } /* FREE: no auto framing */
+  }
+
+  // --- Environment Switching
+  function setEnvironment(envKey){
+    const env = ENVIRONMENTS[envKey];
+    if(!env) return;
+    currentEnvironment = envKey;
+    scene.fog = new THREE.Fog(env.fog[0], env.fog[1], env.fog[2]);
+    scene.background = new THREE.Color(env.fog[0]);
+    if(waterPlane) waterPlane.visible = env.water;
+    updateHUD();
+  }
+  
+  function cycleEnvironment(){
+    const keys = Object.keys(ENVIRONMENTS);
+    const idx = keys.indexOf(currentEnvironment);
+    const next = keys[(idx + 1) % keys.length];
+    setEnvironment(next);
+    showStatus(`🏞️ Environment: ${ENVIRONMENTS[next].name}`);
+  }
+
+  // --- Animation Loop
+  function animate(){ 
+    requestAnimationFrame(animate); 
+    const dt=Math.min(clock.getDelta(),0.1); 
+    
+    if(waterPlane && waterPlane.visible){
+      waterTime += dt;
+      waterPlane.material.uniforms.time.value = waterTime;
+    }
+    
+    world.step(1/60, dt, 3);
+    
+    for(const t of tvs){
+      t.group.position.copy(t.body.position);
+      t.group.quaternion.copy(t.body.quaternion);
+      if(!t.settled && t.body.sleepState===CANNON.Body.SLEEPING) t.settled=true;
+      if(t.settled) height = Math.max(height, t.body.position.y);
+      if (t.cssPivot){
+        t.cssPivot.position.copy(t.group.position);
+        t.cssPivot.quaternion.copy(t.group.quaternion);
+        if(t.cssObj) t.cssObj.position.set(0,0,TV.d/2+0.002);
+      }
+    }
+    
+    if(selectedTV){ 
+      updateStabilityRing(selectedTV);
+      drawPlacementGrid();
+      drawGhostLines();
+      if(mobileCameraMode === 'ORBIT' && cinematicMode){
+        setMobileCameraMode('ORBIT');
+      }
+    }
+    
+    if(camMode!==CAM.FREE && !feedMode) frameCamera();
+    
+    updateHUD();
+    renderer.render(scene,camera);
+    if (cssRenderer) cssRenderer.render(cssScene,camera);
+  }
+
+  // --- Event Handlers
+  function onResize(){
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    if (cssRenderer) cssRenderer.setSize(window.innerWidth,window.innerHeight);
+    
+    if(gridCanvas){ gridCanvas.width = window.innerWidth; gridCanvas.height = window.innerHeight; }
+    if(ghostCanvas){ ghostCanvas.width = window.innerWidth; ghostCanvas.height = window.innerHeight; }
+    
+    if(window.innerWidth < 1024){ $('#mobile-camera').classList.add('active'); } 
+    else { $('#mobile-camera').classList.remove('active'); }
+  }
+  
+  // Keyboard shortcuts
+  function onKeyDown(e){
+    const key = e.key.toLowerCase();
+    
+    // Environment & view
+    if(key === 'e') { cycleEnvironment(); }
+    if(key === 'v') { cycleCameraPreset(); }
+    if(key === 'c') { toggleCinematicMode(); }
+    if(key === 'f') { toggleFullscreen(); }
+    if(key === 'p') { toggleFeedMode(); }
+    if(key >= '1' && key <= '8') setCameraPreset(parseInt(key)-1);
+    
+    // Feed mode navigation
+    if(key === 'arrowup' && feedMode) { prevFeedTV(); e.preventDefault(); }
+    if(key === 'arrowdown' && feedMode) { nextFeedTV(); e.preventDefault(); }
+    
+    // UI visibility
+    if(key === 'u') { cycleUIMode(); }
+    
+    // Gravity
+    if(key === 'g' && !e.shiftKey) { cycleGravity(); }
+    
+    // Layout
+    if(key === 'l') { cycleLayout(); }
+    if(key === 'y') { setupPyramidOfTVs(); } // Y for pyramid
+    if(key === 'w' && !e.ctrlKey) { setupVideoWallLayout(); } // W for video wall
+    if(key === 'r') { setupFlatLayout(); } // R for row
+    if(key === 't') { setupTriangleLayout(); } // T for triangle
+    if(key === 'd') { setupDenseGridLayout(); } // D for dense grid (radio shack)
+    if(key === 'e' && !e.ctrlKey) { setupTempleLayout(); } // E for temple
+
+    // Tools
+    if(key === 'q') { currentTool = TOOLS.SELECT; showStatus('🎯 Tool: SELECT'); }
+    if(key === 's' && !e.ctrlKey) { 
+      if(selectedTV){
+        selectedTV.snapToGrid = !selectedTV.snapToGrid;
+        showStatus(`🧲 Snap: ${selectedTV.snapToGrid ? 'ON' : 'OFF'}`);
+      }
+    }
+    
+    // TV operations - RAPID BUILDING! (dynamic add only now)
+    if(key === 'a' && !e.ctrlKey) { 
+      const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+      createTV(0, TV.h/2+3.0, 0, media, false); updateHUD(); showStatus('➕ Added TV'); 
+    }
+    if(key === 'b') { 
+      for(let i=0; i<5; i++){ 
+        const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+        setTimeout(() => createTV(0, TV.h/2+3.0+i*0.1, 0, media, false), i * 100); 
+      } showStatus('🚧 Building: Adding 5 TVs...'); 
+    }
+    if(key === 'n') { 
+      for(let i=0; i<10; i++){ 
+        const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+        setTimeout(() => createTV(0, TV.h/2+3.0+i*0.1, 0, media, false), i * 80); 
+      } showStatus('🚧 Building: Adding 10 TVs...'); 
+    }
+    if(key === 'm') { 
+      for(let i=0; i<20; i++){ 
+        const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+        setTimeout(() => createTV(0, TV.h/2+3.0+i*0.1, 0, media, false), i * 60); 
+      } showStatus('🚧 Building: Adding 20 TVs... LEGO TIME!'); 
+    }
+    if(key === 'd' && selectedTV && !e.ctrlKey) { 
+      const newPos = selectedTV.body.position.clone();
+      newPos.y += TV.h + 0.1; // Place slightly above for visibility
+      const cloned = createTV(newPos.x, newPos.y, newPos.z, selectedTV.mediaItem, false);
+      cloned.tags = [...selectedTV.tags]; showStatus('👯 Cloned TV');
+    }
+    if(key === 'delete' || key === 'backspace') {
+      if(selectedTV){
+        const idx = tvs.indexOf(selectedTV);
+        if(idx >= 0){
+          scene.remove(selectedTV.group);
+          if(selectedTV.cssPivot) cssScene.remove(selectedTV.cssPivot);
+          if(selectedTV.iframe) selectedTV.iframe.remove(); 
+          if (selectedTV.youtubePlayer && window.YTPlayers) {
+            try { selectedTV.youtubePlayer.stopVideo(); delete window.YTPlayers[selectedTV.id]; } catch (e) {}
+          }
+          world.removeBody(selectedTV.body);
+          tvs.splice(idx, 1);
+          deselectTV();
+          updateHUD(); showStatus('🗑️ Deleted TV');
+        }
+      }
+    }
+    if (key === 'k') { toggleGlobalMute(); } // K for Kill sound (mute)
+
+    // Display toggles
+    if(key === 'i') { 
+      showIDs = !showIDs;
+      tvs.forEach(tv => { if(tv.labelPlane) tv.labelPlane.visible = showIDs; });
+      showStatus(`🆔 IDs: ${showIDs ? 'ON' : 'OFF'}`);
+    }
+    
+    // Scene management
+    if(key === 's' && e.ctrlKey) { e.preventDefault(); saveScene(); showStatus('💾 Scene saved!'); }
+    
+    // Reset
+    if(key === 'escape') {
+      if(selectMode) toggleSelectMode();
+      if(selectedTV) deselectTV();
+      showStatus('Esc: Deselected');
+    }
+  }
+  
+  // --- Scene save/load
+  function saveScene(){
+    const sceneData = {
+      version: '1.0.0',
+      timestamp: Date.now(),
+      environment: currentEnvironment,
+      layout: currentLayout,
+      tvs: tvs.map(tv => ({
+        id: tv.id,
+        position: {x: tv.body.position.x, y: tv.body.position.y, z: tv.body.position.z},
+        rotation: {x: tv.body.quaternion.x, y: tv.body.quaternion.y, z: tv.body.quaternion.z, w: tv.body.quaternion.w},
+        tags: tv.tags,
+        metadata: tv.metadata,
+        mediaItem: tv.mediaItem // Store full media item for recreation
+      }))
+    };
+    
+    const json = JSON.stringify(sceneData, null, 2);
+    const blob = new Blob([json], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scene-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // --- Bootstrapping Logic
+  let bootTries=0; const MAX_TRIES=20; 
+  
+  // The global initMediaLibrary() is called outside this IIFE now.
+
+  const boot = () => {
+    if (window._APP_BOOT_ATTEMPTED) {
+      return; 
+    }
+    window._APP_BOOT_ATTEMPTED = true;
+
+
+    if (window.THREE && window.CANNON) {
+      try {
+        init();
+        $('#loading').style.display='none';
+        return; // Exit boot, init was successful
+      } catch(e){
+        console.error("Initialization error:", e);
+        showFatal(e);
+        // If init failed, we want to retry or activate fallback, so don't set _APP_INITIALIZED=true here.
+        // The outer IIFE guard `if (window._APP_INITIALIZED)` is the ultimate single-run gate.
+      }
+    }
+
+    if (++bootTries <= MAX_TRIES) {
+      window._APP_BOOT_ATTEMPTED = false; // Allow retry
+      setTimeout(boot, 100);
+    } else {
+      activateFallback('3D libraries blocked or failed to load.');
+    }
+  };
+  
+  // Start boot sequence when DOM is ready
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(boot, 0);
+  } else {
+    window.addEventListener('load', boot);
+  }
+
+  function init(){
+    // Load media library first
+    initMediaLibrary();
+    
+    clock=new THREE.Clock();
+    scene=new THREE.Scene();
+    cssScene=new THREE.Scene();
+    scene.background=new THREE.Color(0x101010);
+    scene.fog=new THREE.Fog(0x101010,12,30);
+
+    camera=new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 200);
+    camera.position.set(0,3,6.5);
+
+    renderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    document.getElementById('webgl').appendChild(renderer.domElement);
+
+    const CSS3D = (window.THREE && THREE.CSS3DRenderer) ? THREE.CSS3DRenderer : (window.CSS3DRenderer || null);
+    if (CSS3D){
+      cssRenderer=new CSS3D();
+      cssRenderer.setSize(window.innerWidth,window.innerHeight);
+      cssRenderer.domElement.style.pointerEvents='none';
+      document.getElementById('css3d').appendChild(cssRenderer.domElement);
+    } else {
+      console.error('CSS3DRenderer not found! YouTube embeds will not work.');
+      showFatal('CSS3DRenderer Missing: No YouTube embeds.');
+      throw new Error('CSS3DRenderer not found.'); // Prevent further init if core component is missing
+    }
+
+    // Lights
+    const amb=new THREE.AmbientLight(0x404040,1.4); scene.add(amb);
+    const key=new THREE.DirectionalLight(0xffffff,1.2); key.position.set(6,10,5); key.castShadow=true; key.shadow.mapSize.width=2048; key.shadow.mapSize.height=2048; key.shadow.camera.left=-10; key.shadow.camera.right=10; key.shadow.camera.top=10; key.shadow.camera.bottom=-10; scene.add(key);
+    const fill=new THREE.DirectionalLight(0x6699ff,0.5); fill.position.set(-5,4,-3); scene.add(fill);
+    const rim=new THREE.DirectionalLight(0xff7744,0.35); rim.position.set(5,3,-4); scene.add(rim);
+
+    // Physics
+    world=new CANNON.World();
+    world.gravity.set(0,-9.82,0);
+    world.broadphase=new CANNON.SAPBroadphase(world);
+    world.allowSleep=true;
+    world.defaultContactMaterial.friction=0.6;
+    world.defaultContactMaterial.restitution=0.1;
+
+    // Floor
+    const floorShape=new CANNON.Plane();
+    const floorBody=new CANNON.Body({mass:0, shape:floorShape});
+    floorBody.quaternion.setFromEuler(-Math.PI/2,0,0);
+    world.addBody(floorBody);
+
+    const floorGeo=new THREE.PlaneGeometry(60,60);
+    const floorMat=new THREE.MeshStandardMaterial({color:0x1e1e1e, roughness:0.95, metalness:0.05});
+    const floor=new THREE.Mesh(floorGeo,floorMat); floor.receiveShadow=true; floor.rotation.x=-Math.PI/2; scene.add(floor);
+    const grid=new THREE.GridHelper(26,52,0x444444,0x2b2b2b); grid.material.opacity=0.35; grid.material.transparent=true; grid.position.y=0.01; scene.add(grid);
+    
+    // Water plane
+    const waterGeo = new THREE.PlaneGeometry(80, 80, 64, 64);
+    const waterMat = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0 }, waterColor: { value: new THREE.Color(0x0a2535) }, opacity: { value: 0.6 } },
+      vertexShader: `
+        varying vec2 vUv; varying vec3 vPos; uniform float time;
+        void main() { vUv = uv; vec3 pos = position; pos.z += sin(pos.x * 2.0 + time * 0.5) * 0.08; pos.z += cos(pos.y * 2.0 + time * 0.3) * 0.08; vPos = pos; gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0); }
+      `,
+      fragmentShader: `
+        uniform vec3 waterColor; uniform float time; uniform float opacity; varying vec2 vUv;
+        void main() { vec2 uv = vUv; float caustic = sin(uv.x * 15.0 + time) * cos(uv.y * 15.0 + time * 0.7); caustic = caustic * 0.5 + 0.5; vec3 color = waterColor + caustic * 0.15; gl_FragColor = vec4(color, opacity); }
+      `,
+      transparent: true
+    });
+    waterPlane = new THREE.Mesh(waterGeo, waterMat);
+    waterPlane.rotation.x = -Math.PI / 2;
+    waterPlane.position.y = -0.2;
+    waterPlane.visible = (currentEnvironment === 'CALM');
+    scene.add(waterPlane);
+
+    setWorldGravity(gravMode);
+
+    // Events (pointer for touch+mouse)
+    const target = document.getElementById('webgl');
+    target.addEventListener('pointerdown',onPointerDown);
+    target.addEventListener('pointermove',onPointerMove);
+    target.addEventListener('pointerup',onPointerUp);
+    target.addEventListener('click',onClick);
+    window.addEventListener('resize',onResize);
+    window.addEventListener('keydown', onKeyDown);
+    
+    // UI hooks 
+    $('#btn-add').onclick = addTV; 
+    $('#btn-select').onclick = () => { selectMode = !selectMode; $('#btn-select').classList.toggle('active', selectMode); showStatus(`👆 Select Mode: ${selectMode ? 'ON' : 'OFF'}`); };
+    $('#btn-guide').onclick = openTVGuide;
+    $('#btn-view').onclick = cycleCameraPreset;
+    $('#btn-freeze').onclick = toggleFreeze;
+    $('#btn-gravity').onclick = cycleGravity;
+    $('#btn-media').onclick = openMedia;
+    $('#btn-reset').onclick = resetAll;
+    $('#btn-mute-all').onclick = toggleGlobalMute;
+    
+    // Layout buttons
+    $('#btn-layout-row').onclick = setupFlatLayout;
+    $('#btn-layout-wall').onclick = setupVideoWallLayout;
+    $('#btn-layout-pyramid').onclick = setupPyramidOfTVs;
+    $('#btn-layout-triangle').onclick = setupTriangleLayout;
+    $('#btn-layout-grid').onclick = setupDenseGridLayout;
+    $('#btn-layout-temple').onclick = setupTempleLayout;
+
+    $('#close-upload').onclick = closeMedia;
+    $('#close-guide').onclick = closeTVGuide;
+    $('#done-btn').onclick = closeMedia;
+    $('#drop-zone').onclick = ()=> $('#file-input').click();
+    $('#file-input').addEventListener('change', handleFileUpload);
+    $('#add-text-btn').onclick = addTextToLibrary;
+    
+    $('#ui-toggle').onclick = () => { cycleUIMode(); hapticFeedback('light'); };
+    
+    // Mobile camera controls
+    $('#cam-feed').onclick = () => { toggleFeedMode(); $('#cam-feed').classList.toggle('active', feedMode); trackInteraction(); };
+    $('#cam-close').onclick = () => { hapticFeedback('light'); if(selectedTV) setMobileCameraMode('CLOSEUP'); else showStatus('⚠️ Select a TV first'); trackInteraction(); };
+    $('#cam-cinema').onclick = () => { hapticFeedback('light'); toggleCinematicMode(); if(selectedTV) setMobileCameraMode('CINEMA'); trackInteraction(); };
+    $('#cam-orbit').onclick = () => { hapticFeedback('light'); if(selectedTV) setMobileCameraMode('ORBIT'); else showStatus('⚠️ Select a TV first'); trackInteraction(); };
+    $('#cam-fullscreen').onclick = () => { hapticFeedback('medium'); toggleFullscreen(); trackInteraction(); };
+
+    const dz = $('#drop-zone');
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('dragover');});
+    dz.addEventListener('dragleave', ()=> dz.classList.remove('dragover'));
+    dz.addEventListener('drop', handleFileDrop);
+
+    initPlacementGrid();
+    initGhostCanvas();
+    
+    if(window.innerWidth < 1024){ $('#mobile-camera').classList.add('active'); $('#ui-toggle').style.display = 'block'; startUIAutoHide(); }
+    
+    document.getElementById('stage').addEventListener('touchstart', trackInteraction);
+    document.getElementById('stage').addEventListener('click', trackInteraction);
+    
+    setEnvironment('CALM');
+
+    setupFlatLayout(); // Default layout on load
+    updateHUD(); 
+    
+    // Print keyboard shortcuts
+    console.log(`
+%c🎬 VIDEO_STACKER_PLUS - Keyboard Shortcuts%c
+
+%cENVIRONMENT & VIEW:%c
+E - Cycle environment (Calm/Energetic/Void/Gallery)
+V - Cycle camera preset (Default/Close-up/Overview/etc.)
+C - Toggle CINEMATIC MODE 🎥 (letterbox, enhanced colors)
+F - Toggle FULLSCREEN ⛶
+P - Toggle FEED MODE 📱 (vertical scroll like TikTok/Instagram)
+  Arrow Up/Down - Navigate feed when in feed mode
+U - Cycle UI MODE (full → collapsed → hidden)
+1-8 - Jump to camera preset:
+  1-Default  2-Close-up  3-Overview  4-Left Side
+  5-Right Side  6-Top-Down  7-Low Angle  8-Dramatic
+
+%cTV OPERATIONS (LEGO BUILDING!):%c
+A - Add 1 TV (dynamic placement)
+B - Add 5 TVs rapidly 🚧 (dynamic placement)
+N - Add 10 TVs 🚧 (dynamic placement)
+M - Add 20 TVs (MASSIVE!) 🚧 (dynamic placement)
+D - Clone selected TV
+Delete - Delete selected TV
+K - Toggle Global Mute/Unmute 🔇
+
+%cGIZMO & LEGO ASSEMBLY:%c
+Click TV → HUGE gizmo appears!
+Drag Red arrow → Move X axis
+Drag Green arrow → Move Y (lift)
+Drag Blue arrow → Move Z (depth)
+Drag Yellow ring → Rotate
+🧲 MAGNETIC SNAP - Auto-snaps to nearby TVs!
+  • On top (stack)
+  • Side-by-side
+  • Front-to-back
+S - Toggle grid snap (overrides magnetic)
+Gizmo flashes GREEN when snapped!
+
+%cLAYOUT & PHYSICS:%c
+L - Cycle layout (Flat Row / Video Wall / Pyramid)
+G - Cycle gravity (Normal/Soft/Off)
+Y - Build a pyramid of all loaded videos
+W - Build a video wall of all loaded videos
+R - Build a flat row of all loaded videos
+
+%cDISPLAY:%c
+I - Toggle TV IDs
+Ctrl+T - Toggle tags
+
+%cMOBILE CAMERA (Left Side):%c
+📱 - FEED MODE (TikTok-style vertical scrolling)
+  • Swipe up/down to navigate
+  • TV fills screen
+  • Diegetic info overlay
+  • Haptic feedback
+📸 - Close-up view (1.5m from TV)
+🎥 - Cinematic view (letterbox + 2.5m)
+🌐 - Orbit view (4m, slow rotation)
+⛶ - Toggle fullscreen
+
+%cSCENE:%c
+Ctrl+S - Save scene as JSON
+Esc - Deselect / Exit mode
+
+%cASSEMBLY FEATURES:%c
+- Each TV has unique ID (TV-001, TV-002...)
+- Tag system for organizing (poems, scenes, etc.)
+- Multiple content layers per TV
+- Holographic overlays
+- Zettelkasten-style linking
+- EDL export capability
+    `, 
+    'color:#0ff;font-size:16px;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', ''
+    );
+    
+    animate();
+  }
+
+})();
+
+// --- Global YouTube Iframe API setup
+// This section ensures the YouTube Iframe API script is loaded.
+// The API will call the global `onYouTubeIframeAPIReady` function once it's ready.
+if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+  console.log("Loading YouTube Iframe API script...");
+  const tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  const firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
+
+
+// --- Global Fallback and Error Handlers
+function showFatal(msg){
+  const el = document.getElementById('loading');
+  if (el) {
+      el.style.display='flex';
+      el.style.color='#f66';
+      el.innerHTML = `Error: ${msg && msg.message ? msg.message : msg} <br> <span>(Check console for details)</span>`;
+  }
+}
+
+function activateFallback(note){
+  try{
+    FALLBACK = true;
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display='none';
+    const pill = document.getElementById('mode-pill');
+    if (pill) pill.textContent = 'FALLBACK MODE • ' + (note||'');
+    
+    fallbackRoot = document.createElement('div');
+    fallbackRoot.id = 'fallback';
+    const base = document.createElement('div');
+    base.className = 'f-base';
+    document.getElementById('stage').appendChild(fallbackRoot);
+    document.getElementById('stage').appendChild(base);
+    
+    // Use a local function for fallback TVs
+    const addFallbackTV = () => {
+      const tv = document.createElement('div');
+      tv.className = 'f-tv';
+      tv.textContent = 'TV ' + (fallbackRoot.children.length + 1);
+      fallbackRoot.appendChild(tv);
+    };
+    // Seed a few fallback TVs
+    setTimeout(()=>{ addFallbackTV(); setTimeout(addFallbackTV,200); setTimeout(addFallbackTV,400); }, 50);
+  }catch(e){ showFatal(e); }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>WHERE YOU GO WHEN YOU LEAVE — Poetry Pyramid (39 TVs)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root{
+  --ui-bg: rgba(20,20,20,0.9);
+  --ui-acc: #0a84ff;
+  --ui-fg: #fff;
+}
+body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#000; overflow:hidden; color:var(--ui-fg); }
+#stage{ position:fixed; inset:0; }
+#webgl{ position:absolute; inset:0; touch-action:none; }
+#css3d{ position:absolute; inset:0; touch-action:none; pointer-events:none; }
+#css3d > *{ pointer-events:auto; }
+
+#hud{ position:fixed; top:env(safe-area-inset-top,12px); left:12px; font-size:11px; font-weight:600; z-index:30; opacity:0.85; text-shadow:0 2px 4px rgba(0,0,0,0.8); line-height:1.4; background:rgba(0,0,0,0.6); padding:8px 10px; border-radius:8px; backdrop-filter:blur(8px); }
+
+#bottom-toolbar{ position:fixed; bottom:env(safe-area-inset-bottom,12px); left:50%; transform:translateX(-50%); display:flex; gap:12px; z-index:40; padding:12px; background:rgba(0,0,0,0.85); border-radius:24px; backdrop-filter:blur(16px); border:2px solid rgba(255,255,255,0.1); }
+.big-btn{ width:64px; height:64px; border-radius:16px; border:none; cursor:pointer; display:grid; place-items:center; font-size:28px; color:#fff; background:rgba(255,255,255,0.12); backdrop-filter:blur(14px); box-shadow:0 4px 16px rgba(0,0,0,0.4); transition:all 0.15s ease; }
+.big-btn:active{ transform:scale(0.92); background:rgba(255,255,255,0.2); }
+
+#loading{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; z-index:60; background:#000; color:#888; gap:10px; flex-direction:column; }
+#loading .progress{ width:300px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; }
+#loading .bar{ height:100%; background:#0a84ff; width:0%; transition:width 0.3s; }
+</style>
+</head>
+<body>
+<div id="loading">
+  <div>🏔️ BUILDING POETRY PYRAMID</div>
+  <div id="load-text">Loading videos...</div>
+  <div class="progress"><div class="bar" id="progress-bar"></div></div>
+</div>
+
+<div id="stage">
+  <div id="webgl"></div>
+  <div id="css3d"></div>
+</div>
+
+<div id="hud">
+  <div><b>WHERE YOU GO WHEN YOU LEAVE</b></div>
+  <div>Poetry Pyramid • <span id="tv-count">0</span> TVs</div>
+  <div>Camera: <span id="cam-mode">Orbit</span></div>
+</div>
+
+<div id="bottom-toolbar">
+  <button class="big-btn" id="btn-orbit" title="Orbit">🌐</button>
+  <button class="big-btn" id="btn-top" title="Top View">⬆️</button>
+  <button class="big-btn" id="btn-reset" title="Reset View">↺</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+
+<script>
+(function(){
+
+// --- ALL POETRY VIDEOS (39 total: 26 timestamped + 13 standalone)
+const POETRY_VIDEOS = [
+  // WHERE YOU GO WHEN YOU LEAVE (CODEX) - First version with timestamps
+  { name: 'Out of Life', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 0, end: 135, tags: ['poem', 'intro'], color: 0xff3366 },
+  { name: 'Flashing Lights', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 136, end: 271, tags: ['poem'], color: 0xff6633 },
+  { name: 'How to Break Off an Engagement', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 272, end: 407, tags: ['poem'], color: 0xffaa33 },
+  { name: 'Nevermore', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 408, end: 543, tags: ['poem'], color: 0xffdd33 },
+  { name: 'Bloodline', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 544, end: 679, tags: ['poem'], color: 0xddff33 },
+  { name: 'Resurrecting Atlantis', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 680, end: 815, tags: ['poem'], color: 0xaaff33 },
+  { name: 'DJ Turn Me Up', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 816, end: 951, tags: ['poem'], color: 0x66ff33 },
+  { name: 'Newly Single', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 952, end: 1087, tags: ['poem'], color: 0x33ff66 },
+  { name: 'Yet, Heard', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1088, end: 1223, tags: ['poem'], color: 0x33ffaa },
+  { name: 'Magic Ride', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1224, end: 1359, tags: ['poem'], color: 0x33ffdd },
+  { name: 'Reunion', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1360, end: 1495, tags: ['poem'], color: 0x33ddff },
+  { name: 'How to Win My Heart', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1496, end: 1631, tags: ['poem'], color: 0x33aaff },
+  { name: 'Hot Minute', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1632, end: 1772, tags: ['poem', 'outro'], color: 0x3366ff },
+  
+  // WHERE YOU GO WHEN YOU LEAVE (CODEX) - Second version with timestamps
+  { name: 'Out of Life (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 0, end: 131, tags: ['poem', 'intro', 'v2'], color: 0x6633ff },
+  { name: 'Flashing Lights (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 131, end: 262, tags: ['poem', 'v2'], color: 0xaa33ff },
+  { name: 'How to Break Off an Engagement (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 262, end: 393, tags: ['poem', 'v2'], color: 0xdd33ff },
+  { name: 'Nevermore (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 393, end: 524, tags: ['poem', 'v2'], color: 0xff33dd },
+  { name: 'Bloodline (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 524, end: 655, tags: ['poem', 'v2'], color: 0xff33aa },
+  { name: 'Resurrecting Atlantis (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 655, end: 786, tags: ['poem', 'v2'], color: 0xff3377 },
+  { name: 'DJ Turn Me Up (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 786, end: 917, tags: ['poem', 'v2'], color: 0xff5533 },
+  { name: 'Newly Single (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 917, end: 1048, tags: ['poem', 'v2'], color: 0xff7733 },
+  { name: 'Yet Heard (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 1048, end: 1179, tags: ['poem', 'v2'], color: 0xff9933 },
+  { name: 'Magic Ride (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 1179, end: 1310, tags: ['poem', 'v2'], color: 0xffbb33 },
+  { name: 'Reunion (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 1310, end: 1441, tags: ['poem', 'v2'], color: 0xffdd55 },
+  { name: 'How to Win My Heart (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 1441, end: 1572, tags: ['poem', 'v2'], color: 0xddff55 },
+  { name: 'Hot Minute (v2)', url: 'https://www.youtube.com/watch?v=G2NXjz5pGVw', start: 1572, end: 1703, tags: ['poem', 'outro', 'v2'], color: 0xbbff55 },
+  
+  // Standalone videos (Center of pyramid - featured)
+  { name: 'Where You Go When You Leave (Main)', url: 'https://youtu.be/OGp5NDpYV6Y', tags: ['main', 'music', 'visual'], color: 0x00ffff, featured: true },
+  { name: 'Visual-Poetry Journey (26min)', url: 'https://youtu.be/MT3snSsqcHs', tags: ['journey', 'full'], color: 0x00ddff, featured: true },
+  { name: 'DVR Recording', url: 'https://youtu.be/fWMhuF_JKIE', tags: ['dvr'], color: 0x00bbff, featured: true },
+  { name: 'Out of Life (Lead Clip)', url: 'https://youtu.be/8NSzLAS_Uz8', tags: ['clip', 'lead'], color: 0x0099ff, featured: true },
+  
+  // Series videos (Top of pyramid)
+  { name: 'WYGWYL 00', url: 'https://youtu.be/FRsRjWLWz9w', tags: ['series', 'intro'], color: 0xff00ff },
+  { name: 'WGWYL 01', url: 'https://youtu.be/L9LFBU8ZMIg', tags: ['series'], color: 0xdd00ff },
+  { name: 'WGWYL 02', url: 'https://youtu.be/4_aMricPV9c', tags: ['series'], color: 0xbb00ff },
+  
+  // Additional videos
+  { name: 'Pro Segments', url: 'https://youtu.be/6AiCk06MgmQ', tags: ['segments'], color: 0x99ff99 },
+  { name: 'Part 2', url: 'https://youtu.be/8I4oqkyTC3o', tags: ['part2', 'poem'], color: 0x77ff77 },
+  { name: 'Living H20', url: 'https://youtu.be/re72b7VuPbE', tags: ['h2o'], color: 0x55ff55 }
+];
+
+// --- Configuration
+const TV={ w:0.50, d:0.35, h:0.32 };
+const SCREEN={ w:TV.w*0.84, h:TV.h*0.68 };
+
+// --- State
+let scene, cssScene, camera, renderer, cssRenderer, clock;
+let tvs=[];
+let orbitAngle = 0;
+let cameraMode = 'orbit'; // 'orbit', 'top', 'free'
+let loadProgress = 0;
+
+function parseYouTubeUrl(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/,
+    /youtube\.com\/embed\/([^?\s]+)/
+  ];
+  for (let pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function updateProgress(loaded, total){
+  loadProgress = (loaded / total) * 100;
+  const bar = document.getElementById('progress-bar');
+  const text = document.getElementById('load-text');
+  if(bar) bar.style.width = loadProgress + '%';
+  if(text) text.textContent = `Loading ${loaded}/${total} videos...`;
+}
+
+function init(){
+  clock=new THREE.Clock();
+  scene=new THREE.Scene();
+  cssScene=new THREE.Scene();
+  scene.background=new THREE.Color(0x050508);
+  scene.fog=new THREE.Fog(0x050508,20,60);
+
+  camera=new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
+  camera.position.set(0, 8, 20);
+  camera.lookAt(0, 3, 0);
+
+  renderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  document.getElementById('webgl').appendChild(renderer.domElement);
+
+  cssRenderer=new THREE.CSS3DRenderer();
+  cssRenderer.setSize(window.innerWidth,window.innerHeight);
+  cssRenderer.domElement.style.pointerEvents='none';
+  document.getElementById('css3d').appendChild(cssRenderer.domElement);
+
+  // Lights - dramatic for poetry
+  const amb=new THREE.AmbientLight(0x1a1a2a, 0.8); 
+  scene.add(amb);
+  
+  const key=new THREE.DirectionalLight(0xffffff, 1.2); 
+  key.position.set(10,15,8); 
+  scene.add(key);
+  
+  const rim1=new THREE.DirectionalLight(0x0088ff, 0.6); 
+  rim1.position.set(-8,5,-6); 
+  scene.add(rim1);
+  
+  const rim2=new THREE.DirectionalLight(0xff0088, 0.5); 
+  rim2.position.set(8,4,6); 
+  scene.add(rim2);
+
+  // Floor with grid
+  const floorGeo=new THREE.CircleGeometry(40, 64);
+  const floorMat=new THREE.MeshStandardMaterial({
+    color:0x0a0a12, 
+    roughness:0.9, 
+    metalness:0.1
+  });
+  const floor=new THREE.Mesh(floorGeo,floorMat); 
+  floor.rotation.x=-Math.PI/2; 
+  floor.position.y = -0.1;
+  scene.add(floor);
+  
+  const grid=new THREE.GridHelper(50, 100, 0x0a84ff, 0x1a1a2a); 
+  grid.material.opacity=0.2; 
+  grid.material.transparent=true; 
+  scene.add(grid);
+
+  // Create pyramid structure
+  buildPoetryPyramid();
+
+  // Events
+  window.addEventListener('resize',onResize);
+  document.getElementById('btn-orbit').onclick = () => { cameraMode = 'orbit'; updateCameraLabel(); };
+  document.getElementById('btn-top').onclick = () => { cameraMode = 'top'; camera.position.set(0, 25, 0.1); camera.lookAt(0, 0, 0); updateCameraLabel(); };
+  document.getElementById('btn-reset').onclick = () => { cameraMode = 'orbit'; orbitAngle = 0; updateCameraLabel(); };
+
+  window.addEventListener('keydown', e => {
+    if(e.key === 'o') { cameraMode = 'orbit'; updateCameraLabel(); }
+    if(e.key === 't') { cameraMode = 'top'; camera.position.set(0, 25, 0.1); camera.lookAt(0, 0, 0); updateCameraLabel(); }
+    if(e.key === 'r') { cameraMode = 'orbit'; orbitAngle = 0; updateCameraLabel(); }
+  });
+
+  // Hide loader
+  setTimeout(() => {
+    document.getElementById('loading').style.display='none';
+  }, 2000);
+
+  updateHUD();
+  animate();
+}
+
+function updateCameraLabel(){
+  const label = document.getElementById('cam-mode');
+  if(label) label.textContent = cameraMode.charAt(0).toUpperCase() + cameraMode.slice(1);
+}
+
+function buildPoetryPyramid(){
+  console.log('🏔️ Building pyramid with', POETRY_VIDEOS.length, 'videos');
+  
+  // Pyramid structure: 7 levels
+  // Base: 13 TVs (ring)
+  // Level 2: 10 TVs
+  // Level 3: 8 TVs  
+  // Level 4: 6 TVs (featured videos)
+  // Level 5: 4 TVs
+  // Level 6: 3 TVs (series)
+  // Top: 1 TV
+  
+  const levels = [
+    { count: 13, radius: 6.0, height: 0.5, videos: POETRY_VIDEOS.slice(0, 13) },
+    { count: 10, radius: 5.0, height: 1.0, videos: POETRY_VIDEOS.slice(13, 23) },
+    { count: 8, radius: 4.0, height: 1.5, videos: POETRY_VIDEOS.slice(23, 31) },
+    { count: 4, radius: 2.5, height: 2.0, videos: POETRY_VIDEOS.slice(31, 35) },
+    { count: 3, radius: 1.5, height: 2.5, videos: POETRY_VIDEOS.slice(35, 38) },
+    { count: 1, radius: 0, height: 3.0, videos: POETRY_VIDEOS.slice(38, 39) }
+  ];
+  
+  let loadedCount = 0;
+  const totalVideos = POETRY_VIDEOS.length;
+  
+  levels.forEach((level, levelIndex) => {
+    level.videos.forEach((video, idx) => {
+      const angle = (idx / level.count) * Math.PI * 2;
+      const x = Math.cos(angle) * level.radius;
+      const z = Math.sin(angle) * level.radius;
+      const y = level.height;
+      
+      setTimeout(() => {
+        createTV(x, y, z, video);
+        loadedCount++;
+        updateProgress(loadedCount, totalVideos);
+      }, levelIndex * 200 + idx * 50);
+    });
+  });
+}
+
+function createTV(x, y, z, videoData){
+  const group=new THREE.Group();
+  group.position.set(x, y, z);
+  
+  // Look at center for nice arrangement
+  group.lookAt(0, y, 0);
+  
+  // Shell with poem color
+  const shellGeo=new THREE.BoxGeometry(TV.w,TV.h,TV.d);
+  const shellMat=new THREE.MeshStandardMaterial({
+    color: videoData.color || 0x2a2a3a, 
+    roughness:0.6, 
+    metalness:0.4,
+    emissive: videoData.color || 0x2a2a3a,
+    emissiveIntensity: 0.3
+  });
+  const shell=new THREE.Mesh(shellGeo,shellMat); 
+  group.add(shell);
+  
+  // Bezel
+  const bezelGeo=new THREE.PlaneGeometry(SCREEN.w*1.08, SCREEN.h*1.08);
+  const bezelMat=new THREE.MeshBasicMaterial({color:0x0a0a0a});
+  const bezel=new THREE.Mesh(bezelGeo,bezelMat); 
+  bezel.position.set(0,0,TV.d/2+0.001); 
+  group.add(bezel);
+
+  // CSS screen
+  const screenEl=document.createElement('div');
+  screenEl.style.width=(SCREEN.w*320)+'px';
+  screenEl.style.height=(SCREEN.h*320)+'px';
+  screenEl.style.pointerEvents='auto';
+  screenEl.style.background='#000';
+  screenEl.style.display='flex'; 
+  screenEl.style.alignItems='center'; 
+  screenEl.style.justifyContent='center';
+  screenEl.style.overflow='hidden';
+  screenEl.style.borderRadius='8px';
+
+  const videoId = parseYouTubeUrl(videoData.url);
+  if(videoId){
+    const iframe=document.createElement('iframe');
+    let embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1`;
+    
+    // Add timestamp parameters if specified
+    if(videoData.start !== undefined){
+      embedUrl += `&start=${videoData.start}`;
+      if(videoData.end !== undefined){
+        embedUrl += `&end=${videoData.end}`;
+      }
+    }
+    
+    iframe.src = embedUrl;
+    iframe.style.width='100%'; 
+    iframe.style.height='100%'; 
+    iframe.style.border='none';
+    iframe.setAttribute('allow', 'autoplay; encrypted-media');
+    iframe.setAttribute('allowfullscreen', 'true');
+    screenEl.appendChild(iframe);
+  }
+
+  // Add title label
+  const labelDiv = document.createElement('div');
+  labelDiv.style.cssText = 'position:absolute;bottom:2px;left:0;right:0;background:rgba(0,0,0,0.8);color:#0ff;font-size:8px;padding:2px 4px;text-align:center;font-family:monospace;';
+  labelDiv.textContent = videoData.name;
+  screenEl.appendChild(labelDiv);
+
+  const cssObj = new THREE.CSS3DObject(screenEl);
+  cssObj.position.set(0,0,TV.d/2+0.002);
+  cssObj.scale.set(1/320, 1/320, 1);
+  
+  const cssPivot=new THREE.Object3D();
+  cssPivot.position.copy(group.position);
+  cssPivot.rotation.copy(group.rotation);
+  cssPivot.add(cssObj);
+  
+  scene.add(group);
+  cssScene.add(cssPivot);
+  
+  const unit={ group, cssPivot, cssObj, videoData };
+  tvs.push(unit);
+  
+  updateHUD();
+  return unit;
+}
+
+function updateHUD(){
+  const counter = document.getElementById('tv-count');
+  if(counter) counter.textContent = String(tvs.length);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.1);
+
+  // Orbit camera mode
+  if(cameraMode === 'orbit'){
+    orbitAngle += dt * 0.15;
+    const radius = 20;
+    const height = 8;
+    camera.position.x = Math.cos(orbitAngle) * radius;
+    camera.position.z = Math.sin(orbitAngle) * radius;
+    camera.position.y = height + Math.sin(orbitAngle * 0.5) * 2;
+    camera.lookAt(0, 3, 0);
+  }
+
+  // Sync CSS objects
+  tvs.forEach(tv => {
+    if(tv.cssPivot){
+      tv.cssPivot.position.copy(tv.group.position);
+      tv.cssPivot.rotation.copy(tv.group.rotation);
+    }
+  });
+
+  renderer.render(scene,camera);
+  cssRenderer.render(cssScene,camera);
+}
+
+function onResize(){
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  cssRenderer.setSize(window.innerWidth,window.innerHeight);
+}
+
+// Boot
+const boot = () => {
+  if (window.THREE) { 
+    try { 
+      init(); 
+      return; 
+    } catch(e){ 
+      console.error(e); 
+    } 
+  }
+  setTimeout(boot, 100);
+};
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(boot, 0);
+} else {
+  window.addEventListener('load', boot);
+}
+
+console.log(`
+%c🏔️ POETRY PYRAMID - WHERE YOU GO WHEN YOU LEAVE%c
+
+${POETRY_VIDEOS.length} videos arranged in pyramid structure
+
+%cControls:%c
+O - Orbit camera (auto-rotate)
+T - Top-down view
+R - Reset camera
+Click 🌐 - Orbit mode
+Click ⬆️ - Top view
+Click ↺ - Reset
+
+%cStructure:%c
+• Base (13 TVs) - First poem cycle
+• Level 2-3 (18 TVs) - Second poem cycle
+• Level 4 (4 TVs) - Featured videos
+• Level 5-6 (4 TVs) - Series & extras
+• Top (1 TV) - Living H20
+
+Each TV plays its video with timestamps!
+`, 
+'color:#0ff;font-size:16px;font-weight:bold', '',
+'color:#0a84ff;font-weight:bold', '',
+'color:#0a84ff;font-weight:bold', ''
+);
+
+})();
+</script>
+</body>
+</html>

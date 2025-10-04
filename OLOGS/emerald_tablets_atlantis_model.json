@@ -1,0 +1,272 @@
+{
+  "step1": {
+    "entities": [
+      {
+        "id": "great_atlantis",
+        "type": "place",
+        "name": "Great Atlantis",
+        "definition": "Ancient civilization with mighty wisdom, ten island kingdoms ruled by advanced beings",
+        "functions": [
+          "preserve wisdom",
+          "rule kingdoms",
+          "channel divine power",
+          "teach earth-men",
+          "guard mysteries"
+        ],
+        "evidence": {
+          "quote": "Great were my people in the ancient days, great beyond the conception of the little people now around me; knowing the wisdom of old",
+          "loc": "Tablet I"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "keor_undal",
+        "type": "place",
+        "name": "City of Keor on Island of Undal",
+        "definition": "Great city where Thoth incarnated, located on surviving island after Atlantis sinking",
+        "functions": [
+          "house temple",
+          "preserve records",
+          "maintain light",
+          "survive cataclysm",
+          "guard gateway"
+        ],
+        "evidence": {
+          "quote": "In the great city of Keor on the island of Undal in a time far past, I began this incarnation",
+          "loc": "Tablet I"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "halls_of_amenti",
+        "type": "place",
+        "name": "Halls of Amenti",
+        "definition": "Underworld realm beneath sunken Atlantis where souls renew life and masters dwell eternally",
+        "functions": [
+          "renew life",
+          "house masters",
+          "preserve souls",
+          "conduct judgment",
+          "store wisdom"
+        ],
+        "evidence": {
+          "quote": "Deep in the Earth's heart lie the Halls of Amenti, far 'neath the islands of sunken Atlantis, Halls of the Dead and halls of the living",
+          "loc": "Tablet II"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "children_of_light",
+        "type": "agent",
+        "name": "Children of Light",
+        "definition": "Thirty-two advanced beings who descended from space-time to free humanity from bondage",
+        "functions": [
+          "teach wisdom",
+          "guide humanity",
+          "channel power",
+          "incarnate physically",
+          "oppose darkness"
+        ],
+        "evidence": {
+          "quote": "Thirty and two were there of the children, sons of Light who had come among men, seeking to free from the bondage of darkness",
+          "loc": "Tablet II"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "seven_lords",
+        "type": "agent",
+        "name": "Seven Lords of Amenti",
+        "definition": "Numerical cosmic masters (Three through Nine) governing different aspects of reality and human development",
+        "functions": [
+          "govern cycles",
+          "direct destiny",
+          "weigh progress",
+          "teach mysteries",
+          "balance forces"
+        ],
+        "evidence": {
+          "quote": "Seven are they, the Lords of Amenti, overlords they of the Children of Morning, Suns of the Cycles, Masters of Wisdom",
+          "loc": "Tablet III"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "dweller_of_unal",
+        "type": "agent",
+        "name": "The Dweller",
+        "definition": "Formless master from beyond cycles who ruled through three messengers and controlled Atlantis destruction",
+        "functions": [
+          "rule from temple",
+          "control messengers",
+          "destroy civilizations",
+          "change earth balance",
+          "preserve light"
+        ],
+        "evidence": {
+          "quote": "Master, He, from a cycle beyond us, living in bodies as one among men. Not as the earth-born, He from beyond us",
+          "loc": "Tablet V"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "serpent_beings",
+        "type": "agent",
+        "name": "Children of Shadows/Serpent-Headed Beings",
+        "definition": "Formless entities from deep spaces who infiltrated Atlantis through blood sacrifice and dark magic",
+        "functions": [
+          "infiltrate councils",
+          "rule through deception",
+          "consume blood",
+          "appear as men",
+          "spread darkness"
+        ],
+        "evidence": {
+          "quote": "Serpent-headed when the glamour was lifted but appearing to man as men among men. Crept they into the Councils",
+          "loc": "Tablet VIII"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "magic_science",
+        "type": "process",
+        "name": "Magic-Science",
+        "definition": "Atlantean fusion of mystical and technological knowledge enabling matter manipulation and energy projection",
+        "functions": [
+          "manipulate matter",
+          "project energy",
+          "overcome gravity",
+          "create structures",
+          "preserve wisdom"
+        ],
+        "evidence": {
+          "quote": "Cowed I them by my display of magic-science... using the power that overcomes Earth force (gravity)",
+          "loc": "Tablet I"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "ether_manipulation",
+        "type": "process",
+        "name": "Ether Manipulation",
+        "definition": "Advanced ability to condense, coalesce and shape primordial ether into physical forms through will",
+        "functions": [
+          "create matter",
+          "build cities",
+          "form planets",
+          "manifest thoughts",
+          "reshape reality"
+        ],
+        "evidence": {
+          "quote": "condensing, coalescing the ether into forms that grew as they willed... formed in their mind only a picture and swiftly created",
+          "loc": "Tablet IV"
+        },
+        "esoteric_tag": "esoteric claim"
+      },
+      {
+        "id": "flower_of_life",
+        "type": "object",
+        "name": "Flower of Life/Light",
+        "definition": "Central energy source in Halls of Amenti providing life-giving and light-giving power to masters",
+        "functions": [
+          "give life",
+          "provide light",
+          "renew bodies",
+          "sustain masters",
+          "drive back darkness"
+        ],
+        "evidence": {
+          "quote": "Deep in the Halls of Life grew a flower, flaming, expanding, driving backward the night... Life giving, Light giving",
+          "loc": "Tablet II"
+        },
+        "esoteric_tag": "esoteric claim"
+      }
+    ]
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "dweller_of_unal",
+        "to": "great_atlantis",
+        "relation": "governs",
+        "statement": "Dweller controlled Atlantis destruction when it turned to darkness and opened forbidden gateways",
+        "evidence": {
+          "quote": "Called He then on the powers of the Seven Lords wielded; changed the Earth's balance. Down sank Atlantis beneath the dark waves",
+          "loc": "Tablet V"
+        }
+      },
+      {
+        "from": "serpent_beings",
+        "to": "great_atlantis",
+        "relation": "claims_about",
+        "statement": "Shadow beings infiltrated Atlantean councils through blood offerings and ruled by deception",
+        "evidence": {
+          "quote": "Lived they in Atlantis as shadows... Crept they into the Councils, taking forms that were like unto men",
+          "loc": "Tablet VIII"
+        }
+      },
+      {
+        "from": "children_of_light",
+        "to": "halls_of_amenti",
+        "relation": "governs",
+        "statement": "Children of Light created and dwell eternally in Halls of Amenti beneath sunken Atlantis",
+        "evidence": {
+          "quote": "Builded they then the Halls of Amenti, that they might dwell eternally there living with life to eternity's end",
+          "loc": "Tablet II"
+        }
+      },
+      {
+        "from": "seven_lords",
+        "to": "magic_science",
+        "relation": "claims_about",
+        "statement": "Each numbered lord governs different aspects of cosmic law and mystical knowledge",
+        "evidence": {
+          "quote": "Three holds the key of all hidden magic... Five is the master, the Lord of all magic\u2014Key to The Word",
+          "loc": "Tablet III"
+        }
+      },
+      {
+        "from": "flower_of_life",
+        "to": "ether_manipulation",
+        "relation": "causal",
+        "statement": "Flower provides life-force enabling advanced matter manipulation and consciousness expansion",
+        "evidence": {
+          "quote": "Placed in the center, a ray of great potence, Life giving, Light giving, filling with power all who came near it",
+          "loc": "Tablet II"
+        }
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Atlantean Esoteric Cosmology",
+      "axioms": [
+        "Advanced beings from space-time descended to guide human evolution",
+        "Atlantis possessed magic-science blending mystical and technological knowledge",
+        "Numerical cosmic lords govern reality through vibrational law",
+        "Serpent entities from lower dimensions infiltrated human civilization",
+        "Ether manipulation enables matter creation through conscious will"
+      ],
+      "rules": [
+        "IF civilizations turn to darkness THEN cosmic dwellers destroy them",
+        "IF beings offer blood sacrifice THEN shadow entities gain physical form",
+        "IF souls achieve light mastery THEN they access eternal halls",
+        "IF consciousness attunes to ether THEN matter responds to mental commands"
+      ],
+      "evidence": [
+        {
+          "quote": "Not as the little men of the present age did the mighty ones of Atlantis live and die, but rather from aeon to aeon did they renew their life",
+          "loc": "Tablet I"
+        },
+        {
+          "quote": "Only through blood could they have formed being. Only through man could they live in the world",
+          "loc": "Tablet VIII"
+        },
+        {
+          "quote": "formed in their mind only a picture and swiftly created, it grew",
+          "loc": "Tablet IV"
+        }
+      ]
+    }
+  }
+}

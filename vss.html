@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VIDEO_STACKER_∞</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #00ff88;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* CRT Scanline Effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 136, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 136, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scanlines 8s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* UI Overlay */
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: all;
+        }
+
+        .title {
+            font-size: clamp(24px, 5vw, 48px);
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: clamp(10px, 2vw, 14px);
+            opacity: 0.7;
+            letter-spacing: 2px;
+        }
+
+        /* Stats Panel */
+        .stats {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            background: rgba(10, 14, 39, 0.8);
+            border: 2px solid #00ff88;
+            padding: 15px;
+            border-radius: 5px;
+            min-width: 200px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            pointer-events: all;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #00ffff;
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            pointer-events: all;
+            max-width: 90vw;
+        }
+
+        button {
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 12px 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+        }
+
+        button:hover {
+            background: rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            border-color: #ff0055;
+            color: #ff0055;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+        }
+
+        button.danger:hover {
+            background: rgba(255, 0, 85, 0.2);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+        }
+
+        /* Mode Selector */
+        .mode-selector {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            background: rgba(10, 14, 39, 0.8);
+            border: 2px solid #00ff88;
+            padding: 15px;
+            border-radius: 5px;
+            pointer-events: all;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .mode-title {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .mode-btn.active {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+        }
+
+        /* Collapse Message */
+        .collapse-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 85, 0.95);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 10px;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            pointer-events: none;
+            box-shadow: 0 0 50px rgba(255, 0, 85, 0.8);
+            animation: collapse-pulse 0.5s ease-out;
+        }
+
+        @keyframes collapse-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        /* Touch Instructions */
+        .touch-hint {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            opacity: 0.5;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* Loading Screen */
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0e27;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(0, 255, 136, 0.1);
+            border-top: 3px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats, .mode-selector {
+                top: auto;
+                bottom: 100px;
+            }
+
+            .mode-selector {
+                right: auto;
+                left: 20px;
+            }
+
+            .controls {
+                bottom: 10px;
+                gap: 5px;
+            }
+
+            button {
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <div class="spinner"></div>
+        <div style="color: #00ff88; font-size: 18px;">LOADING PHYSICS ENGINE...</div>
+    </div>
+
+    <div id="container"></div>
+    
+    <div class="ui-overlay">
+        <div class="header">
+            <div class="title">VIDEO_STACKER_∞</div>
+            <div class="subtitle">attention as weight · collapse as critique</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-row">
+                <span class="stat-label">TVs:</span>
+                <span class="stat-value" id="tv-count">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Height:</span>
+                <span class="stat-value" id="stack-height">0m</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Stability:</span>
+                <span class="stat-value" id="stability">100%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Score:</span>
+                <span class="stat-value" id="score">0</span>
+            </div>
+        </div>
+
+        <div class="mode-selector">
+            <div class="mode-title">SOURCE MODE</div>
+            <div class="mode-buttons">
+                <button class="mode-btn active" id="mode-demo">Demo Videos</button>
+                <button class="mode-btn" id="mode-youtube">YouTube</button>
+                <button class="mode-btn" id="mode-custom">Custom URL</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="add-tv">📺 ADD TV</button>
+            <button id="nudge-left">← NUDGE</button>
+            <button id="nudge-right">NUDGE →</button>
+            <button id="auto-mode">🤖 AUTO</button>
+            <button class="danger" id="reset">⚡ RESET</button>
+        </div>
+
+        <div class="touch-hint">
+            Swipe ↑ to add · Swipe ← → to nudge · Tap TV to focus
+        </div>
+
+        <div class="collapse-message" id="collapse-msg">
+            STACK COLLAPSED!
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { CSS3DRenderer, CSS3DObject } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS3DRenderer.js';
+        import * as CANNON from 'cannon-es';
+
+        // Configuration
+        const CONFIG = {
+            physics: {
+                gravity: -3,
+                restitution: 0.3,
+                friction: 0.8,
+                damping: 0.01
+            },
+            tv: {
+                width: 4,
+                height: 2.5,
+                depth: 0.3,
+                mass: 10
+            },
+            demo: {
+                autoInterval: 3000,
+                maxTVs: 20
+            },
+            videos: {
+                segments: [
+                    { title: 'Out of Life', start: 0, end: 135 },
+                    { title: 'Flashing Lights', start: 136, end: 271 },
+                    { title: 'How to Break Off an Engagement', start: 272, end: 407 },
+                    { title: 'Nevermore', start: 408, end: 543 },
+                    { title: 'Bloodline', start: 544, end: 679 },
+                    { title: 'Resurrecting Atlantis', start: 680, end: 815 },
+                    { title: 'DJ Turn Me Up', start: 816, end: 951 },
+                    { title: 'Newly Single', start: 952, end: 1087 },
+                    { title: 'Yet, Heard', start: 1088, end: 1223 },
+                    { title: 'Magic Ride', start: 1224, end: 1359 },
+                    { title: 'Reunion', start: 1360, end: 1495 },
+                    { title: 'How to Win My Heart', start: 1496, end: 1631 },
+                    { title: 'Hot Minute', start: 1632, end: 1772 }
+                ],
+                youtubeId: 'uDUoMnp1z_g'
+            }
+        };
+
+        // State
+        const state = {
+            tvs: [],
+            score: 0,
+            highestPoint: 0,
+            isAutoMode: false,
+            autoInterval: null,
+            mode: 'demo',
+            videoIndex: 0,
+            hasCollapsed: false
+        };
+
+        // Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0e27);
+        scene.fog = new THREE.Fog(0x0a0e27, 10, 50);
+        
+        // CSS3D Scene for video overlays
+        const cssScene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 5, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('container').appendChild(renderer.domElement);
+        
+        // CSS3D Renderer for videos
+        const cssRenderer = new CSS3DRenderer();
+        cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        cssRenderer.domElement.style.position = 'absolute';
+        cssRenderer.domElement.style.top = '0';
+        cssRenderer.domElement.style.pointerEvents = 'none';
+        document.getElementById('container').appendChild(cssRenderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const spotLight = new THREE.SpotLight(0x00ff88, 1.5);
+        spotLight.position.set(10, 30, 10);
+        spotLight.castShadow = true;
+        spotLight.shadow.mapSize.width = 2048;
+        spotLight.shadow.mapSize.height = 2048;
+        scene.add(spotLight);
+
+        const rimLight = new THREE.DirectionalLight(0x00ffff, 0.5);
+        rimLight.position.set(-10, 10, -10);
+        scene.add(rimLight);
+
+        // Physics World
+        const world = new CANNON.World({
+            gravity: new CANNON.Vec3(0, CONFIG.physics.gravity, 0)
+        });
+        world.defaultContactMaterial.restitution = CONFIG.physics.restitution;
+        world.defaultContactMaterial.friction = CONFIG.physics.friction;
+
+        // Ground
+        const groundShape = new CANNON.Box(new CANNON.Vec3(50, 0.5, 50));
+        const groundBody = new CANNON.Body({ mass: 0 });
+        groundBody.addShape(groundShape);
+        groundBody.position.set(0, -0.5, 0);
+        world.addBody(groundBody);
+
+        const groundGeometry = new THREE.BoxGeometry(100, 1, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1f3a,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+        groundMesh.receiveShadow = true;
+        groundMesh.position.copy(groundBody.position);
+        scene.add(groundMesh);
+
+        // Create TV
+        function createTV(segment = null) {
+            const width = CONFIG.tv.width;
+            const height = CONFIG.tv.height;
+            const depth = CONFIG.tv.depth;
+            const mass = CONFIG.tv.mass;
+
+            const shape = new CANNON.Box(new CANNON.Vec3(width/2, height/2, depth/2));
+            const body = new CANNON.Body({
+                mass: mass,
+                shape: shape,
+                linearDamping: CONFIG.physics.damping,
+                angularDamping: CONFIG.physics.damping
+            });
+            
+            const spawnY = state.tvs.length === 0 ? 5 : state.highestPoint + 6;
+            body.position.set(
+                (Math.random() - 0.5) * 2,
+                spawnY,
+                0
+            );
+            
+            world.addBody(body);
+
+            // Visual mesh
+            const geometry = new THREE.BoxGeometry(width, height, depth);
+            
+            // Create material with dark screen look
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x1a1a1a,
+                emissive: 0x003322,
+                emissiveIntensity: 0.2,
+                roughness: 0.6,
+                metalness: 0.3
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+
+            // Edge glow
+            const edges = new THREE.EdgesGeometry(geometry);
+            const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
+            const edgeMesh = new THREE.LineSegments(edges, edgeMaterial);
+            mesh.add(edgeMesh);
+
+            // Create YouTube iframe as CSS3D object if segment provided
+            let cssObject = null;
+            let cssPivot = null;
+            if (segment) {
+                const iframe = document.createElement('iframe');
+                // Autoplay immediately when TV is created
+                iframe.src = `https://www.youtube.com/embed/${CONFIG.videos.youtubeId}?start=${segment.start}&autoplay=1&mute=1&controls=1&playsinline=1`;
+                iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+                iframe.style.width = `${width * 320}px`;
+                iframe.style.height = `${height * 320}px`;
+                iframe.style.border = '0';
+                iframe.style.background = '#000';
+                
+                cssObject = new CSS3DObject(iframe);
+                cssObject.position.set(0, 0, depth/2 + 0.01);
+                cssObject.scale.set(1/320, 1/320, 1);
+                
+                cssPivot = new THREE.Object3D();
+                cssPivot.add(cssObject);
+                cssScene.add(cssPivot);
+            }
+
+            const tv = { body, mesh, id: Date.now(), cssObject, cssPivot, segment };
+            state.tvs.push(tv);
+
+            updateStats();
+            return tv;
+        }
+
+        // Nudge Functions
+        function nudgeTV(direction) {
+            if (state.tvs.length === 0) return;
+            
+            const topTV = state.tvs[state.tvs.length - 1];
+            const force = new CANNON.Vec3(direction * 50, 0, 0);
+            topTV.body.applyImpulse(force, topTV.body.position);
+        }
+
+        // Reset Function
+        function reset() {
+            state.tvs.forEach(tv => {
+                world.removeBody(tv.body);
+                scene.remove(tv.mesh);
+            });
+            state.tvs = [];
+            state.score = 0;
+            state.highestPoint = 0;
+            state.hasCollapsed = false;
+            updateStats();
+        }
+
+        // Auto Mode
+        function toggleAutoMode() {
+            state.isAutoMode = !state.isAutoMode;
+            
+            if (state.isAutoMode) {
+                document.getElementById('auto-mode').style.background = 'rgba(0, 255, 136, 0.3)';
+                state.autoInterval = setInterval(() => {
+                    if (state.tvs.length < CONFIG.demo.maxTVs) {
+                        createTV();
+                    }
+                }, CONFIG.demo.autoInterval);
+            } else {
+                document.getElementById('auto-mode').style.background = '';
+                clearInterval(state.autoInterval);
+            }
+        }
+
+        // Collapse Detection
+        function checkCollapse() {
+            const threshold = -2;
+            const hasCollapsedTV = state.tvs.some(tv => tv.body.position.y < threshold);
+            
+            if (hasCollapsedTV && !state.hasCollapsed) {
+                state.hasCollapsed = true;
+                showCollapseMessage();
+                if (state.isAutoMode) toggleAutoMode();
+            }
+        }
+
+        function showCollapseMessage() {
+            const msg = document.getElementById('collapse-msg');
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 2000);
+        }
+
+        // Update Stats
+        function updateStats() {
+            document.getElementById('tv-count').textContent = state.tvs.length;
+            
+            const maxY = Math.max(0, ...state.tvs.map(tv => tv.body.position.y));
+            state.highestPoint = maxY;
+            document.getElementById('stack-height').textContent = maxY.toFixed(1) + 'm';
+            
+            const stability = state.tvs.length === 0 ? 100 : 
+                Math.max(0, 100 - (state.tvs.filter(tv => 
+                    tv.body.velocity.length() > 1 || 
+                    tv.body.angularVelocity.length() > 1
+                ).length / state.tvs.length * 100));
+            document.getElementById('stability').textContent = Math.round(stability) + '%';
+            
+            state.score = Math.round(state.tvs.length * maxY * stability);
+            document.getElementById('score').textContent = state.score;
+        }
+
+        // Event Listeners
+        document.getElementById('add-tv').addEventListener('click', createTV);
+        document.getElementById('nudge-left').addEventListener('click', () => nudgeTV(-1));
+        document.getElementById('nudge-right').addEventListener('click', () => nudgeTV(1));
+        document.getElementById('auto-mode').addEventListener('click', toggleAutoMode);
+        document.getElementById('reset').addEventListener('click', reset);
+
+        // Mode Selection
+        document.getElementById('mode-demo').addEventListener('click', () => {
+            state.mode = 'demo';
+            updateModeButtons('mode-demo');
+        });
+
+        document.getElementById('mode-youtube').addEventListener('click', () => {
+            state.mode = 'youtube';
+            updateModeButtons('mode-youtube');
+            alert('YouTube mode: Add your video IDs to CONFIG.videos.youtube array');
+        });
+
+        document.getElementById('mode-custom').addEventListener('click', () => {
+            state.mode = 'custom';
+            updateModeButtons('mode-custom');
+            const url = prompt('Enter video URL:');
+            if (url) CONFIG.videos.demo.push(url);
+        });
+
+        function updateModeButtons(activeId) {
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(activeId).classList.add('active');
+        }
+
+        // Touch Controls
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+        });
+
+        renderer.domElement.addEventListener('touchend', (e) => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndX = e.changedTouches[0].clientX;
+            const deltaY = touchStartY - touchEndY;
+            const deltaX = touchStartX - touchEndX;
+
+            if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 50) {
+                if (deltaY > 0) createTV(); // Swipe up
+            } else if (Math.abs(deltaX) > 50) {
+                if (deltaX > 0) nudgeTV(-1); // Swipe left
+                else nudgeTV(1); // Swipe right
+            }
+        });
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            world.step(1 / 60);
+
+            state.tvs.forEach(tv => {
+                tv.mesh.position.copy(tv.body.position);
+                tv.mesh.quaternion.copy(tv.body.quaternion);
+                
+                // Sync CSS3D pivot with 3D mesh
+                if (tv.cssPivot) {
+                    tv.cssPivot.position.copy(tv.mesh.position);
+                    tv.cssPivot.quaternion.copy(tv.mesh.quaternion);
+                }
+            });
+
+            checkCollapse();
+            updateStats();
+
+            renderer.render(scene, camera);
+            cssRenderer.render(cssScene, camera);
+        }
+
+        // Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize - spawn 13 TVs with YouTube segments
+        setTimeout(() => {
+            document.querySelector('.loading').classList.add('hidden');
+            
+            // Spawn all 13 segment TVs
+            CONFIG.videos.segments.forEach((seg, i) => {
+                setTimeout(() => {
+                    createTV(seg);
+                }, i * 500); // 500ms between each drop
+            });
+        }, 1000);
+
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+{
+  "step1": {
+    "entities": [
+      {
+        "id": "atlantis_island",
+        "type": "place",
+        "name": "Atlantis Island",
+        "definition": "Large Atlantic Ocean island opposite Mediterranean mouth, remnant of Atlantic continent",
+        "functions": [
+          "cradle civilization",
+          "rule over islands",
+          "populate continents",
+          "manufacture metals",
+          "serve as bridge"
+        ],
+        "evidence": {
+          "quote": "there once existed in the Atlantic Ocean, opposite the mouth of the Mediterranean Sea, a large island, which was the remnant of an Atlantic continent, and known to the ancient world as Atlantis",
+          "loc": "Chapter I, Proposition 1"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "antediluvian_world",
+        "type": "place",
+        "name": "Antediluvian World/Garden of Eden",
+        "definition": "True prehistoric world including Garden of Eden, Gardens of Hesperides, Elysian Fields, Olympos, Asgard",
+        "functions": [
+          "house early mankind",
+          "provide peace and happiness",
+          "preserve universal memory",
+          "serve as mythological template",
+          "represent golden age"
+        ],
+        "evidence": {
+          "quote": "it was the true Antediluvian world; the Garden of Eden; the Gardens of the Hesperides; the Elysian Fields; the Gardens of Alcinous; the Mesomphalos; the Olympos; the Asgard of the traditions of the ancient nations",
+          "loc": "Chapter I, Proposition 5"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "overflowing_nations",
+        "type": "polity",
+        "name": "Atlantean Colonies",
+        "definition": "Civilized nations populating shores of Gulf of Mexico, Mississippi, Amazon, Mediterranean, Europe, Africa, Baltic, Black Sea, Caspian",
+        "functions": [
+          "spread civilization",
+          "populate continents",
+          "transmit knowledge",
+          "establish colonies",
+          "carry traditions"
+        ],
+        "evidence": {
+          "quote": "from whose overflowings the shores of the Gulf of Mexico, the Mississippi River, the Amazon, the Pacific coast of South America, the Mediterranean, the west coast of Europe and Africa, the Baltic, the Black Sea, and the Caspian were populated by civilized nations",
+          "loc": "Chapter I, Proposition 4"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "atlantean_gods",
+        "type": "agent",
+        "name": "Atlantean Kings/Queens as Gods",
+        "definition": "Kings, queens, heroes of Atlantis remembered as gods and goddesses by Greeks, Phoenicians, Hindoos, Scandinavians",
+        "functions": [
+          "rule kingdoms",
+          "perform heroic deeds",
+          "inspire myths",
+          "establish religions",
+          "transmit culture"
+        ],
+        "evidence": {
+          "quote": "the gods and goddesses of the ancient Greeks, the Phoenicians, the Hindoos, and the Scandinavians were simply the kings, queens, and heroes of Atlantis; and the acts attributed to them in mythology are a confused recollection of real historical events",
+          "loc": "Chapter I, Proposition 6"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "bronze_age_culture",
+        "type": "process",
+        "name": "Bronze Age Technology Transmission",
+        "definition": "European Bronze Age implements and iron manufacturing originating from Atlantean technology",
+        "functions": [
+          "advance metallurgy",
+          "spread technology",
+          "enable civilization",
+          "produce tools",
+          "establish trade"
+        ],
+        "evidence": {
+          "quote": "the implements of the 'Bronze Age' of Europe were derived from Atlantis. The Atlanteans were also the first manufacturers of iron",
+          "loc": "Chapter I, Proposition 9"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "phoenician_alphabet",
+        "type": "object",
+        "name": "Atlantean Alphabet System",
+        "definition": "Original alphabet system transmitted to Phoenicians (European parent) and Mayas of Central America",
+        "functions": [
+          "enable writing",
+          "transmit knowledge",
+          "preserve records",
+          "communicate across distances",
+          "establish literature"
+        ],
+        "evidence": {
+          "quote": "the Phoenician alphabet, parent of all the European alphabets, was derived from an Atlantis alphabet, which was also conveyed from Atlantis to the Mayas of Central America",
+          "loc": "Chapter I, Proposition 10"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "racial_origin_point",
+        "type": "place",
+        "name": "Aryan-Semitic Homeland",
+        "definition": "Original seat of Aryan/Indo-European family, Semitic peoples, possibly Turanian races",
+        "functions": [
+          "originate racial groups",
+          "disperse populations",
+          "establish language families",
+          "seed continents",
+          "create ethnic diversity"
+        ],
+        "evidence": {
+          "quote": "Atlantis was the original seat of the Aryan or Indo-European family of nations, as well as of the Semitic peoples, and possibly also of the Turanian races",
+          "loc": "Chapter I, Proposition 11"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "catastrophic_destruction",
+        "type": "process",
+        "name": "Geological Catastrophe",
+        "definition": "Terrible convulsion of nature causing entire island to sink into ocean with nearly all inhabitants",
+        "functions": [
+          "destroy civilization",
+          "sink island",
+          "scatter survivors",
+          "create flood legends",
+          "end golden age"
+        ],
+        "evidence": {
+          "quote": "Atlantis perished in a terrible convulsion of nature, in which the whole island sunk into the ocean, with nearly all its inhabitants",
+          "loc": "Chapter I, Proposition 12"
+        },
+        "authorial_assertion": "authorial assertion"
+      },
+      {
+        "id": "flood_legend_transmission",
+        "type": "process",
+        "name": "Deluge Legend Transmission",
+        "definition": "Few survivors escaping on ships/rafts carrying tidings of catastrophe to east and west nations",
+        "functions": [
+          "preserve memory",
+          "spread warning",
+          "create flood myths",
+          "transmit history",
+          "establish traditions"
+        ],
+        "evidence": {
+          "quote": "a few persons escaped in ships and on rafts, and, carried to the nations east and west the tidings of the appalling catastrophe, which has survived to our own time in the Flood and Deluge legends",
+          "loc": "Chapter I, Proposition 13"
+        },
+        "authorial_assertion": "authorial assertion"
+      }
+    ]
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "atlantis_island",
+        "to": "overflowing_nations",
+        "relation": "claims_about",
+        "statement": "Donnelly asserts Atlantis populated and civilized shores of both Old and New Worlds through colonization",
+        "evidence": {
+          "quote": "it became, in the course of ages, a populous and mighty nation, from whose overflowings the shores... were populated by civilized nations",
+          "loc": "Chapter I, Proposition 4"
+        }
+      },
+      {
+        "from": "atlantean_gods",
+        "to": "bronze_age_culture",
+        "relation": "claims_about",
+        "statement": "Donnelly claims Atlantean rulers transmitted advanced metallurgy as remembered divine knowledge",
+        "evidence": {
+          "quote": "the gods and goddesses... were simply the kings, queens, and heroes of Atlantis... the implements of the 'Bronze Age' of Europe were derived from Atlantis",
+          "loc": "Chapter I, Propositions 6, 9"
+        }
+      },
+      {
+        "from": "racial_origin_point",
+        "to": "phoenician_alphabet",
+        "relation": "claims_about",
+        "statement": "Donnelly asserts original Atlantean racial groups transmitted alphabet systems to both hemispheres",
+        "evidence": {
+          "quote": "Atlantis was the original seat of the Aryan or Indo-European family... the Phoenician alphabet... was derived from an Atlantis alphabet... also conveyed... to the Mayas",
+          "loc": "Chapter I, Propositions 10, 11"
+        }
+      },
+      {
+        "from": "catastrophic_destruction",
+        "to": "flood_legend_transmission",
+        "relation": "causal",
+        "statement": "Donnelly claims geological catastrophe caused survivor dispersal creating universal flood legends",
+        "evidence": {
+          "quote": "Atlantis perished in a terrible convulsion... a few persons escaped... carried to the nations east and west the tidings... which has survived... in the Flood and Deluge legends",
+          "loc": "Chapter I, Propositions 12, 13"
+        }
+      },
+      {
+        "from": "antediluvian_world",
+        "to": "atlantean_gods",
+        "relation": "claims_about",
+        "statement": "Donnelly asserts prehistoric golden age generated mythological memories of divine rulers",
+        "evidence": {
+          "quote": "it was the true Antediluvian world... representing a universal memory of a great land... the gods and goddesses... were simply the kings, queens, and heroes of Atlantis",
+          "loc": "Chapter I, Propositions 5, 6"
+        }
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Donnelly's Atlantis Diffusion Theory",
+      "axioms": [
+        "Plato's Atlantis account represents veritable history not fable",
+        "Atlantic Ocean once contained large continental land mass",
+        "Advanced prehistoric civilization served as source for global cultures",
+        "Similar cultural elements across continents indicate common origin point",
+        "Geological catastrophes can destroy entire civilizations and create universal memories"
+      ],
+      "rules": [
+        "IF similar cultural elements appear on opposite sides of Atlantic THEN common Atlantean origin explains transmission",
+        "IF Bronze Age technology and alphabets show intercontinental resemblances THEN Atlantean diffusion accounts for spread",
+        "IF flood legends exist globally THEN survivors from Atlantean catastrophe carried these memories",
+        "IF mythological gods show historical patterns THEN they represent memories of actual Atlantean rulers"
+      ],
+      "evidence": [
+        {
+          "quote": "If these propositions can be proved, they will solve many problems which now perplex mankind... they will explain the remarkable resemblances which exist between the ancient civilizations found upon the opposite shores of the Atlantic Ocean",
+          "loc": "Chapter I, conclusion"
+        },
+        {
+          "quote": "it will only be by bringing to bear upon the question of Atlantis a thousand converging lines of light from a multitude of researches made by scholars in different fields of modern thought",
+          "loc": "Chapter I, methodology"
+        },
+        {
+          "quote": "There can be no question that Solon visited Egypt... There is no improbability in the statement that he commenced in verse a history and description of Atlantis",
+          "loc": "Chapter II, source validation"
+        }
+      ]
+    }
+  }
+}

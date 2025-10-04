@@ -1,0 +1,213 @@
+{
+  "step1": {
+    "entities": [
+      {
+        "id": "bensalem",
+        "type": "place",
+        "name": "Bensalem",
+        "definition": "Island kingdom, isolated by vast seas, with Christian inhabitants practicing advanced natural philosophy",
+        "functions": [
+          "harbor strangers",
+          "preserve knowledge",
+          "practice Christianity",
+          "conduct natural experiments",
+          "govern wisely"
+        ],
+        "evidence": {
+          "quote": "We of this island of Bensalem, (for so they call it in their language,) have this; that by means of our solitary situation; and of the laws of secrecy... we know well most part of the habitable world, and are ourselves unknown",
+          "loc": "Governor's speech"
+        }
+      },
+      {
+        "id": "salomons_house",
+        "type": "institution",
+        "name": "Salomon's House",
+        "definition": "Scientific college dedicated to studying God's works and creatures, the 'very eye of this kingdom'",
+        "functions": [
+          "study nature",
+          "perform experiments",
+          "interpret phenomena",
+          "preserve knowledge",
+          "benefit mankind"
+        ],
+        "evidence": {
+          "quote": "the noblest foundation (as we think) that ever was upon the earth; and the lanthorn of this kingdom. It is dedicated to the study of the Works and Creatures of God",
+          "loc": "Father's explanation"
+        }
+      },
+      {
+        "id": "solamona",
+        "type": "agent",
+        "name": "King Solamona",
+        "definition": "Ancient lawgiver king with 'large heart' who established Bensalem's isolation and institutions",
+        "functions": [
+          "establish laws",
+          "protect kingdom",
+          "ensure prosperity",
+          "create institutions",
+          "govern wisely"
+        ],
+        "evidence": {
+          "quote": "a king, whose memory of all others we most adore; not superstitiously, but as a divine instrument, though a mortal man; his name was Solamona: and we esteem him as the lawgiver of our nation",
+          "loc": "Historical account"
+        }
+      },
+      {
+        "id": "strangers_house",
+        "type": "institution",
+        "name": "Strangers' House",
+        "definition": "Institution providing hospitality and quarantine for foreign visitors to Bensalem",
+        "functions": [
+          "house strangers",
+          "provide medical care",
+          "enforce isolation",
+          "assess character",
+          "offer hospitality"
+        ],
+        "evidence": {
+          "quote": "The Strangers' House is a fair and spacious house, built of brick... they having cast it that four of those chambers... might receive four of the principal men",
+          "loc": "First day description"
+        }
+      },
+      {
+        "id": "father_of_salomons_house",
+        "type": "agent",
+        "name": "Father of Salomon's House",
+        "definition": "Senior member who explains the institution's purpose, methods, and organization to visitors",
+        "functions": [
+          "teach outsiders",
+          "oversee experiments",
+          "interpret nature",
+          "maintain secrecy",
+          "bless endeavors"
+        ],
+        "evidence": {
+          "quote": "God bless thee, my son; I will give thee the greatest jewel I have. For I will impart unto thee, for the love of God and men, a relation of the true state of Salomon's House",
+          "loc": "Father's revelation"
+        }
+      },
+      {
+        "id": "natural_philosophy",
+        "type": "process",
+        "name": "Natural Philosophy",
+        "definition": "Systematic investigation of nature's causes and motions through experiment and observation",
+        "functions": [
+          "reveal causes",
+          "predict effects",
+          "manipulate nature",
+          "benefit humanity",
+          "glorify God"
+        ],
+        "evidence": {
+          "quote": "The End of our Foundation is the knowledge of causes, and secret motions of things; and the enlarging of the bounds of human empire, to the effecting of all things possible",
+          "loc": "Purpose statement"
+        }
+      }
+    ],
+    "notes": "Core entities central to Bensalem governance and knowledge"
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "solamona",
+        "to": "salomons_house",
+        "relation": "functional",
+        "statement": "King Solamona erected and instituted Salomon's House as noblest foundation",
+        "evidence": {
+          "quote": "amongst the excellent acts of that king, one above all hath the pre-eminence. It was the erection and institution of an Order or Society, which we call Salomon's House",
+          "loc": "Historical foundation"
+        }
+      },
+      {
+        "from": "salomons_house",
+        "to": "bensalem",
+        "relation": "part_of",
+        "statement": "Salomon's House serves as the very eye of the kingdom of Bensalem",
+        "evidence": {
+          "quote": "which house, or college (my good brethren) is the very eye of this kingdom",
+          "loc": "Wise man's prayer"
+        }
+      },
+      {
+        "from": "natural_philosophy",
+        "to": "salomons_house",
+        "relation": "functional",
+        "statement": "Natural philosophy provides the method and purpose for Salomon's House operations",
+        "evidence": {
+          "quote": "The End of our Foundation is the knowledge of causes, and secret motions of things",
+          "loc": "Purpose declaration"
+        }
+      },
+      {
+        "from": "strangers_house",
+        "to": "bensalem",
+        "relation": "governs",
+        "statement": "Strangers' House controls and filters external contact with Bensalem",
+        "evidence": {
+          "quote": "the custom of the land requireth, that after this day and to-morrow... you are to keep within doors for three days",
+          "loc": "Quarantine protocol"
+        }
+      },
+      {
+        "from": "father_of_salomons_house",
+        "to": "natural_philosophy",
+        "relation": "governs",
+        "statement": "Father interprets and directs the practice of natural philosophy",
+        "evidence": {
+          "quote": "I will impart unto thee, for the love of God and men, a relation of the true state of Salomon's House",
+          "loc": "Teaching moment"
+        }
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Bensalem's Scientific Governance",
+      "axioms": [
+        "Knowledge of natural causes enables human dominion over nature",
+        "Divine revelation authenticates scientific investigation of creation",
+        "Isolation preserves institutional integrity from foreign corruption",
+        "Organized experiment yields greater results than individual inquiry",
+        "Secrecy protects valuable knowledge from misuse by others"
+      ],
+      "rules": [
+        "IF strangers arrive THEN quarantine and assess before admission",
+        "IF natural phenomena observed THEN distinguish divine from natural causes",
+        "IF experiments conducted THEN organize by systematic division of labor",
+        "IF discoveries made THEN evaluate for publication or concealment"
+      ],
+      "evidence": [
+        {
+          "quote": "The End of our Foundation is the knowledge of causes, and secret motions of things; and the enlarging of the bounds of human empire, to the effecting of all things possible",
+          "loc": "Foundation purpose"
+        },
+        {
+          "quote": "LORD God of heaven and earth, thou hast vouchsafed of thy grace to those of our order, to know thy works of Creation, and the secrets of them",
+          "loc": "Wise man's prayer"
+        },
+        {
+          "quote": "our Lawgiver thought fit altogether to restrain it... preserving the good which cometh by communicating with strangers, and avoiding the hurt",
+          "loc": "Isolation policy"
+        }
+      ]
+    }
+  },
+  "step4": {
+    "critique": {
+      "omissions": [
+        "Limited detail on Bensalem's political structure beyond Salomon's House",
+        "Sparse information on economic systems and material production",
+        "Minimal treatment of religious institutions beyond Christian conversion"
+      ],
+      "overreach": [
+        "May infer too much systematic organization from limited textual evidence",
+        "Could be projecting modern scientific method onto Bacon's vision"
+      ],
+      "fixes": [
+        "Add entity for 'Governor' as distinct institutional role",
+        "Include more specific experimental processes as documented entities",
+        "Clarify hierarchical relations within Salomon's House structure"
+      ]
+    }
+  }
+}

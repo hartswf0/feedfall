@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>🌊 Atlantis Explorer — OLOGS</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --ocean-deep: #0a1628;
+  --ocean-mid: #1a3a52;
+  --ocean-light: #2a5a7a;
+  --foam: #e0f7ff;
+  --coral: #ff6b6b;
+  --gold: #ffd93d;
+  --pearl: #f0f4f8;
+  --shadow: rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; }
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(180deg, var(--ocean-deep) 0%, var(--ocean-mid) 100%);
+  color: var(--foam);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animated water surface */
+#water-bg {
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(42,90,122,0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 60%, rgba(26,58,82,0.3) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: waterFlow 20s ease-in-out infinite;
+}
+
+@keyframes waterFlow {
+  0%, 100% { opacity: 0.6; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(-10px); }
+}
+
+/* Container */
+#app { 
+  position: relative; 
+  z-index: 1; 
+  min-height: 100vh;
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+}
+
+/* Header */
+header {
+  text-align: center;
+  padding: 24px 16px 16px;
+  background: rgba(10,22,40,0.6);
+  backdrop-filter: blur(12px);
+  border-bottom: 2px solid rgba(224,247,255,0.1);
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* Model cards - BIG, thumb-friendly */
+.models-grid {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.model-card {
+  background: linear-gradient(135deg, rgba(26,58,82,0.9) 0%, rgba(42,90,122,0.7) 100%);
+  border-radius: 20px;
+  padding: 20px;
+  border: 2px solid rgba(224,247,255,0.15);
+  box-shadow: 0 8px 32px var(--shadow);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.model-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--coral), var(--gold), var(--foam));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.model-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 16px var(--shadow);
+}
+
+.model-card.selected {
+  border-color: var(--gold);
+  box-shadow: 0 12px 48px rgba(255,217,61,0.3);
+}
+
+.model-card.selected::before { opacity: 1; }
+
+.model-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.model-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.model-subtitle {
+  font-size: 13px;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.model-count {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255,217,61,0.2);
+  color: var(--gold);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255,217,61,0.3);
+}
+
+/* Detail view */
+#detail {
+  position: fixed;
+  inset: 0;
+  background: var(--ocean-deep);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#detail.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.detail-header {
+  position: sticky;
+  top: 0;
+  background: rgba(10,22,40,0.95);
+  backdrop-filter: blur(16px);
+  padding: 16px;
+  border-bottom: 2px solid rgba(224,247,255,0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(224,247,255,0.1);
+  color: var(--foam);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.back-btn:active {
+  transform: scale(0.9);
+  background: rgba(224,247,255,0.2);
+}
+
+.detail-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.detail-content {
+  padding: 20px 16px 80px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Section blocks - clean & spacious */
+.section {
+  background: rgba(26,58,82,0.4);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(224,247,255,0.1);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(224,247,255,0.1);
+}
+
+.section-icon {
+  font-size: 24px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.section-badge {
+  background: rgba(255,217,61,0.2);
+  color: var(--gold);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Entity/Item cards - simple list */
+.item {
+  background: rgba(10,22,40,0.4);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--gold);
+}
+
+.item:last-child { margin-bottom: 0; }
+
+.item-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--gold);
+}
+
+.item-text {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+.item-type {
+  display: inline-block;
+  background: rgba(224,247,255,0.1);
+  color: var(--foam);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Quote blocks */
+.quote {
+  background: rgba(10,22,40,0.6);
+  border-left: 4px solid var(--coral);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  font-style: italic;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.quote-loc {
+  display: block;
+  text-align: right;
+  font-size: 11px;
+  margin-top: 6px;
+  opacity: 0.7;
+  font-style: normal;
+  color: var(--gold);
+}
+
+/* Simple lists */
+.simple-list {
+  list-style: none;
+}
+
+.simple-list li {
+  padding: 8px 0 8px 24px;
+  position: relative;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.simple-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* Loading */
+#loading {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(224,247,255,0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  opacity: 0.6;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* Tabs for different views */
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 2px solid rgba(224,247,255,0.2);
+  background: rgba(26,58,82,0.4);
+  color: var(--foam);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: var(--gold);
+  color: var(--ocean-deep);
+  border-color: var(--gold);
+}
+
+.tab:active {
+  transform: scale(0.95);
+}
+
+/* View toggle */
+.view-toggle {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.view-btn {
+  padding: 8px 20px;
+  border-radius: 12px;
+  border: 2px solid rgba(224,247,255,0.2);
+  background: rgba(26,58,82,0.4);
+  color: var(--foam);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-btn.active {
+  background: var(--gold);
+  color: var(--ocean-deep);
+  border-color: var(--gold);
+}
+
+.view-btn:active {
+  transform: scale(0.95);
+}
+
+/* Grid view - VHS tape aesthetic */
+.all-grid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.tape-card {
+  background: linear-gradient(135deg, rgba(26,58,82,0.9) 0%, rgba(42,90,122,0.7) 100%);
+  border-radius: 12px;
+  padding: 12px;
+  border: 2px solid rgba(224,247,255,0.15);
+  box-shadow: 0 4px 16px var(--shadow);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tape-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  opacity: 0.9;
+}
+
+.tape-card:active {
+  transform: scale(0.98);
+}
+
+/* Color coding by model */
+.tape-card[data-model="ai"]::before { background: #ff3366; }
+.tape-card[data-model="modern"]::before { background: #ff6633; }
+.tape-card[data-model="bacon-rhet"]::before { background: #ffaa33; }
+.tape-card[data-model="bacon-rig"]::before { background: #ffdd33; }
+.tape-card[data-model="bacon-world"]::before { background: #ddff33; }
+.tape-card[data-model="boland"]::before { background: #66ff33; }
+.tape-card[data-model="donnelly"]::before { background: #33ffdd; }
+.tape-card[data-model="emerald"]::before { background: #33aaff; }
+.tape-card[data-model="timaeus"]::before { background: #aa33ff; }
+
+.tape-type {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  color: var(--foam);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-family: 'VT323', monospace;
+}
+
+.tape-title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  flex: 1;
+  font-family: 'VT323', monospace;
+}
+
+.tape-model {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-top: auto;
+  font-family: monospace;
+}
+
+.tape-arrow {
+  font-size: 16px;
+  margin: 4px 0;
+  opacity: 0.8;
+  text-align: center;
+}
+
+/* Filter bar */
+.filter-bar {
+  padding: 12px 16px;
+  background: rgba(10,22,40,0.6);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(224,247,255,0.1);
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chip {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 2px solid rgba(224,247,255,0.2);
+  background: rgba(26,58,82,0.4);
+  color: var(--foam);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filter-chip.active {
+  background: var(--gold);
+  color: var(--ocean-deep);
+  border-color: var(--gold);
+}
+
+.filter-chip:active {
+  transform: scale(0.95);
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .models-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .all-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .all-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+/* Accessibility */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+</style>
+</head>
+<body>
+<div id="water-bg"></div>
+
+<div id="app">
+  <header>
+    <h1>🌊 Atlantis Explorer</h1>
+    <div class="subtitle">9 Ontology Models • Tap to Explore</div>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="models">📚 Models</button>
+      <button class="view-btn" data-view="grid">🎞️ All View</button>
+    </div>
+  </header>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Loading Atlantis archives...</div>
+  </div>
+
+  <div class="models-grid" id="models"></div>
+  
+  <!-- Grid view for all entities -->
+  <div class="all-grid" id="all-grid" style="display:none;"></div>
+</div>
+
+<!-- Detail view -->
+<div id="detail">
+  <div class="detail-header">
+    <button class="back-btn" id="back-btn">←</button>
+    <div class="detail-title" id="detail-title"></div>
+  </div>
+  
+  <div class="tabs" id="tabs"></div>
+  
+  <div class="detail-content" id="detail-content"></div>
+</div>
+
+<script>
+(function(){
+  const MODELS = [
+    { file: 'ai_atlantis_resurrection_project.json', icon: '🤖', title: 'AI Resurrection Project', subtitle: 'Computational myth reconstruction' },
+    { file: 'atlantis_modern_refractions_model.json', icon: '🔮', title: 'Modern Refractions', subtitle: 'Contemporary interpretations' },
+    { file: 'bacon_rhetorical_inheritance_model.json', icon: '📜', title: 'Bacon Rhetorical', subtitle: 'Rhetorical analysis framework' },
+    { file: 'bacon_rigorous_inheritance_model.json', icon: '⚖️', title: 'Bacon Rigorous', subtitle: 'Rigorous inheritance model' },
+    { file: 'bacon_world_model.json', icon: '🌍', title: 'Bacon World Model', subtitle: 'Comprehensive worldview' },
+    { file: 'boland_atlantis_symbolic_model.json', icon: '🔺', title: 'Boland Symbolic', subtitle: 'Symbolic interpretation' },
+    { file: 'donnelly_atlantis_claims_model.json', icon: '🗺️', title: 'Donnelly Claims', subtitle: 'Historical assertions' },
+    { file: 'emerald_tablets_atlantis_model.json', icon: '💎', title: 'Emerald Tablets', subtitle: 'Hermetic tradition' },
+    { file: 'timaeus_atlantis_model.json', icon: '📖', title: 'Timaeus Account', subtitle: 'Plato\'s original dialogue' }
+  ];
+
+  let modelsData = {};
+  let currentModel = null;
+  let currentTab = 'entities';
+  let currentView = 'models';
+  let currentFilter = 'all';
+  let allItems = [];
+  
+  const MODEL_COLORS = {
+    'ai_atlantis_resurrection_project.json': { code: 'ai', icon: '🤖', name: 'AI Project' },
+    'atlantis_modern_refractions_model.json': { code: 'modern', icon: '🔮', name: 'Modern' },
+    'bacon_rhetorical_inheritance_model.json': { code: 'bacon-rhet', icon: '📜', name: 'Bacon Rhet' },
+    'bacon_rigorous_inheritance_model.json': { code: 'bacon-rig', icon: '⚖️', name: 'Bacon Rig' },
+    'bacon_world_model.json': { code: 'bacon-world', icon: '🌍', name: 'Bacon World' },
+    'boland_atlantis_symbolic_model.json': { code: 'boland', icon: '🔺', name: 'Boland' },
+    'donnelly_atlantis_claims_model.json': { code: 'donnelly', icon: '🗺️', name: 'Donnelly' },
+    'emerald_tablets_atlantis_model.json': { code: 'emerald', icon: '💎', name: 'Emerald' },
+    'timaeus_atlantis_model.json': { code: 'timaeus', icon: '📖', name: 'Timaeus' }
+  };
+
+  async function loadModels() {
+    const grid = document.getElementById('models');
+    const loading = document.getElementById('loading');
+    
+    try {
+      // Load all models
+      const promises = MODELS.map(async model => {
+        const response = await fetch(`./OLOGS/${model.file}`);
+        const data = await response.json();
+        modelsData[model.file] = data;
+        return { ...model, data };
+      });
+      
+      await Promise.all(promises);
+      
+      // Build all items list
+      buildAllItemsList();
+      
+      // Render cards
+      loading.style.display = 'none';
+      grid.innerHTML = MODELS.map(model => {
+        const data = modelsData[model.file];
+        const entityCount = data.step1?.entities?.length || data.step1?.chapters?.length || 0;
+        
+        return `
+          <div class="model-card" data-file="${model.file}">
+            <div class="model-count">${entityCount}</div>
+            <div class="model-icon">${model.icon}</div>
+            <div class="model-title">${model.title}</div>
+            <div class="model-subtitle">${model.subtitle}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // Add click handlers
+      document.querySelectorAll('.model-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const file = card.dataset.file;
+          openModel(file);
+        });
+      });
+      
+    } catch(e) {
+      loading.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>Could not load models</div></div>`;
+      console.error(e);
+    }
+  }
+  
+  function buildAllItemsList() {
+    allItems = [];
+    
+    MODELS.forEach(model => {
+      const data = modelsData[model.file];
+      const modelInfo = MODEL_COLORS[model.file];
+      
+      // Add entities
+      if (data.step1?.entities) {
+        data.step1.entities.forEach(e => {
+          allItems.push({
+            type: 'entity',
+            subtype: e.type,
+            title: e.name,
+            definition: e.definition,
+            model: model.file,
+            modelInfo: modelInfo,
+            data: e
+          });
+        });
+      }
+      
+      // Add chapters
+      if (data.step1?.chapters) {
+        data.step1.chapters.forEach(ch => {
+          allItems.push({
+            type: 'chapter',
+            subtype: 'chapter',
+            title: ch.title,
+            definition: ch.world_seed,
+            model: model.file,
+            modelInfo: modelInfo,
+            data: ch
+          });
+        });
+      }
+      
+      // Add morphisms/relations
+      if (data.step2?.morphisms) {
+        data.step2.morphisms.forEach(m => {
+          allItems.push({
+            type: 'relation',
+            subtype: m.relation,
+            title: `${m.from} → ${m.to}`,
+            definition: m.statement,
+            model: model.file,
+            modelInfo: modelInfo,
+            data: m
+          });
+        });
+      }
+    });
+    
+    console.log(`📦 Built ${allItems.length} items from all models`);
+  }
+  
+  function renderGridView() {
+    const grid = document.getElementById('all-grid');
+    const filters = new Set(['all']);
+    
+    // Collect unique types
+    allItems.forEach(item => {
+      filters.add(item.type);
+    });
+    
+    // Create filter bar
+    const filterBar = document.createElement('div');
+    filterBar.className = 'filter-bar';
+    filterBar.innerHTML = Array.from(filters).map(f => 
+      `<button class="filter-chip ${f === currentFilter ? 'active' : ''}" data-filter="${f}">
+        ${f === 'all' ? '🌊 All' : f === 'entity' ? '👥 Entities' : f === 'chapter' ? '📚 Chapters' : '🔗 Relations'}
+      </button>`
+    ).join('');
+    
+    // Filter items
+    const filtered = currentFilter === 'all' 
+      ? allItems 
+      : allItems.filter(item => item.type === currentFilter);
+    
+    // Render tape cards
+    const cards = filtered.map(item => `
+      <div class="tape-card" data-model="${item.modelInfo.code}" data-type="${item.type}">
+        <div class="tape-type">${item.subtype}</div>
+        <div class="tape-title">${item.title}</div>
+        ${item.type === 'relation' ? '<div class="tape-arrow">↓</div>' : ''}
+        <div class="tape-model">${item.modelInfo.icon} ${item.modelInfo.name}</div>
+      </div>
+    `).join('');
+    
+    grid.innerHTML = '';
+    grid.appendChild(filterBar);
+    
+    const cardsContainer = document.createElement('div');
+    cardsContainer.className = 'all-grid';
+    cardsContainer.style.display = 'grid';
+    cardsContainer.innerHTML = cards;
+    grid.appendChild(cardsContainer);
+    
+    // Add filter handlers
+    filterBar.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        currentFilter = chip.dataset.filter;
+        renderGridView();
+      });
+    });
+    
+    // Add card click handlers
+    cardsContainer.querySelectorAll('.tape-card').forEach((card, idx) => {
+      card.addEventListener('click', () => {
+        const item = filtered[idx];
+        showItemDetail(item);
+      });
+    });
+  }
+  
+  function showItemDetail(item) {
+    // Quick detail view
+    const detail = document.getElementById('detail');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+    const tabs = document.getElementById('tabs');
+    
+    title.textContent = item.title;
+    tabs.innerHTML = '';
+    
+    let html = `
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">${item.modelInfo.icon}</span>
+          <span class="section-title">${item.modelInfo.name}</span>
+        </div>
+        
+        <div class="item">
+          <div class="item-type">${item.subtype}</div>
+          <div class="item-title">${item.title}</div>
+          <div class="item-text">${item.definition}</div>
+    `;
+    
+    if (item.data.evidence?.quote) {
+      html += `
+        <div class="quote">
+          "${item.data.evidence.quote}"
+          <span class="quote-loc">${item.data.evidence.loc}</span>
+        </div>
+      `;
+    }
+    
+    if (item.data.functions) {
+      html += `
+        <div style="margin-top:12px;">
+          <strong style="font-size:13px;opacity:0.8;">Functions:</strong>
+          <ul class="simple-list">
+            ${item.data.functions.map(f => `<li>${f}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+    
+    if (item.data.premises) {
+      html += `
+        <div style="margin-top:12px;">
+          <strong style="font-size:13px;opacity:0.8;">Premises:</strong>
+          <ul class="simple-list">
+            ${item.data.premises.map(p => `<li>${p}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+    
+    html += `
+        </div>
+      </div>
+    `;
+    
+    content.innerHTML = html;
+    detail.classList.add('show');
+  }
+
+  function openModel(file) {
+    currentModel = file;
+    const model = MODELS.find(m => m.file === file);
+    const data = modelsData[file];
+    
+    document.getElementById('detail-title').textContent = model.title;
+    document.getElementById('detail').classList.add('show');
+    
+    // Determine available tabs
+    const tabs = [];
+    if (data.step1?.entities) tabs.push({ id: 'entities', label: 'Entities', icon: '👥' });
+    if (data.step1?.chapters) tabs.push({ id: 'chapters', label: 'Chapters', icon: '📚' });
+    if (data.step2?.morphisms) tabs.push({ id: 'morphisms', label: 'Relations', icon: '🔗' });
+    if (data.step3?.olog) tabs.push({ id: 'olog', label: 'Olog', icon: '🎯' });
+    if (data.step4?.critique) tabs.push({ id: 'critique', label: 'Critique', icon: '🔍' });
+    
+    renderTabs(tabs);
+    currentTab = tabs[0]?.id || 'entities';
+    renderContent(data, currentTab);
+  }
+
+  function renderTabs(tabs) {
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = tabs.map(tab => 
+      `<button class="tab ${tab.id === currentTab ? 'active' : ''}" data-tab="${tab.id}">
+        ${tab.icon} ${tab.label}
+      </button>`
+    ).join('');
+    
+    tabsEl.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentTab = btn.dataset.tab;
+        const data = modelsData[currentModel];
+        renderTabs(tabs);
+        renderContent(data, currentTab);
+      });
+    });
+  }
+
+  function renderContent(data, tab) {
+    const content = document.getElementById('detail-content');
+    
+    if (tab === 'entities' && data.step1?.entities) {
+      content.innerHTML = `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">👥</span>
+            <span class="section-title">Entities</span>
+            <span class="section-badge">${data.step1.entities.length}</span>
+          </div>
+          ${data.step1.entities.map(e => `
+            <div class="item">
+              <div class="item-type">${e.type}</div>
+              <div class="item-title">${e.name}</div>
+              <div class="item-text">${e.definition}</div>
+              ${e.evidence?.quote ? `
+                <div class="quote">
+                  "${e.evidence.quote}"
+                  <span class="quote-loc">${e.evidence.loc}</span>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else if (tab === 'chapters' && data.step1?.chapters) {
+      content.innerHTML = `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">📚</span>
+            <span class="section-title">Chapters</span>
+            <span class="section-badge">${data.step1.chapters.length}</span>
+          </div>
+          ${data.step1.chapters.map(ch => `
+            <div class="item">
+              <div class="item-title">${ch.title}</div>
+              <div class="item-text">${ch.world_seed}</div>
+              ${ch.premises ? `
+                <div style="margin-top:12px;">
+                  <strong style="font-size:13px;opacity:0.8;">Premises:</strong>
+                  <ul class="simple-list">
+                    ${ch.premises.map(p => `<li>${p}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else if (tab === 'morphisms' && data.step2?.morphisms) {
+      content.innerHTML = `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">🔗</span>
+            <span class="section-title">Relations</span>
+            <span class="section-badge">${data.step2.morphisms.length}</span>
+          </div>
+          ${data.step2.morphisms.map(m => `
+            <div class="item">
+              <div class="item-title">${m.from} → ${m.to}</div>
+              <div class="item-type">${m.relation}</div>
+              <div class="item-text">${m.statement}</div>
+              ${m.evidence?.quote ? `
+                <div class="quote">
+                  "${m.evidence.quote}"
+                  <span class="quote-loc">${m.evidence.loc}</span>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else if (tab === 'olog' && data.step3?.olog) {
+      const olog = data.step3.olog;
+      content.innerHTML = `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">🎯</span>
+            <span class="section-title">${olog.name}</span>
+          </div>
+          
+          ${olog.axioms ? `
+            <div style="margin-bottom:20px;">
+              <strong style="font-size:14px;display:block;margin-bottom:12px;color:var(--gold);">Axioms</strong>
+              <ul class="simple-list">
+                ${olog.axioms.map(a => `<li>${a}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          
+          ${olog.rules ? `
+            <div style="margin-bottom:20px;">
+              <strong style="font-size:14px;display:block;margin-bottom:12px;color:var(--gold);">Rules</strong>
+              <ul class="simple-list">
+                ${olog.rules.map(r => `<li>${r}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          
+          ${olog.evidence ? `
+            <div>
+              <strong style="font-size:14px;display:block;margin-bottom:12px;color:var(--gold);">Evidence</strong>
+              ${olog.evidence.map(e => `
+                <div class="quote">
+                  "${e.quote}"
+                  <span class="quote-loc">${e.loc}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    } else if (tab === 'critique' && data.step4?.critique) {
+      const crit = data.step4.critique;
+      content.innerHTML = `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">🔍</span>
+            <span class="section-title">Critical Analysis</span>
+          </div>
+          
+          ${crit.omissions ? `
+            <div style="margin-bottom:20px;">
+              <strong style="font-size:14px;display:block;margin-bottom:12px;color:var(--coral);">⚠️ Omissions</strong>
+              <ul class="simple-list">
+                ${crit.omissions.map(o => `<li>${o}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          
+          ${crit.overreach ? `
+            <div style="margin-bottom:20px;">
+              <strong style="font-size:14px;display:block;margin-bottom:12px;color:var(--coral);">⚠️ Overreach</strong>
+              <ul class="simple-list">
+                ${crit.overreach.map(o => `<li>${o}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          
+          ${crit.fixes ? `
+            <div>
+              <strong style="font-size:14px;display:block;margin-bottom:12px;color:var(--gold);">✓ Suggested Fixes</strong>
+              <ul class="simple-list">
+                ${crit.fixes.map(f => `<li>${f}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      content.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div>No data for this view</div></div>`;
+    }
+  }
+
+  // Back button
+  document.getElementById('back-btn').addEventListener('click', () => {
+    document.getElementById('detail').classList.remove('show');
+  });
+  
+  // View toggle
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentView = btn.dataset.view;
+      
+      // Update buttons
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Toggle views
+      if (currentView === 'models') {
+        document.getElementById('models').style.display = 'grid';
+        document.getElementById('all-grid').style.display = 'none';
+      } else {
+        document.getElementById('models').style.display = 'none';
+        document.getElementById('all-grid').style.display = 'block';
+        renderGridView();
+      }
+    });
+  });
+
+  // Start
+  loadModels();
+})();
+</script>
+</body>
+</html>

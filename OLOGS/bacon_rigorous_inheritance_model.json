@@ -1,0 +1,319 @@
+{
+  "step1": {
+    "provenance": {
+      "corpus": "Early+Critical Canon"
+    },
+    "entities": [
+      {
+        "id": "bensalem_island",
+        "type": "place",
+        "name": "Bensalem Island",
+        "definition": "Isolated island polity governing through laws of secrecy, knowing most of habitable world while remaining unknown",
+        "functions": [
+          "preserve knowledge",
+          "control strangers",
+          "maintain isolation",
+          "support Salomon's House",
+          "practice Christianity"
+        ],
+        "stance": "primary",
+        "evidence": {
+          "quote": "We of this island of Bensalem, have this; that by means of our solitary situation; and of the laws of secrecy, which we have for our travellers, and our rare admission of strangers; we know well most part of the habitable world, and are ourselves unknown",
+          "loc": "Gutenberg \u00a7 Governor's Speech",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.95
+      },
+      {
+        "id": "salomons_house_institution",
+        "type": "institution",
+        "name": "Salomon's House",
+        "definition": "Scientific college whose end is knowledge of causes and secret motions, enlarging bounds of human empire to effect all things possible",
+        "functions": [
+          "study causes",
+          "enlarge human empire",
+          "effect all things possible",
+          "discover inventions",
+          "preserve/publish selectively"
+        ],
+        "stance": "primary",
+        "evidence": {
+          "quote": "The end of our foundation is the knowledge of causes, and secret motions of things; and the enlarging of the bounds of human empire, to the effecting of all things possible",
+          "loc": "Gutenberg \u00a7 Father's Declaration",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.95
+      },
+      {
+        "id": "merchants_of_light_agents",
+        "type": "agent",
+        "name": "Merchants of Light",
+        "definition": "Twelve fellows sailing to foreign countries under concealed names to bring books, abstracts, and patterns of experiments",
+        "functions": [
+          "sail abroad",
+          "conceal identities",
+          "collect foreign knowledge",
+          "bring books",
+          "gather experimental patterns"
+        ],
+        "stance": "primary",
+        "evidence": {
+          "quote": "We have twelve that sail into foreign countries, under the names of other nations, (for our own we conceal); who bring us the books, and abstracts, and patterns of experiments of all other parts. These we call Merchants of Light",
+          "loc": "Gutenberg \u00a7 Institutional Structure",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.95
+      },
+      {
+        "id": "interpreters_of_nature_agents",
+        "type": "agent",
+        "name": "Interpreters of Nature",
+        "definition": "Three fellows who raise former discoveries by experiments into greater observations, axioms, and aphorisms",
+        "functions": [
+          "interpret discoveries",
+          "synthesize experiments",
+          "create axioms",
+          "form aphorisms",
+          "generate principles"
+        ],
+        "stance": "primary",
+        "evidence": {
+          "quote": "Lastly, we have three that raise the former discoveries by experiments into greater observations, axioms, and aphorisms. These we call Interpreters of Nature",
+          "loc": "Gutenberg \u00a7 Institutional Structure",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.95
+      },
+      {
+        "id": "feast_of_family_custom",
+        "type": "custom",
+        "name": "Feast of the Family",
+        "definition": "Bensalem ceremony honoring fathers of thirty living descendants with state funding and patriarchal authority",
+        "functions": [
+          "honor fatherhood",
+          "celebrate fertility",
+          "provide state funding",
+          "establish hierarchy",
+          "encourage population"
+        ],
+        "stance": "primary",
+        "evidence": {
+          "quote": "There is not under the heavens so chaste a nation as this of Bensalem; nor so free from all pollution or foulness. It is the virgin of the world",
+          "loc": "Gutenberg \u00a7 Joabin's Account",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.9
+      },
+      {
+        "id": "william_rawley_executor",
+        "type": "agent",
+        "name": "William Rawley",
+        "definition": "Bacon's chaplain, friend, literary executor who published New Atlantis posthumously in 1627 with Sylva Sylvarum",
+        "functions": [
+          "preserve manuscripts",
+          "edit works",
+          "provide context",
+          "publish posthumously",
+          "explain intentions"
+        ],
+        "stance": "editorial",
+        "evidence": {
+          "quote": "a fable my lord devised, to the end that he might exhibit therein a model or description of a college, instituted for the interpretation of nature",
+          "loc": "FBRT \u00a7 Rawley's Preface",
+          "source_label": "FBRT_New_Atlantis"
+        },
+        "confidence": 0.9
+      },
+      {
+        "id": "oxford_francis_bacon_project_institution",
+        "type": "institution",
+        "name": "Oxford Francis Bacon Project",
+        "definition": "Major scholarly project producing new critical edition to replace Victorian Spedding edition with modern editorial techniques",
+        "functions": [
+          "produce critical editions",
+          "advance editorial methods",
+          "provide translations",
+          "reintegrate works",
+          "establish authority"
+        ],
+        "stance": "editorial",
+        "evidence": {
+          "quote": "Volume XIV of the Oxford Francis Bacon is comprised of Bacon's last natural historical and literary writings, the Sylva sylvarum, New Atlantis, and Magnalia Naturae",
+          "loc": "OFB XIV Website \u00a7 Contents",
+          "source_label": "OFB_XIV_Sylva+NewAtlantis"
+        },
+        "confidence": 0.9
+      },
+      {
+        "id": "david_colclough_editor",
+        "type": "agent",
+        "name": "David Colclough",
+        "definition": "Professor of Renaissance Studies, editor of New Atlantis in OFB XIX providing detailed introduction and critical apparatus",
+        "functions": [
+          "edit text",
+          "provide commentary",
+          "establish contexts",
+          "analyze sources",
+          "create apparatus"
+        ],
+        "stance": "editorial",
+        "evidence": {
+          "quote": "David Colclough's detailed Introduction sets New Atlantis in the contexts of Bacon's works and of contemporary models of information-gathering and -management",
+          "loc": "AbeBooks \u00a7 Synopsis OFB XIX",
+          "source_label": "OUP_OFB_XIX_catalogue"
+        },
+        "confidence": 0.9
+      }
+    ]
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "salomons_house_institution",
+        "to": "bensalem_island",
+        "relation": "governs",
+        "statement": "Salomon's House serves as the very eye and lanthorn of the kingdom of Bensalem",
+        "evidence": {
+          "quote": "which house, or college (my good brethren) is the very eye of this kingdom",
+          "loc": "Gutenberg \u00a7 Wise Man's Prayer",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.95
+      },
+      {
+        "from": "william_rawley_executor",
+        "to": "salomons_house_institution",
+        "relation": "edits",
+        "statement": "Rawley posthumously published and explained Bacon's model of scientific college",
+        "evidence": {
+          "quote": "a fable my lord devised, to the end that he might exhibit therein a model or description of a college, instituted for the interpretation of nature",
+          "loc": "FBRT \u00a7 Rawley's Preface",
+          "source_label": "FBRT_New_Atlantis"
+        },
+        "confidence": 0.95
+      },
+      {
+        "from": "oxford_francis_bacon_project_institution",
+        "to": "david_colclough_editor",
+        "relation": "produces",
+        "statement": "Oxford project produces Colclough edition as part of comprehensive scholarly series",
+        "evidence": {
+          "quote": "Volume XIV of the Oxford Francis Bacon... Edited by the late Graham Rees with Maria Wakely, and including extensive commentary by David Colclough",
+          "loc": "OFB XIV Website \u00a7 Contents",
+          "source_label": "OFB_XIV_Sylva+NewAtlantis"
+        },
+        "confidence": 0.9
+      },
+      {
+        "from": "merchants_of_light_agents",
+        "to": "interpreters_of_nature_agents",
+        "relation": "precedes",
+        "statement": "Merchants of Light gather raw materials ultimately synthesized by Interpreters of Nature",
+        "evidence": {
+          "quote": "We have twelve that sail into foreign countries... Lastly, we have three that raise the former discoveries by experiments into greater observations, axioms, and aphorisms",
+          "loc": "Gutenberg \u00a7 Institutional Structure",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        "confidence": 0.9
+      },
+      {
+        "from": "salomons_house_institution",
+        "to": "feast_of_family_custom",
+        "relation": "twins_with",
+        "statement": "Salomon's House scientific program parallels Bensalem's social reproduction through family ceremonies",
+        "evidence": {
+          "quote": "New Atlantis: A Worke unfinished, it was appended to (i.e. twinned with) a larger work, Sylva Sylvarum",
+          "loc": "FBRT \u00a7 Commentary p.1",
+          "source_label": "FBRT_New_Atlantis"
+        },
+        "confidence": 0.8
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Bacon's New Atlantis: Epistemic and Rhetorical Inheritance",
+      "tier_a_epistemic": {
+        "description": "Experiment \u2192 Collection \u2192 Synthesis \u2192 Publication \u2192 Utility",
+        "axioms": [
+          "Systematic foreign collection enables domestic synthesis of natural knowledge",
+          "Collaborative institutional research surpasses individual philosophical inquiry",
+          "Scientific secrecy balances public benefit with institutional preservation"
+        ]
+      },
+      "tier_b_institutional": {
+        "description": "Offices \u2192 Governance \u2192 Secrecy \u2192 Selective dissemination",
+        "axioms": [
+          "Hierarchical division of scientific labor optimizes knowledge production efficiency",
+          "Institutional isolation preserves scientific integrity from external political corruption"
+        ]
+      },
+      "tier_c_editorial_reception": {
+        "description": "Rawley \u2192 OFB XIX \u2192 Colclough \u2192 Modern Readings",
+        "axioms": [
+          "Editorial apparatus mediates between historical text and contemporary scholarly interpretation",
+          "Critical editions transform textual authority through modern scholarly intervention"
+        ]
+      },
+      "rules": [
+        "IF foreign knowledge is systematically collected THEN domestic scientific synthesis becomes possible",
+        "IF experiments are methodically organized by offices THEN axioms and aphorisms emerge",
+        "IF scientific institutions maintain secrecy THEN external independence is preserved",
+        "IF editorial projects recontextualize historical texts THEN new interpretive possibilities arise"
+      ],
+      "evidence": [
+        {
+          "quote": "The end of our foundation is the knowledge of causes, and secret motions of things; and the enlarging of the bounds of human empire, to the effecting of all things possible",
+          "loc": "Gutenberg \u00a7 Father's Declaration",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        {
+          "quote": "we have consultations, which of the inventions and experiences which we have discovered shall be published, and which not: and take all an oath of secrecy",
+          "loc": "Gutenberg \u00a7 Institutional Governance",
+          "source_label": "Gutenberg_New_Atlantis"
+        },
+        {
+          "quote": "Volume XIV of the Oxford Francis Bacon is comprised of Bacon's last natural historical and literary writings",
+          "loc": "OFB XIV Website \u00a7 Contents",
+          "source_label": "OFB_XIV_Sylva+NewAtlantis"
+        }
+      ]
+    }
+  },
+  "step4": {
+    "critique": {
+      "variants": [
+        {
+          "description": "EEBO 1658 vs later editions: EEBO TCP access failed, preventing comparison of early vs modern witness variants",
+          "missing_comparison": "Early Rawley preface phrasing vs Gutenberg modernization"
+        }
+      ],
+      "omissions": [
+        "TLS Houston review inaccessible - missing modern reception analysis of Bacon's technocratic legacy",
+        "Colclough Ethics and Politics chapter unavailable - missing secondary scholarly interpretation",
+        "OFB XIX preview content limited - missing detailed editorial principles and copy-text information"
+      ],
+      "overreach": [
+        "May infer systematic twinning relationship between Sylva Sylvarum and New Atlantis without full editorial evidence",
+        "Could suggest editorial causation in interpretation without direct textual warrant for influence claims"
+      ],
+      "corrections": [
+        {
+          "fix": "Add entity for 'Sylva Sylvarum' with twins_with relation to New Atlantis based on FBRT evidence of paired publication",
+          "replacement_quote": "New Atlantis: A Worke unfinished, it was appended to (i.e. twinned with) a larger work, Sylva Sylvarum",
+          "loc": "FBRT \u00a7 Commentary p.1"
+        },
+        {
+          "fix": "Include morphism for 'King Solamona' governs 'Bensalem' with institutional founding evidence",
+          "replacement_quote": "There reigned in this land, about nineteen hundred years ago, a king, whose memory of all others we most adore; not superstitiously, but as a divine instrument, though a mortal man; his name was Solamona",
+          "loc": "Gutenberg \u00a7 Historical Account"
+        },
+        {
+          "fix": "Expand axiom about selective publication with oath of secrecy evidence for institutional governance",
+          "replacement_quote": "we have consultations, which of the inventions and experiences which we have discovered shall be published, and which not: and take all an oath of secrecy, for the concealing of those which we think fit to keep secret",
+          "loc": "Gutenberg \u00a7 Publication Policy"
+        }
+      ]
+    }
+  }
+}

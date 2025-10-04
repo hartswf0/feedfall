@@ -1,0 +1,297 @@
+{
+  "step1": {
+    "provenance": {
+      "corpus": "Textual Canon"
+    },
+    "entities": [
+      {
+        "id": "bensalem",
+        "type": "place",
+        "name": "Bensalem",
+        "definition": "Island polity where inhabitants live in peace, friendship, and charity, isolated by laws of secrecy",
+        "functions": [
+          "preserve knowledge",
+          "control strangers",
+          "practice Christianity",
+          "maintain virtue",
+          "support Salomon's House"
+        ],
+        "evidence": {
+          "quote": "We of this island of Bensalem, have this; that by means of our solitary situation; and of the laws of secrecy, which we have for our travellers, and our rare admission of strangers; we know well most part of the habitable world, and are ourselves unknown",
+          "loc": "Gutenberg \u00a7 Governor's Explanation"
+        },
+        "stance": "primary"
+      },
+      {
+        "id": "salomons_house",
+        "type": "institution",
+        "name": "Salomon's House",
+        "definition": "Scientific college dedicated to study of works and creatures of God, called the 'noblest foundation' and 'lanthorn of this kingdom'",
+        "functions": [
+          "study causes",
+          "enlarge human empire",
+          "effect all things possible",
+          "publish inventions",
+          "preserve secrets"
+        ],
+        "evidence": {
+          "quote": "The end of our foundation is the knowledge of causes, and secret motions of things; and the enlarging of the bounds of human empire, to the effecting of all things possible",
+          "loc": "Gutenberg \u00a7 Father's Declaration"
+        },
+        "stance": "primary"
+      },
+      {
+        "id": "merchants_of_light",
+        "type": "agent",
+        "name": "Merchants of Light",
+        "definition": "Twelve fellows who sail into foreign countries under names of other nations to gather books, abstracts, and patterns of experiments",
+        "functions": [
+          "collect foreign knowledge",
+          "conceal identity",
+          "bring books",
+          "gather patterns",
+          "sail abroad"
+        ],
+        "evidence": {
+          "quote": "We have twelve that sail into foreign countries, under the names of other nations, (for our own we conceal); who bring us the books, and abstracts, and patterns of experiments of all other parts. These we call Merchants of Light",
+          "loc": "Gutenberg \u00a7 Institutional Structure"
+        },
+        "stance": "primary"
+      },
+      {
+        "id": "interpreters_of_nature",
+        "type": "agent",
+        "name": "Interpreters of Nature",
+        "definition": "Three fellows who raise discoveries by experiments into greater observations, axioms, and aphorisms",
+        "functions": [
+          "interpret discoveries",
+          "create axioms",
+          "form aphorisms",
+          "raise observations",
+          "synthesize knowledge"
+        ],
+        "evidence": {
+          "quote": "Lastly, we have three that raise the former discoveries by experiments into greater observations, axioms, and aphorisms. These we call Interpreters of Nature",
+          "loc": "Gutenberg \u00a7 Institutional Structure"
+        },
+        "stance": "primary"
+      },
+      {
+        "id": "william_rawley",
+        "type": "agent",
+        "name": "William Rawley",
+        "definition": "Bacon's chaplain, friend, and literary executor who published New Atlantis posthumously in 1627",
+        "functions": [
+          "preserve papers",
+          "edit manuscripts",
+          "publish works",
+          "serve as executor",
+          "defend memory"
+        ],
+        "evidence": {
+          "quote": "Bacon's literary executor, Dr. Rowley, published \"The New Atlantis\" in 1627, the year after the author's death",
+          "loc": "Gutenberg \u00a7 Editorial Introduction"
+        },
+        "stance": "secondary"
+      },
+      {
+        "id": "oxford_francis_bacon_project",
+        "type": "institution",
+        "name": "Oxford Francis Bacon Project",
+        "definition": "Major scholarly project producing new 16-volume critical edition to replace Victorian Spedding edition",
+        "functions": [
+          "produce critical edition",
+          "advance editorial techniques",
+          "provide translations",
+          "reintegrate Bacon's work",
+          "transform knowledge"
+        ],
+        "evidence": {
+          "quote": "The Oxford Francis Bacon project aims to produce a new 16-volume critical edition of the works of Francis Bacon (1561\u20131626), the Elizabethan-Jacobean lawyer, natural philosopher, and statesman",
+          "loc": "Oxford Francis Bacon website"
+        },
+        "stance": "secondary"
+      },
+      {
+        "id": "david_colclough",
+        "type": "agent",
+        "name": "David Colclough",
+        "definition": "Professor of Renaissance Studies at Queen Mary University of London, editor of New Atlantis in Oxford Francis Bacon XIX",
+        "functions": [
+          "edit texts",
+          "provide commentary",
+          "establish contexts",
+          "analyze sources",
+          "create critical apparatus"
+        ],
+        "evidence": {
+          "quote": "David Colclough's detailed Introduction sets New Atlantis in the contexts of Bacon's works and of contemporary models of information-gathering and -management",
+          "loc": "AbeBooks \u00a7 Synopsis OFB XIX"
+        },
+        "stance": "secondary"
+      },
+      {
+        "id": "plato_atlantis",
+        "type": "place",
+        "name": "Plato's Atlantis",
+        "definition": "Classical Atlantis narrative from Timaeus and Critias providing mythological template for Bacon's utopia",
+        "functions": [
+          "provide precedent",
+          "establish genre",
+          "offer mythological framework",
+          "inspire imitation",
+          "legitimize fiction"
+        ],
+        "evidence": {
+          "quote": "The story, set in the present but against the background of Plato's account of Atlantis, and incorporating important classical, biblical and Christian elements",
+          "loc": "FBRT \u00a7 Commentary p.1"
+        },
+        "stance": "commentary"
+      },
+      {
+        "id": "thomas_more_utopia",
+        "type": "place",
+        "name": "More's Utopia",
+        "definition": "Renaissance utopian precedent establishing literary tradition of ideal commonwealth description",
+        "functions": [
+          "establish utopian genre",
+          "provide literary model",
+          "inspire political speculation",
+          "legitimate fiction",
+          "influence form"
+        ],
+        "evidence": {
+          "quote": "His Lordship thought also in this present fable to have composed a frame of Laws, or of the best state or mould of a commonwealth",
+          "loc": "FBRT \u00a7 Rawley's Description"
+        },
+        "stance": "commentary"
+      }
+    ]
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "william_rawley",
+        "to": "salomons_house",
+        "relation": "publishes",
+        "statement": "Rawley posthumously published New Atlantis containing Bacon's model of scientific college",
+        "evidence": {
+          "quote": "a fable my lord devised, to the end that he might exhibit therein a model or description of a college, instituted for the interpretation of nature",
+          "loc": "FBRT \u00a7 Rawley's Preface"
+        },
+        "confidence": 0.95
+      },
+      {
+        "from": "oxford_francis_bacon_project",
+        "to": "david_colclough",
+        "relation": "governs",
+        "statement": "Oxford project produces Colclough edition as volume XIX of critical series",
+        "evidence": {
+          "quote": "This volume comprises the first critical edition since the nineteenth century of New Atlantis... David Colclough's detailed Introduction",
+          "loc": "AbeBooks \u00a7 Synopsis OFB XIX"
+        },
+        "confidence": 0.9
+      },
+      {
+        "from": "salomons_house",
+        "to": "bensalem",
+        "relation": "part_of",
+        "statement": "Salomon's House serves as the very eye and lanthorn of Bensalem kingdom",
+        "evidence": {
+          "quote": "which house, or college (my good brethren) is the very eye of this kingdom",
+          "loc": "Gutenberg \u00a7 Wise Man's Prayer"
+        },
+        "confidence": 0.95
+      },
+      {
+        "from": "merchants_of_light",
+        "to": "interpreters_of_nature",
+        "relation": "precedes",
+        "statement": "Merchants of Light gather raw materials ultimately processed by Interpreters of Nature",
+        "evidence": {
+          "quote": "We have twelve that sail into foreign countries... Lastly, we have three that raise the former discoveries by experiments into greater observations, axioms, and aphorisms",
+          "loc": "Gutenberg \u00a7 Institutional Structure"
+        },
+        "confidence": 0.9
+      },
+      {
+        "from": "plato_atlantis",
+        "to": "bensalem",
+        "relation": "precedes",
+        "statement": "Plato's Atlantis provides mythological template and narrative framework for Bacon's Bensalem",
+        "evidence": {
+          "quote": "The story, set in the present but against the background of Plato's account of Atlantis",
+          "loc": "FBRT \u00a7 Commentary p.1"
+        },
+        "confidence": 0.9
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Bacon's New Atlantis: Conceptual and Rhetorical Inheritance",
+      "tiers": {
+        "conceptual": {
+          "description": "Epistemic Infrastructure: Experiment \u2192 Collection \u2192 Synthesis \u2192 Publication \u2192 Utility",
+          "axioms": [
+            "Systematic experiment yields reliable natural knowledge through institutional organization",
+            "Collaborative research surpasses individual inquiry in scope and accuracy",
+            "Scientific secrecy balances public benefit with institutional preservation"
+          ]
+        },
+        "institutional": {
+          "description": "Organizational Logic: College \u2192 Office \u2192 Governance \u2192 Ethos \u2192 Secrecy",
+          "axioms": [
+            "Hierarchical division of labor optimizes knowledge production efficiency",
+            "Institutional isolation preserves scientific integrity from external corruption"
+          ]
+        },
+        "interpretive": {
+          "description": "Scholarly Descent: Plato \u2192 Bacon \u2192 Colclough \u2192 Modern Readings",
+          "axioms": [
+            "Editorial apparatus mediates between historical text and contemporary interpretation",
+            "Critical editions transform textual authority through scholarly intervention"
+          ]
+        }
+      },
+      "rules": [
+        "IF foreign knowledge is systematically gathered THEN domestic synthesis becomes possible",
+        "IF experiments are methodically organized THEN axioms and aphorisms emerge",
+        "IF scientific institutions maintain secrecy THEN external independence is preserved",
+        "IF editorial projects recontextualize texts THEN new interpretive possibilities arise"
+      ],
+      "evidence": [
+        {
+          "quote": "The end of our foundation is the knowledge of causes, and secret motions of things; and the enlarging of the bounds of human empire, to the effecting of all things possible",
+          "loc": "Gutenberg \u00a7 Father's Declaration"
+        },
+        {
+          "quote": "We have consultations, which of the inventions and experiences which we have discovered shall be published, and which not: and take all an oath of secrecy",
+          "loc": "Gutenberg \u00a7 Institutional Governance"
+        },
+        {
+          "quote": "This volume comprises the first critical edition since the nineteenth century of New Atlantis",
+          "loc": "AbeBooks \u00a7 Synopsis OFB XIX"
+        }
+      ]
+    }
+  },
+  "step4": {
+    "critique": {
+      "omissions": [
+        "TLS review by Chlo\u00eb Houston could not be accessed for modern interpretive framework",
+        "Colclough's Ethics and Politics essay unavailable for secondary analysis",
+        "Missing specific analysis of Sylva Sylvarum relationship to New Atlantis"
+      ],
+      "overreach": [
+        "May infer systematic institutional logic beyond explicit textual warrant",
+        "Could suggest editorial influence on interpretation without direct evidence of causation"
+      ],
+      "corrections": [
+        "Add entity for 'Feast of the Family' from Gutenberg \u00a7 Family Customs with quote about Tirsan authority",
+        "Include morphism between 'Sylva Sylvarum' and 'New Atlantis' as 'twinned with' based on FBRT \u00a7 Publishing History",
+        "Expand axiom about collaborative research with Gutenberg \u00a7 'Merchants of Light' evidence for systematic collection"
+      ]
+    }
+  }
+}

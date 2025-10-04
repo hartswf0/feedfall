@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>VIDEO_STACKER_∞ — Pyramid Scene: "Out of Life"</title>
+<style>
+  :root{
+    --ink:#0f0; --bg:#000; --panel:#0a0a0a; --line:#003300;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, "Courier New", monospace;
+    overflow:hidden; touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  #gl{position:fixed; inset:0; z-index:1;}
+  #css{position:fixed; inset:0; z-index:2; pointer-events:none;}
+  
+  /* Minimal UI overlay */
+  #info{position:fixed; top:20px; left:20px; z-index:100; color:var(--ink); font-size:12px; background:rgba(0,0,0,.8); padding:12px; border:1px solid var(--ink); border-radius:8px; max-width:320px;}
+  #info h1{font-size:18px; margin:0 0 8px; letter-spacing:1px;}
+  #info p{margin:4px 0; opacity:.8;}
+  
+  /* Controls */
+  #controls{position:fixed; right:20px; top:20px; z-index:100; display:flex; flex-direction:column; gap:10px;}
+  .btn{width:48px; height:48px; border-radius:50%; border:1px solid var(--ink); background:rgba(0,0,0,.7); color:var(--ink); display:grid; place-items:center; font-weight:700; box-shadow:0 0 12px rgba(0,255,0,.2); cursor:pointer;}
+  .btn:active{background:var(--ink); color:#000;}
+  
+  /* YouTube iframe styling */
+  .yt-surface{pointer-events:auto; border-radius:4px; overflow:hidden; border:1px solid #0b0b0b; box-shadow:0 0 8px rgba(0,0,0,.6);}
+  .tv-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.9); color:#0f0; padding:4px 6px; font-size:9px; text-align:center; font-family:monospace; letter-spacing:.5px; border-top:1px solid #003300;}
+  
+  /* Loading */
+  #loading{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; color:var(--ink); font-size:18px; z-index:100; background:radial-gradient(circle at 50% 50%, rgba(0,255,0,.05), rgba(0,0,0,1));}
+</style>
+</head>
+<body>
+  <div id="loading">INITIALIZING PYRAMID SCENE...</div>
+  <div id="gl"></div>
+  <div id="css"></div>
+  
+  <div id="info">
+    <h1>VIDEO_STACKER_∞</h1>
+    <p><strong>Pyramid Scene</strong></p>
+    <p>14 TVs • 1 Video • Temporal Fragmentation</p>
+    <p style="font-size:10px; margin-top:8px; opacity:.6;">MT3snSsqcHs — "Out of Life"</p>
+  </div>
+  
+  <div id="controls">
+    <button class="btn" id="btn-orbit" title="Toggle Orbit">⟲</button>
+    <button class="btn" id="btn-mute" title="Mute All">🔊</button>
+    <button class="btn" id="btn-reset" title="Reset Camera">⌂</button>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+// ======= CONFIG =======
+const TV = { w:0.64, h:0.42, d:0.46 };
+const SCREEN_RATIO = 16/9;
+const VIDEO_ID = 'MT3snSsqcHs';
+
+// Pyramid structure: 1-2-3-4-4 rows (14 TVs total)
+const PYRAMID_ROWS = [1, 2, 3, 4, 4];
+
+// Timestamps (in seconds) mapped to each TV
+const TIMESTAMPS = [
+  { label: '00:00 Out of Life', time: 0 },
+  { label: '02:11 Flashing Lights', time: 131 },
+  { label: '04:22 How to Break Off an Engagement', time: 262 },
+  { label: '06:33 Nevermore', time: 393 },
+  { label: '08:44 Bloodline', time: 524 },
+  { label: '10:55 Resurrecting Atlantis', time: 655 },
+  { label: '13:06 DJ Turn Me Up', time: 786 },
+  { label: '15:17 Newly Single', time: 917 },
+  { label: '17:28 Yet Heard', time: 1048 },
+  { label: '19:39 Magic Ride', time: 1179 },
+  { label: '21:50 Reunion', time: 1310 },
+  { label: '24:01 How to Win My Heart', time: 1441 },
+  { label: '06:00 Interlude', time: 360 },
+  { label: '12:00 Bridge', time: 720 }
+];
+
+// ======= STATE =======
+let scene, cssScene, camera, renderer, cssRenderer, clock;
+let tvs = [];
+let YT_READY = false, pendingPlayerCbs = [];
+let orbitEnabled = false, muted = false;
+let orbitAngle = 0;
+
+// ======= YT API READY =======
+window.onYouTubeIframeAPIReady = () => { 
+  YT_READY = true; 
+  pendingPlayerCbs.splice(0).forEach(fn=>fn()); 
+};
+
+// ======= PYRAMID POSITION GENERATOR =======
+function generatePyramidPositions(rows) {
+  const positions = [];
+  const GAP_X = 0.12, GAP_Y = 0.12;
+  let tvIndex = 0;
+  let currentY = 0;
+  
+  rows.forEach((count, rowIndex) => {
+    const rowWidth = (count * TV.w) + ((count - 1) * GAP_X);
+    const startX = -rowWidth / 2 + TV.w / 2;
+    
+    for (let i = 0; i < count; i++) {
+      positions.push({
+        x: startX + (i * (TV.w + GAP_X)),
+        y: currentY,
+        z: 0,
+        index: tvIndex++
+      });
+    }
+    currentY += TV.h + GAP_Y;
+  });
+  
+  return positions;
+}
+
+// ======= CREATE STATIC TV =======
+function createStaticTV(position, timestamp, index) {
+  // WebGL group (visual TV shell)
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.BoxGeometry(TV.w, TV.h, TV.d),
+    new THREE.MeshStandardMaterial({color:0x121212, roughness:.8, metalness:.25})
+  );
+  shell.castShadow = true;
+  shell.receiveShadow = true;
+  g.add(shell);
+
+  // Bezel frame
+  const bezel = new THREE.Mesh(
+    new THREE.BoxGeometry(TV.w*0.86, TV.h*0.72, 0.02),
+    new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:.7})
+  );
+  bezel.position.z = TV.d/2 + 0.01;
+  g.add(bezel);
+
+  // LED indicator
+  const led = new THREE.Mesh(
+    new THREE.CircleGeometry(0.012, 8),
+    new THREE.MeshBasicMaterial({color:0x00ff00})
+  );
+  led.position.set(TV.w*0.35, -TV.h*0.35, TV.d/2 + 0.002);
+  g.add(led);
+
+  // CSS3D YouTube surface
+  const pxW = 384, pxH = Math.round(pxW/SCREEN_RATIO);
+  const surface = document.createElement('div');
+  surface.className = 'yt-surface';
+  surface.style.width = pxW + 'px';
+  surface.style.height = pxH + 'px';
+  surface.style.background = '#000';
+  surface.style.position = 'relative';
+
+  // Label overlay
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'tv-label';
+  labelDiv.textContent = `TV ${index + 1}: ${timestamp.label}`;
+  surface.appendChild(labelDiv);
+
+  // YouTube player with timestamp
+  let player = null;
+  const makePlayer = () => {
+    const iframe = document.createElement('div');
+    surface.insertBefore(iframe, labelDiv);
+    
+    player = new YT.Player(iframe, {
+      width: pxW,
+      height: pxH,
+      videoId: VIDEO_ID,
+      playerVars: {
+        autoplay: 1,
+        controls: 1,
+        modestbranding: 1,
+        rel: 0,
+        playsinline: 1,
+        mute: 0,
+        start: timestamp.time,
+        loop: 1,
+        playlist: VIDEO_ID
+      },
+      events: {
+        onReady: (e) => {
+          console.log(`TV ${index + 1} ready: ${timestamp.label}`);
+          e.target.seekTo(timestamp.time, true);
+          if (muted) e.target.mute();
+        }
+      }
+    });
+  };
+
+  if (YT_READY) makePlayer();
+  else pendingPlayerCbs.push(makePlayer);
+
+  const cssObj = new THREE.CSS3DObject(surface);
+  const scale = (TV.w*0.86) / pxW;
+  cssObj.scale.set(scale, scale, 1);
+  cssObj.position.z = TV.d/2 + 0.012;
+
+  // Position in pyramid
+  g.position.set(position.x, position.y, position.z);
+
+  scene.add(g);
+  cssScene.add(cssObj);
+
+  return { group: g, css: cssObj, player, label: timestamp.label, led, index };
+}
+
+// ======= INIT =======
+function init(){
+  document.getElementById('loading').style.display = 'none';
+  clock = new THREE.Clock();
+  
+  // Scenes
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x050805);
+  scene.fog = new THREE.Fog(0x050805, 8, 20);
+  cssScene = new THREE.Scene();
+
+  // Camera (positioned to view pyramid)
+  camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 100);
+  camera.position.set(0, 2.5, 6);
+  camera.lookAt(0, 1.8, 0);
+
+  // WebGL Renderer
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = true;
+  document.getElementById('gl').appendChild(renderer.domElement);
+
+  // CSS3D Renderer
+  cssRenderer = new THREE.CSS3DRenderer();
+  cssRenderer.setSize(innerWidth, innerHeight);
+  cssRenderer.domElement.style.pointerEvents = 'none';
+  document.getElementById('css').appendChild(cssRenderer.domElement);
+
+  // Lights (dramatic installation lighting)
+  scene.add(new THREE.AmbientLight(0x1a1a2e, 0.4));
+  
+  const spotlight = new THREE.SpotLight(0xffffff, 1.0);
+  spotlight.position.set(0, 8, 3);
+  spotlight.angle = Math.PI / 3;
+  spotlight.penumbra = 0.4;
+  spotlight.castShadow = true;
+  scene.add(spotlight);
+  
+  const rimLeft = new THREE.PointLight(0x00ff88, 0.5, 10);
+  rimLeft.position.set(-4, 3, 2);
+  scene.add(rimLeft);
+  
+  const rimRight = new THREE.PointLight(0xff0088, 0.5, 10);
+  rimRight.position.set(4, 3, 2);
+  scene.add(rimRight);
+
+  // Floor
+  const floorGeo = new THREE.PlaneGeometry(20, 20);
+  const floorMat = new THREE.MeshStandardMaterial({color:0x0b0b0b, roughness:.95});
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const grid = new THREE.GridHelper(12, 24, 0x003300, 0x001a00);
+  grid.position.y = 0.01;
+  scene.add(grid);
+
+  // Generate pyramid positions
+  const positions = generatePyramidPositions(PYRAMID_ROWS);
+  
+  // Create all 14 TVs
+  positions.forEach((pos, i) => {
+    const tv = createStaticTV(pos, TIMESTAMPS[i], i);
+    tvs.push(tv);
+  });
+
+  // Events
+  window.addEventListener('resize', onResize);
+  document.getElementById('btn-orbit').onclick = toggleOrbit;
+  document.getElementById('btn-mute').onclick = toggleMute;
+  document.getElementById('btn-reset').onclick = resetCamera;
+
+  // Allow CSS3D pointer events for YouTube controls
+  cssRenderer.domElement.style.pointerEvents = 'auto';
+
+  animate();
+}
+
+// ======= CONTROLS =======
+function toggleOrbit() {
+  orbitEnabled = !orbitEnabled;
+  document.getElementById('btn-orbit').textContent = orbitEnabled ? '⏸' : '⟲';
+}
+
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('btn-mute').textContent = muted ? '🔇' : '🔊';
+  tvs.forEach(tv => {
+    if (tv.player && tv.player.mute && tv.player.unMute) {
+      try {
+        if (muted) tv.player.mute();
+        else tv.player.unMute();
+      } catch(e) {}
+    }
+  });
+}
+
+function resetCamera() {
+  camera.position.set(0, 2.5, 6);
+  camera.lookAt(0, 1.8, 0);
+  orbitAngle = 0;
+  orbitEnabled = false;
+  document.getElementById('btn-orbit').textContent = '⟲';
+}
+
+function onResize() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  cssRenderer.setSize(innerWidth, innerHeight);
+}
+
+// ======= ANIMATE =======
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // Optional orbit camera
+  if (orbitEnabled) {
+    orbitAngle += 0.002;
+    const radius = 6;
+    camera.position.x = Math.sin(orbitAngle) * radius;
+    camera.position.z = Math.cos(orbitAngle) * radius;
+    camera.lookAt(0, 1.8, 0);
+  }
+
+  // LED pulse animation
+  tvs.forEach((tv, i) => {
+    const phase = t + i * 0.3;
+    const brightness = 0.3 + Math.sin(phase * 2) * 0.2;
+    tv.led.material.color.setHSL(0.33, 1, brightness);
+  });
+
+  // Sync CSS3D object positions (in case of future animations)
+  tvs.forEach(tv => {
+    tv.css.position.copy(tv.group.position.clone().add(new THREE.Vector3(0, 0, TV.d/2 + 0.012)));
+    tv.css.quaternion.copy(tv.group.quaternion);
+  });
+
+  renderer.render(scene, camera);
+  cssRenderer.render(cssScene, camera);
+}
+
+// ======= BOOT =======
+if (typeof THREE !== 'undefined') {
+  setTimeout(init, 300);
+} else {
+  setTimeout(init, 600);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+{
+  "step1": {
+    "entities": [
+      {
+        "id": "atlantis",
+        "type": "polity",
+        "name": "Atlantis",
+        "definition": "Great island empire larger than Libya and Asia, situated beyond Pillars of Heracles in Atlantic Ocean",
+        "functions": [
+          "rule over islands",
+          "subjugate continent parts",
+          "wage war",
+          "control navigation routes",
+          "exercise imperial power"
+        ],
+        "evidence": {
+          "quote": "there was an island situated in front of the straits which are by you called the Pillars of Heracles; the island was larger than Libya and Asia put together",
+          "loc": "25a-25b"
+        }
+      },
+      {
+        "id": "ancient_athens",
+        "type": "polity",
+        "name": "Ancient Athens",
+        "definition": "Prehistoric Athenian city, first in war and best governed, founded by Athena nine thousand years before Solon's time",
+        "functions": [
+          "lead Hellenes",
+          "resist invaders",
+          "preserve from slavery",
+          "liberate others",
+          "excel in virtue"
+        ],
+        "evidence": {
+          "quote": "when the city which now is Athens was first in war and in every way the best governed of all cities, is said to have performed the noblest deeds",
+          "loc": "23e-24a"
+        }
+      },
+      {
+        "id": "egyptian_priests",
+        "type": "agent",
+        "name": "Egyptian Priests",
+        "definition": "Keepers of ancient records in Sais who preserve knowledge of prehistoric events in temple writings",
+        "functions": [
+          "preserve traditions",
+          "maintain records",
+          "teach antiquity",
+          "interpret myths",
+          "recall ancient deeds"
+        ],
+        "evidence": {
+          "quote": "he asked the priests who were most skilful in such matters, about antiquity, and made the discovery that neither he nor any other Hellene knew anything worth mentioning about the times of old",
+          "loc": "22a"
+        }
+      },
+      {
+        "id": "solon",
+        "type": "agent",
+        "name": "Solon",
+        "definition": "Wisest of seven sages, Athenian lawgiver who traveled to Egypt and received ancient story from priests",
+        "functions": [
+          "receive story",
+          "transmit tradition",
+          "compose poetry",
+          "establish laws",
+          "seek wisdom"
+        ],
+        "evidence": {
+          "quote": "a tale which, though strange, is certainly true, having been attested by Solon, who was the wisest of the seven sages",
+          "loc": "20e"
+        }
+      },
+      {
+        "id": "critias_elder",
+        "type": "agent",
+        "name": "Critias the Elder",
+        "definition": "Grandfather of dialogue's Critias, aged ninety, who heard and preserved Solon's account of Atlantis",
+        "functions": [
+          "hear from Solon",
+          "remember story",
+          "transmit to grandson",
+          "preserve tradition",
+          "teach young"
+        ],
+        "evidence": {
+          "quote": "he told the story to Critias, my grandfather, who remembered and repeated it to us",
+          "loc": "20e"
+        }
+      },
+      {
+        "id": "cataclysm",
+        "type": "process",
+        "name": "Cataclysm",
+        "definition": "Violent earthquakes and floods occurring in single day and night, causing simultaneous destruction",
+        "functions": [
+          "destroy warriors",
+          "sink island",
+          "create mud shoals",
+          "end civilizations",
+          "reshape geography"
+        ],
+        "evidence": {
+          "quote": "But afterwards there occurred violent earthquakes and floods; and in a single day and night of misfortune all your warlike men in a body sank into the earth, and the island of Atlantis in like manner disappeared in the depths of the sea",
+          "loc": "25c-25d"
+        }
+      },
+      {
+        "id": "transmission_chain",
+        "type": "process",
+        "name": "Story Transmission",
+        "definition": "Sequential passing of Atlantis narrative from Egyptian priests through Solon to Critias family",
+        "functions": [
+          "preserve memory",
+          "maintain accuracy",
+          "bridge cultures",
+          "convey wisdom",
+          "connect generations"
+        ],
+        "evidence": {
+          "quote": "I heard from an aged man; for Critias, at the time of telling it, was as he said, nearly ninety years of age, and I was about ten",
+          "loc": "21a-21b"
+        }
+      }
+    ],
+    "notes": "Entities limited to direct Timaeus mentions"
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "atlantis",
+        "to": "ancient_athens",
+        "relation": "conflict_with",
+        "statement": "Atlantis made unprovoked expedition against Europe and Asia, ended by Athens",
+        "evidence": {
+          "quote": "a mighty power which unprovoked made an expedition against the whole of Europe and Asia, and to which your city put an end",
+          "loc": "24e-25a"
+        }
+      },
+      {
+        "from": "egyptian_priests",
+        "to": "solon",
+        "relation": "transmission",
+        "statement": "Egyptian priests informed Solon about ancient Athens and Atlantis conflict",
+        "evidence": {
+          "quote": "You are welcome to hear about them, Solon, said the priest, both for your own sake and for that of your city",
+          "loc": "23d"
+        }
+      },
+      {
+        "from": "solon",
+        "to": "critias_elder",
+        "relation": "transmission",
+        "statement": "Solon told story to Critias who remembered and repeated it",
+        "evidence": {
+          "quote": "he told the story to Critias, my grandfather, who remembered and repeated it to us",
+          "loc": "20e"
+        }
+      },
+      {
+        "from": "cataclysm",
+        "to": "ancient_athens",
+        "relation": "causal",
+        "statement": "Earthquakes and floods caused warlike men to sink into earth",
+        "evidence": {
+          "quote": "all your warlike men in a body sank into the earth",
+          "loc": "25d"
+        }
+      },
+      {
+        "from": "cataclysm",
+        "to": "atlantis",
+        "relation": "causal",
+        "statement": "Same cataclysm caused Atlantis island to disappear in sea depths",
+        "evidence": {
+          "quote": "and the island of Atlantis in like manner disappeared in the depths of the sea",
+          "loc": "25d"
+        }
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Atlantis Narrative in Timaeus",
+      "axioms": [
+        "Egyptian records preserve what Greek memory has lost through disasters",
+        "Ancient Athens exceeded all cities in virtue and governance",
+        "Atlantis empire extended dominion over islands and continental parts",
+        "Simultaneous cataclysm destroys both victor and vanquished civilizations",
+        "Story transmission requires reliable chain from witnesses to present"
+      ],
+      "rules": [
+        "IF Greeks recount genealogies THEN Egyptians respond with superior ancient knowledge",
+        "IF island empire attacks Mediterranean peoples THEN Athens leads resistance alone",
+        "IF violent earthquakes and floods occur THEN land armies and sea powers perish together",
+        "IF ancient story lacks written record THEN oral tradition preserves essential memory"
+      ],
+      "evidence": [
+        {
+          "quote": "you do not know that there formerly dwelt in your land the fairest and noblest race of men which ever lived",
+          "loc": "23c"
+        },
+        {
+          "quote": "your country shone forth, in the excellence of her virtue and strength, among all mankind",
+          "loc": "25b"
+        },
+        {
+          "quote": "in a single day and night of misfortune all your warlike men in a body sank into the earth, and the island of Atlantis in like manner disappeared",
+          "loc": "25d"
+        }
+      ]
+    }
+  },
+  "step4": {
+    "critique": {
+      "omissions": [
+        "Timaeus lacks architectural details found in Critias dialogue",
+        "No constitutional specifics of Atlantis governance mentioned",
+        "Absent: Poseidon's role, ten kingdoms, concentric harbors structure"
+      ],
+      "overreach": [
+        "May imply systematic empire without textual warrant for administrative details",
+        "Could suggest organized military without specific evidence in Timaeus"
+      ],
+      "fixes": [
+        "Restrict Atlantis description to 'great and wonderful empire' terminology only",
+        "Focus transmission chain on memory preservation rather than factual accuracy claims",
+        "Emphasize Egyptian priests as sources rather than independent historical verification"
+      ]
+    }
+  }
+}

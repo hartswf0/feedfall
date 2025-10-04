@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ENO CRT Garden – Stacked TVs × Filing Cabinet</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
+  touch-action: none;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+#container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* CSS3D layer for YouTube iframes */
+#css3d-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.youtube-wrapper {
+  position: absolute;
+  width: 640px;
+  height: 360px;
+  pointer-events: auto;
+}
+
+.youtube-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Unmute overlay */
+#unmute-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  cursor: pointer;
+}
+
+#unmute-overlay.hidden { display: none; }
+
+#unmute-overlay button {
+  padding: 20px 40px;
+  font-size: 18px;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Bottom UI bar */
+#bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+  z-index: 100;
+}
+
+.view-btn {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-btn.active {
+  background: rgba(255,255,255,0.3);
+  border-color: #fff;
+}
+
+/* Right drawer handles */
+#drawer-handles {
+  position: fixed;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 90;
+}
+
+.drawer-handle {
+  width: 50px;
+  height: 50px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.drawer-handle.open {
+  background: rgba(255,100,100,0.4);
+  border-color: #ff6666;
+}
+
+/* Top controls */
+#top-controls {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+/* Ambient meter */
+#ambient-meter {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  z-index: 100;
+  min-width: 140px;
+}
+
+.meter-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.status-dot.playing { background: #4ade80; }
+.status-dot.frozen { background: #fbbf24; }
+.status-dot.reseed { background: #f87171; }
+
+/* Per-drawer HUD (when open) */
+.drawer-hud {
+  position: fixed;
+  bottom: 70px;
+  left: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 95;
+  display: none;
+}
+
+.drawer-hud.visible { display: block; }
+
+.hud-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.hud-btn {
+  flex: 1;
+  padding: 8px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4ade80;
+  width: 0%;
+  transition: width 0.3s;
+}
+</style>
+</head>
+<body>
+
+<div id="container"></div>
+<div id="css3d-container"></div>
+
+<!-- Unmute overlay -->
+<div id="unmute-overlay">
+  <button id="unmute-btn">🔊 Tap to Enable Sound</button>
+</div>
+
+<!-- Bottom control bar -->
+<div id="bottom-bar">
+  <button class="view-btn active" data-view="front">Front</button>
+  <button class="view-btn" data-view="isoLeft">¾ L</button>
+  <button class="view-btn" data-view="isoRight">¾ R</button>
+  <button class="view-btn" data-view="lowHero">Low</button>
+  <button class="view-btn" data-view="top">Top</button>
+  <button class="view-btn" id="arrangement-btn" style="margin-left:auto; background:rgba(0,255,170,0.2); border-color:#00ffaa;">║ Stack</button>
+</div>
+
+<!-- Right drawer handles -->
+<div id="drawer-handles">
+  <button class="drawer-handle" data-drawer="top" aria-label="Open top drawer">TOP</button>
+  <button class="drawer-handle" data-drawer="middle" aria-label="Open middle drawer">MID</button>
+  <button class="drawer-handle" data-drawer="bottom" aria-label="Open bottom drawer">BOT</button>
+</div>
+
+<!-- Top controls -->
+<div id="top-controls">
+  <button class="control-btn" id="mute-toggle" aria-label="Toggle mute">🔇</button>
+  <button class="control-btn" id="theme-toggle" aria-label="Toggle theme">◐</button>
+</div>
+
+<!-- Ambient meter -->
+<div id="ambient-meter">
+  <div class="meter-row">
+    <span>Top:</span>
+    <span id="meter-top"><span class="status-dot frozen"></span>frozen</span>
+  </div>
+  <div class="meter-row">
+    <span>Mid:</span>
+    <span id="meter-mid"><span class="status-dot frozen"></span>frozen</span>
+  </div>
+  <div class="meter-row">
+    <span>Bot:</span>
+    <span id="meter-bot"><span class="status-dot frozen"></span>frozen</span>
+  </div>
+  <div class="meter-row">
+    <span>Glitch:</span>
+    <span id="meter-glitch">0s</span>
+  </div>
+</div>
+
+<!-- Drawer HUD (appears when drawer open) -->
+<div id="drawer-hud" class="drawer-hud">
+  <div class="hud-controls">
+    <button class="hud-btn" id="hud-play">▶ Play</button>
+    <button class="hud-btn" id="hud-pause">⏸ Pause</button>
+    <button class="hud-btn" id="hud-next">⏭ Next (on close)</button>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// ENO CRT GARDEN – Three.js + CSS3D + YouTube
+// A garden of signals: old TVs as planters for drifting YouTube streams
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Data Stub ───
+// Video: uDUoMnp1z_g (13-segment working video)
+const VIDEO_ID = 'uDUoMnp1z_g';
+const TIMESTAMPS = [
+  0,      // 00:00 Out of Life
+  136,    // 02:16 Flashing Lights
+  272,    // 04:32 How to Break Off an Engagement
+  408,    // 06:48 Nevermore
+  544,    // 09:04 Bloodline
+  680,    // 11:20 Resurrecting Atlantis
+  816,    // 13:36 DJ Turn Me Up
+  952,    // 15:52 Newly Single
+  1088,   // 18:08 Yet, Heard
+  1224,   // 20:24 Magic Ride
+  1360,   // 22:40 Reunion
+  1496,   // 24:56 How to Win My Heart
+  1632    // 27:12 Hot Minute
+];
+
+const TVS = [
+  { slot: 'tv01', videoId: VIDEO_ID, timestamp: TIMESTAMPS[0], label: '00:00 Out of Life' },
+  { slot: 'tv02', videoId: VIDEO_ID, timestamp: TIMESTAMPS[1], label: '02:11 Flashing Lights' },
+  { slot: 'tv03', videoId: VIDEO_ID, timestamp: TIMESTAMPS[2], label: '04:22 How to Break Off' },
+  { slot: 'tv04', videoId: VIDEO_ID, timestamp: TIMESTAMPS[3], label: '06:33 Nevermore' },
+  { slot: 'tv05', videoId: VIDEO_ID, timestamp: TIMESTAMPS[4], label: '08:44 Bloodline' },
+  { slot: 'tv06', videoId: VIDEO_ID, timestamp: TIMESTAMPS[5], label: '10:55 Resurrecting Atlantis' },
+  { slot: 'tv07', videoId: VIDEO_ID, timestamp: TIMESTAMPS[6], label: '13:06 DJ Turn Me Up' },
+  { slot: 'tv08', videoId: VIDEO_ID, timestamp: TIMESTAMPS[7], label: '15:17 Newly Single' },
+  { slot: 'tv09', videoId: VIDEO_ID, timestamp: TIMESTAMPS[8], label: '17:28 Yet Heard' },
+  { slot: 'tv10', videoId: VIDEO_ID, timestamp: TIMESTAMPS[9], label: '19:39 Magic Ride' },
+  { slot: 'tv11', videoId: VIDEO_ID, timestamp: TIMESTAMPS[10], label: '21:50 Reunion' },
+  { slot: 'tv12', videoId: VIDEO_ID, timestamp: TIMESTAMPS[11], label: '24:01 Win My Heart' },
+  { slot: 'tv13', videoId: VIDEO_ID, timestamp: 360, label: '06:00 Interlude' },
+  { slot: 'tv14', videoId: VIDEO_ID, timestamp: 720, label: '12:00 Bridge' }
+];
+
+// ─── State ───
+let scene, camera, renderer, css3dRenderer;
+let tvStack = [];
+let cableBundle;
+let energyParticles;
+let currentView = 'front';
+let globalMuted = true;
+let userUnmuted = false;
+let currentOpenDrawer = null;
+let lastGlitchTime = 0;
+let silenceTimer = 0;
+let hissActive = false;
+let themeDark = true;
+let currentArrangement = 'stack'; // 'stack', 'line', 'pyramid'
+
+// YouTube players
+let players = {};
+let ytReady = false;
+
+// ─── View Presets ───
+const VIEWS = {
+  front:    { pos: [0, 0.8, 3.2], look: [0, 0.6, 0] },
+  isoLeft:  { pos: [-2.5, 1.2, 2.5], look: [0, 0.6, 0] },
+  isoRight: { pos: [2.5, 1.2, 2.5], look: [0, 0.6, 0] },
+  lowHero:  { pos: [0, 0.3, 2.8], look: [0, 0.8, 0] },
+  top:      { pos: [0, 3.5, 0.5], look: [0, 0.5, 0] }
+};
+
+const ARRANGEMENTS = {
+  stack: [
+    { slot: 'tv01', pos: [0, 5.6, 0] },
+    { slot: 'tv02', pos: [0, 5.0, 0] },
+    { slot: 'tv03', pos: [0, 4.4, 0] },
+    { slot: 'tv04', pos: [0, 3.8, 0] },
+    { slot: 'tv05', pos: [0, 3.2, 0] },
+    { slot: 'tv06', pos: [0, 2.6, 0] },
+    { slot: 'tv07', pos: [0, 2.0, 0] },
+    { slot: 'tv08', pos: [0, 1.4, 0] },
+    { slot: 'tv09', pos: [0, 0.8, 0] },
+    { slot: 'tv10', pos: [0, 0.2, 0] },
+    { slot: 'tv11', pos: [0, -0.4, 0] },
+    { slot: 'tv12', pos: [0, -1.0, 0] },
+    { slot: 'tv13', pos: [0, -1.6, 0] },
+    { slot: 'tv14', pos: [0, -2.2, 0] }
+  ],
+  line: [
+    { slot: 'tv01', pos: [-4.2, 0.8, 0] },
+    { slot: 'tv02', pos: [-3.6, 0.8, 0] },
+    { slot: 'tv03', pos: [-3.0, 0.8, 0] },
+    { slot: 'tv04', pos: [-2.4, 0.8, 0] },
+    { slot: 'tv05', pos: [-1.8, 0.8, 0] },
+    { slot: 'tv06', pos: [-1.2, 0.8, 0] },
+    { slot: 'tv07', pos: [-0.6, 0.8, 0] },
+    { slot: 'tv08', pos: [0, 0.8, 0] },
+    { slot: 'tv09', pos: [0.6, 0.8, 0] },
+    { slot: 'tv10', pos: [1.2, 0.8, 0] },
+    { slot: 'tv11', pos: [1.8, 0.8, 0] },
+    { slot: 'tv12', pos: [2.4, 0.8, 0] },
+    { slot: 'tv13', pos: [3.0, 0.8, 0] },
+    { slot: 'tv14', pos: [3.6, 0.8, 0] }
+  ],
+  pyramid: [
+    { slot: 'tv01', pos: [0, 3.6, 0] },
+    { slot: 'tv02', pos: [-0.45, 3.0, 0.2] },
+    { slot: 'tv03', pos: [0.45, 3.0, 0.2] },
+    { slot: 'tv04', pos: [-0.9, 2.4, 0.4] },
+    { slot: 'tv05', pos: [0, 2.4, 0.4] },
+    { slot: 'tv06', pos: [0.9, 2.4, 0.4] },
+    { slot: 'tv07', pos: [-1.35, 1.8, 0.6] },
+    { slot: 'tv08', pos: [-0.45, 1.8, 0.6] },
+    { slot: 'tv09', pos: [0.45, 1.8, 0.6] },
+    { slot: 'tv10', pos: [1.35, 1.8, 0.6] },
+    { slot: 'tv11', pos: [-0.9, 1.2, 0.8] },
+    { slot: 'tv12', pos: [0, 1.2, 0.8] },
+    { slot: 'tv13', pos: [0.9, 1.2, 0.8] },
+    { slot: 'tv14', pos: [0, 0.6, 1.0] }
+  ]
+};
+
+// ─── Init ───
+function init() {
+  const container = document.getElementById('container');
+  
+  // WebGL Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x1a1a1a, 1);
+  container.appendChild(renderer.domElement);
+  
+  // CSS3D Renderer for YouTube iframes
+  css3dRenderer = new THREE.CSS3DRenderer();
+  css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+  css3dRenderer.domElement.style.position = 'absolute';
+  css3dRenderer.domElement.style.top = '0';
+  document.getElementById('css3d-container').appendChild(css3dRenderer.domElement);
+  
+  // Scene
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x1a1a1a, 4, 10);
+  
+  // Camera - wider FOV for 14 TVs
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 2.0, 8.0);
+  camera.lookAt(0, 1.8, 0);
+  
+  // Cinematic lighting
+  const ambient = new THREE.AmbientLight(0x222244, 0.6);
+  scene.add(ambient);
+  
+  // Key light - bright from top
+  const key = new THREE.DirectionalLight(0xffffff, 1.2);
+  key.position.set(3, 8, 4);
+  key.castShadow = true;
+  key.shadow.mapSize.width = 2048;
+  key.shadow.mapSize.height = 2048;
+  key.shadow.camera.top = 8;
+  key.shadow.camera.bottom = -4;
+  key.shadow.camera.left = -4;
+  key.shadow.camera.right = 4;
+  scene.add(key);
+  
+  // Fill light - cool blue
+  const fill = new THREE.DirectionalLight(0x4488ff, 0.5);
+  fill.position.set(-4, 3, -2);
+  scene.add(fill);
+  
+  // Rim light - warm accent
+  const rim = new THREE.DirectionalLight(0xff8844, 0.4);
+  rim.position.set(2, 2, -3);
+  scene.add(rim);
+  
+  // Enable shadows on renderer
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  
+  // Floor + wall
+  const floorGeo = new THREE.PlaneGeometry(10, 10);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.5;
+  scene.add(floor);
+  
+  const wallGeo = new THREE.PlaneGeometry(10, 10);
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+  const wall = new THREE.Mesh(wallGeo, wallMat);
+  wall.position.z = -2;
+  scene.add(wall);
+  
+  // Contact shadow (radial gradient sprite)
+  const shadowTex = createRadialGradient();
+  const shadowMat = new THREE.SpriteMaterial({ map: shadowTex, transparent: true, opacity: 0.3 });
+  const shadow = new THREE.Sprite(shadowMat);
+  shadow.position.set(0, -0.49, 0);
+  shadow.scale.set(2, 2, 1);
+  scene.add(shadow);
+  
+  // Build TV stack
+  buildTVStack();
+  
+  // Cable bundle (instrument the composition)
+  buildCableBundle();
+  
+  // UI event listeners
+  setupUI();
+  
+  // Drift engine intervals
+  startDriftEngine();
+  
+  // Animate
+  animate();
+}
+
+// ─── CSS3D sync: Create radial gradient texture ───
+function createRadialGradient() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(0,0,0,0.6)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(canvas);
+  return tex;
+}
+
+// ─── Build TV Stack ───
+function buildTVStack() {
+  const arrangement = ARRANGEMENTS[currentArrangement];
+  
+  TVS.forEach((tv, idx) => {
+    const group = new THREE.Group();
+    const config = arrangement.find(a => a.slot === tv.slot);
+    group.position.set(config.pos[0], config.pos[1], config.pos[2]);
+    scene.add(group);
+    
+    // CRT shell (rounded box)
+    const shellGeo = new THREE.BoxGeometry(0.8, 0.5, 0.6, 2, 2, 2);
+    const shellMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a1a, 
+      roughness: 0.7,
+      metalness: 0.2
+    });
+    const shell = new THREE.Mesh(shellGeo, shellMat);
+    group.add(shell);
+    
+    // Screen plane (WebGL)
+    const screenGeo = new THREE.PlaneGeometry(0.64, 0.36);
+    const screenMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const screen = new THREE.Mesh(screenGeo, screenMat);
+    screen.position.z = 0.301;
+    group.add(screen);
+    
+    // Glass overlay (for glitch effects)
+    const glassGeo = new THREE.PlaneGeometry(0.64, 0.36);
+    const glassMat = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff, 
+      transparent: true, 
+      opacity: 0,
+      blending: THREE.AdditiveBlending
+    });
+    const glass = new THREE.Mesh(glassGeo, glassMat);
+    glass.position.z = 0.302;
+    group.add(glass);
+    
+    // LED indicator
+    const ledGeo = new THREE.SphereGeometry(0.02, 8, 8);
+    const ledMat = new THREE.MeshBasicMaterial({ color: 0xff3333, emissive: 0xff3333 });
+    const led = new THREE.Mesh(ledGeo, ledMat);
+    led.position.set(0.35, -0.2, 0.301);
+    group.add(led);
+    
+    // Drawer (slides out on Z)
+    const drawerGeo = new THREE.BoxGeometry(0.75, 0.45, 0.05);
+    const drawerMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
+    const drawer = new THREE.Mesh(drawerGeo, drawerMat);
+    drawer.position.z = -0.275;
+    group.add(drawer);
+    
+    // CSS3D YouTube iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.width = '640px';
+    iframe.style.height = '360px';
+    iframe.src = `https://www.youtube.com/embed/${tv.videoId}?enablejsapi=1&controls=0&modestbranding=1&rel=0&start=${tv.timestamp}&loop=1&playlist=${tv.videoId}`;
+    iframe.id = `player-${tv.slot}`;
+    iframe.allow = 'autoplay';
+    
+    const cssObj = new THREE.CSS3DObject(iframe);
+    // Scale: WebGL screen is 0.64 x 0.36, iframe is 640px x 360px
+    // So scale = 0.64 / 640 = 0.001
+    cssObj.scale.set(0.001, 0.001, 1);
+    cssObj.position.set(0, 0, 0.301); // Same Z as screen
+    group.add(cssObj);
+    
+    tvStack.push({
+      slot: tv.slot,
+      group,
+      screen,
+      glass,
+      led,
+      drawer,
+      cssObj,
+      iframe,
+      videoId: tv.videoId,
+      timestamp: tv.timestamp,
+      label: tv.label,
+      drawerOpen: false,
+      targetDrawerZ: -0.275,
+      glitchOpacity: 0,
+      nextVideoQueued: false
+    });
+  });
+}
+
+// ─── Ethereal Energy Thread ───
+function buildCableBundle() {
+  const group = new THREE.Group();
+  
+  // Ethereal curve through all 14 TVs
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, -2.5, -0.3),
+    new THREE.Vector3(0.1, -1.5, -0.25),
+    new THREE.Vector3(-0.05, -0.5, -0.28),
+    new THREE.Vector3(0.08, 0.5, -0.26),
+    new THREE.Vector3(-0.03, 1.5, -0.24),
+    new THREE.Vector3(0.05, 2.5, -0.27),
+    new THREE.Vector3(-0.02, 3.5, -0.25),
+    new THREE.Vector3(0.04, 4.5, -0.29),
+    new THREE.Vector3(0, 5.5, -0.26),
+    new THREE.Vector3(0.06, 6.0, -0.28)
+  ]);
+  
+  // Varying radius function (thicker at base, thinner at top)
+  class OrganicTubeGeometry extends THREE.TubeGeometry {
+    constructor(path, tubularSegments, radius, radialSegments, closed) {
+      super(path, tubularSegments, radius, radialSegments, closed);
+      
+      // Modify vertices for organic thickness variation
+      const position = this.attributes.position;
+      for (let i = 0; i < position.count; i++) {
+        const y = position.getY(i);
+        // Thicker at bottom (-0.5), thinner at top (1.7)
+        const t = (y + 0.5) / 2.2; // Normalize 0-1
+        const thickness = 1.5 - t * 0.8; // 1.5x at base, 0.7x at top
+        
+        // Add slight irregularity
+        const noise = Math.sin(i * 0.5) * 0.1 + 1;
+        const scale = thickness * noise;
+        
+        const x = position.getX(i);
+        const z = position.getZ(i);
+        
+        // Scale radially from center
+        const centerX = 0;
+        const centerZ = 0.3;
+        position.setX(i, centerX + (x - centerX) * scale);
+        position.setZ(i, centerZ + (z - centerZ) * scale);
+      }
+      
+      this.attributes.position.needsUpdate = true;
+      this.computeVertexNormals();
+    }
+  }
+  
+  const tubeGeo = new OrganicTubeGeometry(curve, 32, 0.018, 8, false);
+  
+  // Ethereal glowing material
+  const tubeMat = new THREE.MeshStandardMaterial({ 
+    color: 0x00ffaa,  // Cyan-green energy
+    roughness: 0.3,
+    metalness: 0.6,
+    emissive: 0x00ff88,
+    emissiveIntensity: 0.8,
+    transparent: true,
+    opacity: 0.6
+  });
+  
+  const trunk = new THREE.Mesh(tubeGeo, tubeMat);
+  group.add(trunk);
+  
+  // Add outer glow layer
+  const glowGeo = new OrganicTubeGeometry(curve, 32, 0.035, 8, false);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x00ffcc,
+    transparent: true,
+    opacity: 0.15,
+    side: THREE.BackSide
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  group.add(glow);
+  
+  // Multiple particle systems for thick tendrils
+  const particleSystems = [];
+  const tendrils = 12; // More particle streams for clarity
+  
+  for (let t = 0; t < tendrils; t++) {
+    const particleCount = 120; // More particles
+    const particleGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
+    
+    // Offset each tendril slightly from center curve
+    const offset = t / tendrils * Math.PI * 2;
+    const radius = 0.025 + Math.random() * 0.015; // Thicker tendrils
+    
+    for (let i = 0; i < particleCount; i++) {
+      const curveT = Math.random();
+      const point = curve.getPoint(curveT);
+      
+      // Spiral around main curve
+      const spiralAngle = offset + curveT * Math.PI * 4;
+      positions[i * 3] = point.x + Math.cos(spiralAngle) * radius;
+      positions[i * 3 + 1] = point.y;
+      positions[i * 3 + 2] = point.z + Math.sin(spiralAngle) * radius;
+      
+      // Color variation: cyan, green, white data pulses
+      const pulseType = Math.random();
+      if (pulseType < 0.3) {
+        // Data pulse - bright white/cyan
+        colors[i * 3] = 0.8 + Math.random() * 0.2;
+        colors[i * 3 + 1] = 1;
+        colors[i * 3 + 2] = 1;
+        sizes[i] = 0.08 + Math.random() * 0.05; // Much larger pulses
+      } else if (pulseType < 0.6) {
+        // Energy flow - green
+        colors[i * 3] = 0.2;
+        colors[i * 3 + 1] = 1;
+        colors[i * 3 + 2] = 0.5;
+        sizes[i] = 0.05 + Math.random() * 0.03; // Larger
+      } else {
+        // Ambient particles - dim cyan
+        colors[i * 3] = 0.4;
+        colors[i * 3 + 1] = 0.7;
+        colors[i * 3 + 2] = 0.8;
+        sizes[i] = 0.04 + Math.random() * 0.02; // Larger ambient
+      }
+    }
+    
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    particleGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    
+    const particleMat = new THREE.PointsMaterial({
+      size: 0.08, // Larger base size
+      vertexColors: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+      map: createParticleTexture() // Add texture for better visibility
+    });
+    
+    const particles = new THREE.Points(particleGeo, particleMat);
+    particles.userData.curve = curve;
+    particles.userData.offsets = Array(particleCount).fill(0).map(() => Math.random());
+    particles.userData.tendrilOffset = offset;
+    particles.userData.radius = radius;
+    particles.userData.speed = 0.05 + Math.random() * 0.05; // Varied speeds
+    group.add(particles);
+    particleSystems.push(particles);
+  }
+  
+  energyParticles = particleSystems;
+  
+  cableBundle = group;
+  cableBundle.userData.particleSystems = particleSystems;
+  scene.add(cableBundle);
+}
+
+// Create particle texture for better visibility
+function createParticleTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  
+  // Radial gradient
+  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+  gradient.addColorStop(0.7, 'rgba(255,255,255,0.3)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 64, 64);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+// ─── YouTube IFrame API Ready ───
+function onYouTubeIframeAPIReady() {
+  ytReady = true;
+  TVS.forEach(tv => {
+    players[tv.slot] = new YT.Player(`player-${tv.slot}`, {
+      events: {
+        onReady: (e) => onPlayerReady(e, tv.slot),
+        onStateChange: (e) => onPlayerStateChange(e, tv.slot)
+      }
+    });
+  });
+}
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+function onPlayerReady(event, slot) {
+  console.log(`Player ready: ${slot}`);
+  if (globalMuted) {
+    event.target.mute();
+  }
+}
+
+function onPlayerStateChange(event, slot) {
+  updateAmbientMeter();
+}
+
+// ─── Drawer gating: Open/Close ───
+function toggleDrawer(slot) {
+  const tv = tvStack.find(t => t.slot === slot);
+  if (!tv) return;
+  
+  if (tv.drawerOpen) {
+    closeDrawer(tv);
+  } else {
+    // Close any other open drawer first
+    if (currentOpenDrawer && currentOpenDrawer !== tv) {
+      closeDrawer(currentOpenDrawer);
+    }
+    openDrawerAction(tv);
+  }
+}
+
+function openDrawerAction(tv) {
+  tv.drawerOpen = true;
+  tv.targetDrawerZ = -0.135; // Slide out ~0.14m
+  currentOpenDrawer = tv;
+  
+  // Pause this TV's video (freeze frame)
+  if (players[tv.slot]) {
+    players[tv.slot].pauseVideo();
+  }
+  
+  // Pause all other TVs
+  tvStack.forEach(t => {
+    if (t !== tv && players[t.slot]) {
+      players[t.slot].pauseVideo();
+    }
+  });
+  
+  // Update handle UI
+  document.querySelectorAll('.drawer-handle').forEach(btn => {
+    btn.classList.remove('open');
+  });
+  document.querySelector(`.drawer-handle[data-drawer="${tv.slot}"]`).classList.add('open');
+  
+  // Show drawer HUD
+  showDrawerHUD(tv);
+  
+  updateAmbientMeter();
+}
+
+function closeDrawer(tv) {
+  tv.drawerOpen = false;
+  tv.targetDrawerZ = -0.275; // Slide back in
+  
+  // Mutation on close: advance playlist, maybe rate wobble, trigger glitch
+  mutateTV(tv);
+  
+  // Clear open state
+  if (currentOpenDrawer === tv) {
+    currentOpenDrawer = null;
+  }
+  
+  // Update handle UI
+  document.querySelector(`.drawer-handle[data-drawer="${tv.slot}"]`).classList.remove('open');
+  
+  // Hide drawer HUD
+  hideDrawerHUD();
+  
+  updateAmbientMeter();
+}
+
+// ─── Drift engine: Mutation on close ───
+function mutateTV(tv) {
+  // Advance to next video (or queued if user pressed Next)
+  if (tv.nextVideoQueued) {
+    tv.currentIndex = (tv.currentIndex + 1) % tv.videoIds.length;
+    tv.nextVideoQueued = false;
+  } else {
+    // Weighted random: 70% next, 30% random
+    if (Math.random() < 0.7) {
+      tv.currentIndex = (tv.currentIndex + 1) % tv.videoIds.length;
+    } else {
+      tv.currentIndex = Math.floor(Math.random() * tv.videoIds.length);
+    }
+  }
+  
+  const newId = tv.videoIds[tv.currentIndex];
+  const startTime = tv.timestamps && tv.timestamps[tv.currentIndex] ? tv.timestamps[tv.currentIndex] : 0;
+  
+  // Load new video with timestamp
+  if (players[tv.slot]) {
+    players[tv.slot].loadVideoById({
+      videoId: newId,
+      startSeconds: startTime
+    });
+    if (!globalMuted && userUnmuted) {
+      players[tv.slot].unMute();
+    }
+    players[tv.slot].playVideo();
+  }
+  
+  // Trigger glitch seam (brief visual burst on glass)
+  triggerGlitch(tv);
+  
+  // Clear hiss if active
+  if (hissActive) {
+    hissActive = false;
+    silenceTimer = 0;
+  }
+}
+
+// ─── Glitch seam: Brief visual burst ───
+function triggerGlitch(tv) {
+  tv.glitchOpacity = 0.6;
+  lastGlitchTime = Date.now();
+  
+  // Decay over 1 second
+  const startTime = Date.now();
+  const decay = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    tv.glitchOpacity = Math.max(0, 0.6 - elapsed / 1000 * 0.6);
+    if (elapsed > 1000) {
+      clearInterval(decay);
+      tv.glitchOpacity = 0;
+    }
+  }, 50);
+  
+  updateAmbientMeter();
+}
+
+// ─── Drift engine: Random glitch bursts ───
+function startDriftEngine() {
+  // Random glitch bursts every 15-45s on closed, playing TVs
+  setInterval(() => {
+    tvStack.forEach(tv => {
+      if (!tv.drawerOpen && players[tv.slot]) {
+        const state = players[tv.slot].getPlayerState();
+        if (state === YT.PlayerState.PLAYING) {
+          if (Math.random() < 0.3) { // 30% chance
+            triggerGlitch(tv);
+            // Add subtle scanline jitter (simulate with quick opacity pulse)
+            tv.glass.material.opacity = 0.15;
+            setTimeout(() => {
+              tv.glass.material.opacity = 0;
+            }, 100);
+          }
+        }
+      }
+    });
+  }, Math.random() * 30000 + 15000); // 15-45s
+  
+  // Silence timer: if all paused > 20s, introduce hiss
+  setInterval(() => {
+    const allPaused = tvStack.every(tv => {
+      if (!players[tv.slot]) return true;
+      const state = players[tv.slot].getPlayerState();
+      return state !== YT.PlayerState.PLAYING;
+    });
+    
+    if (allPaused) {
+      silenceTimer += 1;
+      if (silenceTimer > 20 && !hissActive) {
+        // Activate hiss on bottom TV
+        hissActive = true;
+        const bottomTV = tvStack.find(t => t.slot === 'bottom');
+        // Show thumbnail + pink noise sprite (simplified: just add overlay)
+        bottomTV.glass.material.color.setHex(0xff69b4);
+        bottomTV.glass.material.opacity = 0.2;
+      }
+    } else {
+      silenceTimer = 0;
+      if (hissActive) {
+        hissActive = false;
+        const bottomTV = tvStack.find(t => t.slot === 'bottom');
+        bottomTV.glass.material.opacity = 0;
+      }
+    }
+  }, 1000);
+}
+
+// ─── Ambient meter: Update status display ───
+function updateAmbientMeter() {
+  tvStack.forEach(tv => {
+    const statusEl = document.getElementById(`meter-${tv.slot}`);
+    if (!statusEl) return;
+    
+    const dot = statusEl.querySelector('.status-dot');
+    let status = 'frozen';
+    
+    if (players[tv.slot]) {
+      const state = players[tv.slot].getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        status = 'playing';
+      } else if (tv.glitchOpacity > 0) {
+        status = 'reseed';
+      }
+    }
+    
+    dot.className = `status-dot ${status}`;
+    statusEl.innerHTML = `<span class="status-dot ${status}"></span>${status}`;
+  });
+  
+  // Last glitch time
+  const glitchEl = document.getElementById('meter-glitch');
+  const elapsed = Math.floor((Date.now() - lastGlitchTime) / 1000);
+  glitchEl.textContent = `${elapsed}s`;
+}
+
+// ─── Drawer HUD: Show/hide per-drawer controls ───
+function showDrawerHUD(tv) {
+  const hud = document.getElementById('drawer-hud');
+  hud.classList.add('visible');
+  
+  // Wire up controls for this TV
+  document.getElementById('hud-play').onclick = () => {
+    if (players[tv.slot]) players[tv.slot].playVideo();
+  };
+  
+  document.getElementById('hud-pause').onclick = () => {
+    if (players[tv.slot]) players[tv.slot].pauseVideo();
+  };
+  
+  document.getElementById('hud-next').onclick = () => {
+    tv.nextVideoQueued = true;
+  };
+  
+  // Progress bar update
+  const progressInterval = setInterval(() => {
+    if (!tv.drawerOpen) {
+      clearInterval(progressInterval);
+      return;
+    }
+    if (players[tv.slot]) {
+      try {
+        const current = players[tv.slot].getCurrentTime();
+        const duration = players[tv.slot].getDuration();
+        const pct = (current / duration) * 100;
+        document.getElementById('progress-fill').style.width = `${pct}%`;
+      } catch (e) {}
+    }
+  }, 500);
+}
+
+function hideDrawerHUD() {
+  document.getElementById('drawer-hud').classList.remove('visible');
+}
+
+// ─── View transitions: Smooth camera tween ───
+function setView(viewName, duration = 420) {
+  currentView = viewName;
+  const view = VIEWS[viewName];
+  
+  // Simple tween for camera position and lookAt
+  const startPos = camera.position.clone();
+  const startTime = Date.now();
+  
+  const targetPos = new THREE.Vector3(...view.pos);
+  const targetLook = new THREE.Vector3(...view.look);
+  
+  function tweenCamera() {
+    const elapsed = Date.now() - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = easeInOutCubic(t);
+    
+    camera.position.lerpVectors(startPos, targetPos, eased);
+    camera.lookAt(targetLook);
+    
+    if (t < 1) {
+      requestAnimationFrame(tweenCamera);
+    }
+  }
+  
+  if (duration > 0) {
+    tweenCamera();
+  } else {
+    camera.position.copy(targetPos);
+    camera.lookAt(targetLook);
+  }
+  
+  // Update active button
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewName);
+  });
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// ─── UI Setup ───
+function setupUI() {
+  // Unmute overlay
+  document.getElementById('unmute-btn').onclick = () => {
+    userUnmuted = true;
+    globalMuted = false;
+    tvStack.forEach(tv => {
+      if (players[tv.slot]) {
+        players[tv.slot].unMute();
+      }
+    });
+    document.getElementById('unmute-overlay').classList.add('hidden');
+    document.getElementById('mute-toggle').textContent = '🔊';
+  };
+  
+  // View toggles
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    if (btn.dataset.view) {
+      btn.onclick = () => setView(btn.dataset.view);
+    }
+  });
+  
+  // Arrangement toggle button
+  document.getElementById('arrangement-btn').onclick = () => {
+    switchArrangement();
+  };
+  
+  // Swipe to change arrangement (mobile)
+  let touchStartX = 0;
+  let touchEndX = 0;
+  
+  document.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  });
+  
+  document.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    const swipeDistance = touchEndX - touchStartX;
+    
+    if (Math.abs(swipeDistance) > 100) {
+      switchArrangement();
+    }
+  });
+  
+  // Drawer handles
+  document.querySelectorAll('.drawer-handle').forEach(btn => {
+    btn.onclick = () => toggleDrawer(btn.dataset.drawer);
+  });
+  
+  // Mute toggle
+  document.getElementById('mute-toggle').onclick = () => {
+    globalMuted = !globalMuted;
+    tvStack.forEach(tv => {
+      if (players[tv.slot]) {
+        if (globalMuted) {
+          players[tv.slot].mute();
+        } else if (userUnmuted) {
+          players[tv.slot].unMute();
+        }
+      }
+    });
+    document.getElementById('mute-toggle').textContent = globalMuted ? '🔇' : '🔊';
+  };
+  
+  // Theme toggle
+  document.getElementById('theme-toggle').onclick = () => {
+    themeDark = !themeDark;
+    const bgColor = themeDark ? 0x1a1a1a : 0xf5f5f5;
+    const floorColor = themeDark ? 0x2a2a2a : 0xe0e0e0;
+    const wallColor = themeDark ? 0x333333 : 0xfafafa;
+    
+    renderer.setClearColor(bgColor, 1);
+    scene.fog.color.setHex(bgColor);
+    scene.children.forEach(child => {
+      if (child.material) {
+        if (child.geometry && child.geometry.type === 'PlaneGeometry') {
+          if (child.rotation.x < 0) {
+            child.material.color.setHex(floorColor);
+          } else {
+            child.material.color.setHex(wallColor);
+          }
+        }
+      }
+    });
+  };
+  
+  // Keyboard controls (desktop)
+  window.addEventListener('keydown', (e) => {
+    if (e.key === '1') toggleDrawer('top');
+    if (e.key === '2') toggleDrawer('middle');
+    if (e.key === '3') toggleDrawer('bottom');
+    if (e.key === 'a' || e.key === 'A') switchArrangement();
+    if (e.key === 'ArrowLeft') {
+      const views = Object.keys(VIEWS);
+      const idx = views.indexOf(currentView);
+      setView(views[(idx - 1 + views.length) % views.length]);
+    }
+    if (e.key === 'ArrowRight') {
+      const views = Object.keys(VIEWS);
+      const idx = views.indexOf(currentView);
+      setView(views[(idx + 1) % views.length]);
+    }
+    if (e.key === ' ' && currentOpenDrawer && players[currentOpenDrawer.slot]) {
+      const state = players[currentOpenDrawer.slot].getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        players[currentOpenDrawer.slot].pauseVideo();
+      } else {
+        players[currentOpenDrawer.slot].playVideo();
+      }
+      e.preventDefault();
+    }
+  });
+  
+  // Window resize
+  window.addEventListener('resize', onWindowResize);
+  
+  // Page visibility: pause when hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      tvStack.forEach(tv => {
+        if (players[tv.slot]) players[tv.slot].pauseVideo();
+      });
+    }
+  });
+}
+
+function switchArrangement() {
+  const arrangements = Object.keys(ARRANGEMENTS);
+  const idx = arrangements.indexOf(currentArrangement);
+  currentArrangement = arrangements[(idx + 1) % arrangements.length];
+  
+  const arrangement = ARRANGEMENTS[currentArrangement];
+  
+  // Smoothly tween TVs to new positions
+  tvStack.forEach(tv => {
+    const config = arrangement.find(a => a.slot === tv.slot);
+    const startPos = tv.group.position.clone();
+    const targetPos = new THREE.Vector3(config.pos[0], config.pos[1], config.pos[2]);
+    const startTime = Date.now();
+    const duration = 800;
+    
+    function tweenTV() {
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = easeInOutCubic(t);
+      
+      tv.group.position.lerpVectors(startPos, targetPos, eased);
+      
+      if (t < 1) {
+        requestAnimationFrame(tweenTV);
+      }
+    }
+    
+    tweenTV();
+  });
+  
+  // Update button text
+  const btn = document.getElementById('arrangement-btn');
+  const icons = { stack: '║', line: '═', pyramid: '▲' };
+  const labels = { stack: 'Stack', line: 'Line', pyramid: 'Pyramid' };
+  btn.textContent = `${icons[currentArrangement]} ${labels[currentArrangement]}`;
+  
+  console.log('Arrangement:', currentArrangement);
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ─── Animation Loop ───
+function animate() {
+  requestAnimationFrame(animate);
+  
+  const time = Date.now() * 0.001;
+  
+  // Update drawer positions (smooth tween)
+  tvStack.forEach(tv => {
+    const delta = tv.targetDrawerZ - tv.drawer.position.z;
+    tv.drawer.position.z += delta * 0.15; // Smooth lerp
+    
+    // Update glitch overlay
+    tv.glass.material.opacity = tv.glitchOpacity;
+    
+    // LED pulse when playing
+    if (players[tv.slot]) {
+      const state = players[tv.slot].getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        tv.led.material.emissiveIntensity = 0.8 + Math.sin(time * 3) * 0.2;
+      } else {
+        tv.led.material.emissiveIntensity = 0.3;
+      }
+    }
+  });
+  
+  // Ethereal energy thread animation
+  if (cableBundle && cableBundle.userData.particleSystems) {
+    // Gentle sway
+    cableBundle.rotation.z = Math.sin(time * 0.5) * 0.03;
+    
+    const anyPlaying = tvStack.some(tv => {
+      if (!players[tv.slot]) return false;
+      return players[tv.slot].getPlayerState() === YT.PlayerState.PLAYING;
+    });
+    
+    // Animate each particle system
+    cableBundle.userData.particleSystems.forEach((system, sysIdx) => {
+      const positions = system.geometry.attributes.position;
+      const colors = system.geometry.attributes.color;
+      const sizes = system.geometry.attributes.size;
+      const curve = system.userData.curve;
+      const offsets = system.userData.offsets;
+      const tendrilOffset = system.userData.tendrilOffset;
+      const radius = system.userData.radius;
+      const speed = system.userData.speed;
+      
+      for (let i = 0; i < positions.count; i++) {
+        // Flow upward with varied speed
+        let t = (offsets[i] + time * speed) % 1;
+        const point = curve.getPoint(t);
+        
+        // Spiral motion
+        const spiralAngle = tendrilOffset + t * Math.PI * 4 + time * 0.5;
+        const x = point.x + Math.cos(spiralAngle) * radius;
+        const z = point.z + Math.sin(spiralAngle) * radius;
+        
+        positions.setXYZ(i, x, point.y, z);
+        
+        // Data pulse effect - some particles brighten periodically
+        if (anyPlaying && Math.sin(time * 5 + i * 0.5 + sysIdx) > 0.9) {
+          colors.setXYZ(i, 1, 1, 1); // Bright white pulse
+          sizes.setX(i, 0.08); // Larger
+        } else {
+          // Restore original color
+          const pulseType = (i + sysIdx * 100) % 100 / 100;
+          if (pulseType < 0.3) {
+            colors.setXYZ(i, 0.9, 1, 1);
+            sizes.setX(i, 0.05);
+          } else if (pulseType < 0.6) {
+            colors.setXYZ(i, 0.2, 1, 0.5);
+            sizes.setX(i, 0.03);
+          } else {
+            colors.setXYZ(i, 0.4, 0.7, 0.8);
+            sizes.setX(i, 0.02);
+          }
+        }
+      }
+      
+      positions.needsUpdate = true;
+      colors.needsUpdate = true;
+      sizes.needsUpdate = true;
+      
+      // Global opacity pulse
+      if (anyPlaying) {
+        system.material.opacity = 0.8 + Math.sin(time * 3 + sysIdx) * 0.2;
+      } else {
+        system.material.opacity = 0.4;
+      }
+    });
+  }
+  
+  // CSS3D objects inherit transforms from group hierarchy automatically
+  // No manual sync needed since cssObj is child of group
+  
+  // Render
+  renderer.render(scene, camera);
+  css3dRenderer.render(scene, camera);
+  
+  // Update ambient meter periodically
+  if (Math.random() < 0.02) {
+    updateAmbientMeter();
+  }
+}
+
+// ─── Start ───
+init();
+</script>
+
+</body>
+</html>

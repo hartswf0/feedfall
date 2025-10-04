@@ -1,0 +1,211 @@
+{
+  "step1": {
+    "entities": [
+      {
+        "id": "mythical_atlantis",
+        "type": "place",
+        "name": "Atlantis (Mythical City)",
+        "definition": "Lost city with 'arches, pillars, colonnades, not to mention vehicles and animals' that went under",
+        "functions": [
+          "represent loss",
+          "embody disappearance",
+          "trigger wonder",
+          "symbolize permanence",
+          "evoke questioning"
+        ],
+        "evidence": {
+          "quote": "a whole city\u2014arches, pillars, colonnades, not to mention vehicles and animals\u2014had all one fine day gone under",
+          "loc": "lines 2-4"
+        }
+      },
+      {
+        "id": "our_old_city",
+        "type": "place",
+        "name": "Our Old City",
+        "definition": "Personal lost place characterized by 'white pepper, white pudding' and intimate meetings",
+        "functions": [
+          "hold memories",
+          "represent intimacy",
+          "embody personal loss",
+          "provide comfort",
+          "anchor relationship"
+        ],
+        "evidence": {
+          "quote": "I miss our old city \u2014 white pepper, white pudding, you and I meeting under fanlights and low skies to go home in it",
+          "loc": "lines 7-9"
+        }
+      },
+      {
+        "id": "speaker",
+        "type": "agent",
+        "name": "Speaker/Wondering Voice",
+        "definition": "Questioning consciousness that 'used to wonder' and moves from myth to personal experience",
+        "functions": [
+          "wonder",
+          "question",
+          "remember",
+          "miss",
+          "interpret"
+        ],
+        "evidence": {
+          "quote": "How on earth did it happen, I used to wonder",
+          "loc": "line 1"
+        }
+      },
+      {
+        "id": "fable_makers",
+        "type": "agent",
+        "name": "Old Fable-Makers",
+        "definition": "Ancient storytellers who 'searched hard for a word to convey that what is gone is gone forever'",
+        "functions": [
+          "search for words",
+          "create stories",
+          "name sorrow",
+          "preserve tradition",
+          "give meaning to loss"
+        ],
+        "evidence": {
+          "quote": "the old fable-makers searched hard for a word to convey that what is gone is gone forever and never found it",
+          "loc": "lines 11-13"
+        }
+      },
+      {
+        "id": "sorrow",
+        "type": "process",
+        "name": "Named Sorrow",
+        "definition": "Unnamed grief given identity as 'Atlantis' when no adequate word existed for permanent loss",
+        "functions": [
+          "embody loss",
+          "carry grief",
+          "represent finality",
+          "substitute for words",
+          "preserve memory"
+        ],
+        "evidence": {
+          "quote": "they gave their sorrow a name and drowned it",
+          "loc": "lines 14-15"
+        }
+      },
+      {
+        "id": "drowning_process",
+        "type": "process",
+        "name": "Drowning/Submersion",
+        "definition": "Act of sinking beneath water that transforms cities and sorrows into unreachable depths",
+        "functions": [
+          "make unreachable",
+          "finalize loss",
+          "create mystery",
+          "preserve through burial",
+          "enable metaphor"
+        ],
+        "evidence": {
+          "quote": "gone under... drowned it",
+          "loc": "line 4, line 15"
+        }
+      },
+      {
+        "id": "word_search",
+        "type": "process",
+        "name": "Search for Words",
+        "definition": "Linguistic quest to find adequate expression for irreversible loss that ultimately fails",
+        "functions": [
+          "seek expression",
+          "fail linguistically",
+          "drive creativity",
+          "necessitate metaphor",
+          "reveal inadequacy"
+        ],
+        "evidence": {
+          "quote": "searched hard for a word to convey that what is gone is gone forever and never found it",
+          "loc": "lines 11-13"
+        }
+      }
+    ]
+  },
+  "step2": {
+    "morphisms": [
+      {
+        "from": "speaker",
+        "to": "mythical_atlantis",
+        "relation": "claims_about",
+        "statement": "Speaker transforms from wondering about mythical city to recognizing symbolic function",
+        "evidence": {
+          "quote": "How on earth did it happen, I used to wonder... Maybe what really happened is this",
+          "loc": "line 1, lines 9-10"
+        }
+      },
+      {
+        "from": "our_old_city",
+        "to": "mythical_atlantis",
+        "relation": "temporal",
+        "statement": "Personal lost city parallels and explains the creation of Atlantis myth",
+        "evidence": {
+          "quote": "I miss our old city... Maybe what really happened is this: the old fable-makers searched hard for a word",
+          "loc": "line 7, lines 9-11"
+        }
+      },
+      {
+        "from": "fable_makers",
+        "to": "word_search",
+        "relation": "causal",
+        "statement": "Ancient storytellers initiated failed linguistic quest for expression of permanent loss",
+        "evidence": {
+          "quote": "the old fable-makers searched hard for a word to convey that what is gone is gone forever and never found it",
+          "loc": "lines 11-13"
+        }
+      },
+      {
+        "from": "word_search",
+        "to": "sorrow",
+        "relation": "causal",
+        "statement": "Failure to find adequate word necessitated naming and drowning sorrow as Atlantis",
+        "evidence": {
+          "quote": "never found it. And so... they gave their sorrow a name and drowned it",
+          "loc": "lines 12-15"
+        }
+      },
+      {
+        "from": "sorrow",
+        "to": "drowning_process",
+        "relation": "causal",
+        "statement": "Named sorrow undergoes same submersion process as mythical city",
+        "evidence": {
+          "quote": "they gave their sorrow a name and drowned it",
+          "loc": "lines 14-15"
+        }
+      }
+    ]
+  },
+  "step3": {
+    "olog": {
+      "name": "Atlantis as Symbolic Loss System",
+      "axioms": [
+        "Personal loss mirrors mythical disappearance in scale and finality",
+        "Language inadequacy necessitates metaphorical substitution for grief",
+        "Geographic submersion parallels emotional burial of sorrow",
+        "Collective myths emerge from individual inability to name loss",
+        "Wonder transforms into recognition of symbolic function"
+      ],
+      "rules": [
+        "IF adequate words for loss cannot be found THEN metaphorical naming occurs",
+        "IF sorrow requires expression THEN geographical metaphors provide container",
+        "IF personal loss needs universality THEN mythical frameworks emerge",
+        "IF cities disappear completely THEN questioning consciousness awakens"
+      ],
+      "evidence": [
+        {
+          "quote": "I miss our old city \u2014 white pepper, white pudding, you and I meeting under fanlights and low skies",
+          "loc": "lines 7-9"
+        },
+        {
+          "quote": "searched hard for a word to convey that what is gone is gone forever and never found it",
+          "loc": "lines 11-13"
+        },
+        {
+          "quote": "they gave their sorrow a name and drowned it",
+          "loc": "lines 14-15"
+        }
+      ]
+    }
+  }
+}

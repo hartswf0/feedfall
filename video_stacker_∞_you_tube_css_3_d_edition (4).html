@@ -113,6 +113,11 @@ const MAX_ACTIVE_PLAYERS = 5;   // fewer videos playing on mobile
 const NUDGE_IMPULSE = 0.7, NUDGE_MAX_VX = 1.0; // gentler on mobile
 const CSS_FRONT_EPS = 0.012;
 
+// 13-segment working video
+const VIDEO_ID = 'uDUoMnp1z_g';
+const TIMESTAMPS = [0, 136, 272, 408, 544, 680, 816, 952, 1088, 1224, 1360, 1496, 1632];
+const VIDEO_IDS = Array(13).fill(VIDEO_ID);
+
 // ======= STATE =======
 let scene, cssScene, camera, renderer, cssRenderer, world, clock;
 let tvUnits=[]; // {group, body, css, player, settled}
@@ -190,7 +195,7 @@ function toggleMode(){ modeType = (modeType==='game') ? 'scroll' : 'game'; id('m
 function spawnFeedStep(){ const y = tvUnits.length? Math.max(...tvUnits.map(u=>u.group.position.y)) + TV.h + GAP_Y : DROP_SPAWN_Y; const u = makeTV(y+0.2); tvUnits.push(u); u.body.velocity.set(0,0,0); u.body.angularVelocity.set(0,0,0); u.body.sleep(); u.settled = true; unlockIndex = tvUnits.length-1; height = Math.max(height, u.body.position.y); watchedHeight = height; updateHUD(); limitActive(); }
 
 // ======= UTIL =======
-function nextVideo(){ const vid = VIDEO_IDS[feedIndex % VIDEO_IDS.length]; feedIndex++; id('next').textContent = 'next: '+vid; return vid; }
+function nextVideo(){ const vid = VIDEO_ID; const start = TIMESTAMPS[feedIndex % TIMESTAMPS.length]; feedIndex++; id('next').textContent = 'next: segment '+(feedIndex%TIMESTAMPS.length); return {id: vid, start}; }
 
 // ======= CREATE TV =======
 function makeTV(y=DROP_SPAWN_Y){
@@ -206,7 +211,7 @@ function makeTV(y=DROP_SPAWN_Y){
   const cssObj = new THREE.CSS3DObject(surface); const scale=(TV.w*0.86)/pxW; cssObj.scale.set(scale,scale,1);
   const unit={group:g, body, css:cssObj, player:null, settled:false};
 
-  const makePlayer=()=>{ try{ const p=new YT.Player(surface,{ width:pxW,height:pxH, videoId: nextVideo(), playerVars:{autoplay:1,controls:0,modestbranding:1,rel:0,playsinline:1,mute:1,loop:1,playlist: VIDEO_IDS[(feedIndex-1)%VIDEO_IDS.length]}, events:{ onReady:(e)=>{ try{e.target.mute(); e.target.playVideo();}catch{} } } }); unit.player=p; }catch{} };
+  const makePlayer=()=>{ try{ const {id: videoId, start}=nextVideo(); const p=new YT.Player(surface,{ width:pxW,height:pxH, videoId: videoId, playerVars:{autoplay:1,controls:0,modestbranding:1,rel:0,playsinline:1,mute:1,start:start}, events:{ onReady:(e)=>{ try{e.target.mute(); e.target.playVideo();}catch{} } } }); unit.player=p; }catch{} };
   if(YT_READY) makePlayer(); else pendingPlayerCbs.push(makePlayer);
 
   g.position.y = y; scene.add(g); cssScene.add(cssObj);

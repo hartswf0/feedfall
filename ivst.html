@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>VIDEO_STACKER_PRO</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#000; overflow:hidden; color:#fff; }
+canvas{ display:block; touch-action:none; }
+#webgl{ position:fixed; inset:0; }
+#css3d{ position:fixed; inset:0; pointer-events:none; }
+#hud{ position:fixed; top:20px; left:20px; font-size:18px; font-weight:600; z-index:100; opacity:0.7; pointer-events:none; }
+#fab{ position:fixed; right:24px; bottom:24px; width:64px; height:64px; border-radius:50%; background:#0a84ff; color:#fff; font-size:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 20px rgba(10,132,255,0.4); z-index:150; transition:transform 0.2s; border:none; }
+#fab:active{ transform:scale(0.9); }
+#quick-menu{ position:fixed; right:24px; bottom:100px; display:none; flex-direction:column; gap:12px; z-index:140; }
+#quick-menu.open{ display:flex; }
+.quick-btn{ width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,0.15); backdrop-filter:blur(20px); color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; transition:transform 0.2s, background 0.2s; }
+.quick-btn:active{ transform:scale(0.9); background:rgba(255,255,255,0.3); }
+.quick-btn.active{ background:#0a84ff; }
+#media-upload{ position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) scale(0.8); opacity:0; pointer-events:none; width:90%; max-width:400px; background:rgba(20,20,20,0.98); backdrop-filter:blur(30px); border-radius:24px; padding:32px; z-index:100; transition:all 0.3s; }
+#media-upload.open{ opacity:1; pointer-events:auto; transform:translate(-50%, -50%) scale(1); }
+#media-upload h2{ font-size:24px; margin-bottom:20px; text-align:center; }
+.upload-area{ border:2px dashed rgba(255,255,255,0.3); border-radius:16px; padding:40px; text-align:center; margin:16px 0; cursor:pointer; transition:all 0.2s; }
+.upload-area:hover{ border-color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); }
+.upload-area.dragover{ border-color:#0a84ff; background:rgba(10,132,255,0.1); }
+input[type="file"]{ display:none; }
+textarea{ width:100%; min-height:100px; background:rgba(255,255,255,0.1); border:none; border-radius:12px; padding:16px; color:#fff; font-size:14px; font-family:inherit; resize:vertical; margin:16px 0; }
+.btn{ width:100%; padding:16px; border-radius:12px; border:none; background:#0a84ff; color:#fff; font-size:16px; font-weight:600; cursor:pointer; margin:8px 0; }
+.btn.secondary{ background:rgba(255,255,255,0.1); }
+.close-btn{ position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:20px; cursor:pointer; }
+#library{ max-height:200px; overflow-y:auto; margin:16px 0; }
+.lib-item{ padding:12px; background:rgba(255,255,255,0.05); border-radius:10px; margin:8px 0; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+.lib-item button{ padding:6px 12px; background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:6px; font-size:12px; cursor:pointer; margin-left:8px; }
+#loading{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:200; background:#000; transition:opacity 0.3s; }
+#loading.hide{ display:none !important; }
+#debug-console{ position:fixed; bottom:0; left:0; right:0; max-height:200px; background:rgba(0,0,0,0.95); color:#0f0; font-family:monospace; font-size:11px; padding:10px; overflow-y:auto; z-index:999; border-top:2px solid #0f0; }
+#debug-console div{ margin:2px 0; }
+</style>
+</head>
+<body>
+<div id="loading">LOADING 3D ENGINE...</div>
+<div id="webgl"></div>
+<div id="css3d"></div>
+<div id="hud">TVs: <span id="tv-count">0</span> | Height: <span id="height">0.0</span>m</div>
+<div id="quick-menu">
+<button class="quick-btn" id="btn-add" title="Add TV">+</button>
+<button class="quick-btn" id="btn-select" title="Select">◎</button>
+<button class="quick-btn" id="btn-freeze" title="Freeze">❄</button>
+<button class="quick-btn" id="btn-gravity" title="Gravity">⚖</button>
+<button class="quick-btn" id="btn-media" title="Media">📁</button>
+<button class="quick-btn" id="btn-view" title="View">👁</button>
+<button class="quick-btn" id="btn-reset" title="Reset">↺</button>
+</div>
+<button id="fab">☰</button>
+<div id="media-upload">
+<button class="close-btn" id="close-upload">✕</button>
+<h2>Media Library</h2>
+<div class="upload-area" id="drop-zone">
+<div style="font-size:48px;margin-bottom:12px;">📁</div>
+<div>Drop files or click to upload</div>
+<div style="font-size:12px;opacity:0.6;margin-top:8px;">Video, Image, or Text</div>
+</div>
+<input type="file" id="file-input" multiple accept="video/*,image/*,.txt" />
+<textarea id="text-input" placeholder="Or paste text content here..."></textarea>
+<button class="btn" id="add-text-btn">Add Text to Library</button>
+<div id="library"></div>
+<button class="btn secondary" id="done-btn">Done</button>
+</div>
+<div id="debug-console"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script>
+// VISIBLE DEBUG LOGGER
+function dbg(msg){
+  const dc = document.getElementById('debug-console');
+  if(dc){
+    const div = document.createElement('div');
+    div.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+    dc.appendChild(div);
+    dc.scrollTop = dc.scrollHeight;
+  }
+  console.log(msg);
+}
+
+// IMMEDIATE TEST
+dbg('⚡ JAVASCRIPT IS RUNNING');
+dbg('Window: ' + window.innerWidth + 'x' + window.innerHeight);
+
+const TV={w:0.60,d:0.45,h:0.40};
+const SCREEN={w:TV.w*0.84,h:TV.h*0.68};
+const CAMERA_PRESETS=[{pos:[0,3.0,6.0],look:[0,1.5,0]},{pos:[-4,4.0,5.0],look:[0,2.0,0]},{pos:[4,4.0,5.0],look:[0,2.0,0]},{pos:[0,8.0,10.0],look:[0,3.0,0]}];
+let scene,cssScene,camera,renderer,cssRenderer,world,clock;
+let tvs=[];
+let selectedTV=null;
+let mediaLibrary=[];
+let height=0;
+let camPreset=0;
+let freezePhysics=false;
+let gravityMode=0;
+let selectMode=false;
+let gizmoGroup=null;
+let isDragging=false;
+let dragAxis=null;
+let dragStart=new THREE.Vector2();
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+
+function init(){
+  dbg('🚀 INIT START');
+  if(typeof THREE === 'undefined') dbg('❌ THREE.js NOT LOADED');
+  if(typeof CANNON === 'undefined') dbg('❌ CANNON.js NOT LOADED');
+  
+  clock=new THREE.Clock();
+  scene=new THREE.Scene();
+  cssScene=new THREE.Scene();
+  scene.background=new THREE.Color(0x1a1a1a);
+  scene.fog=new THREE.Fog(0x1a1a1a,10,25);
+  dbg('✅ Scene created');
+  
+  camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,100);
+  dbg('✅ Camera created');
+  setCameraPreset(0);
+  dbg('✅ Camera positioned: ' + camera.position.x + ',' + camera.position.y + ',' + camera.position.z);
+  
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  const webglContainer = document.getElementById('webgl');
+  if(!webglContainer) dbg('❌ WebGL container not found');
+  webglContainer.appendChild(renderer.domElement);
+  dbg('✅ WebGL renderer attached');
+  dbg('   Canvas: ' + renderer.domElement.width + 'x' + renderer.domElement.height);
+  
+  cssRenderer=new THREE.CSS3DRenderer();
+  cssRenderer.setSize(window.innerWidth,window.innerHeight);
+  const css3dContainer = document.getElementById('css3d');
+  if(!css3dContainer) dbg('❌ CSS3D container not found');
+  css3dContainer.appendChild(cssRenderer.domElement);
+  dbg('✅ CSS3D renderer attached');
+  dbg('   Pointer-events: ' + window.getComputedStyle(css3dContainer).pointerEvents);
+  
+  const amb=new THREE.AmbientLight(0x404040,1.5);
+  scene.add(amb);
+  
+  const key=new THREE.DirectionalLight(0xffffff,1.2);
+  key.position.set(6,10,5);
+  key.castShadow=true;
+  key.shadow.mapSize.width=2048;
+  key.shadow.mapSize.height=2048;
+  key.shadow.camera.left=-10;
+  key.shadow.camera.right=10;
+  key.shadow.camera.top=10;
+  key.shadow.camera.bottom=-10;
+  scene.add(key);
+  
+  const fill=new THREE.DirectionalLight(0x6699ff,0.6);
+  fill.position.set(-5,4,-3);
+  scene.add(fill);
+  
+  const rim=new THREE.DirectionalLight(0xff6633,0.4);
+  rim.position.set(5,3,-4);
+  scene.add(rim);
+  
+  world=new CANNON.World();
+  world.gravity.set(0,-9.8,0);
+  world.broadphase=new CANNON.SAPBroadphase(world);
+  world.allowSleep=true;
+  world.defaultContactMaterial.friction=0.6;
+  world.defaultContactMaterial.restitution=0.1;
+  
+  const floorShape=new CANNON.Plane();
+  const floorBody=new CANNON.Body({mass:0,shape:floorShape});
+  floorBody.quaternion.setFromEuler(-Math.PI/2,0,0);
+  world.addBody(floorBody);
+  
+  const floorGeo=new THREE.PlaneGeometry(50,50);
+  const floorMat=new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:0.9,metalness:0.1});
+  const floor=new THREE.Mesh(floorGeo,floorMat);
+  floor.rotation.x=-Math.PI/2;
+  floor.receiveShadow=true;
+  scene.add(floor);
+  
+  const grid=new THREE.GridHelper(24,48,0x444444,0x333333);
+  grid.material.opacity=0.4;
+  grid.material.transparent=true;
+  grid.position.y=0.01;
+  scene.add(grid);
+  dbg('✅ Grid added');
+  
+  window.addEventListener('resize',onResize);
+  document.getElementById('webgl').addEventListener('mousedown',onMouseDown);
+  document.getElementById('webgl').addEventListener('mousemove',onMouseMove);
+  document.getElementById('webgl').addEventListener('mouseup',onMouseUp);
+  document.getElementById('webgl').addEventListener('click',onClick);
+  
+  document.getElementById('fab').addEventListener('click',toggleQuickMenu);
+  document.getElementById('btn-add').addEventListener('click',addTV);
+  document.getElementById('btn-select').addEventListener('click',toggleSelectMode);
+  document.getElementById('btn-freeze').addEventListener('click',toggleFreeze);
+  document.getElementById('btn-gravity').addEventListener('click',cycleGravity);
+  document.getElementById('btn-media').addEventListener('click',openMediaUpload);
+  document.getElementById('btn-view').addEventListener('click',()=>setCameraPreset(camPreset+1));
+  document.getElementById('btn-reset').addEventListener('click',resetAll);
+  
+  document.getElementById('close-upload').addEventListener('click',closeMediaUpload);
+  document.getElementById('done-btn').addEventListener('click',closeMediaUpload);
+  document.getElementById('drop-zone').addEventListener('click',()=>document.getElementById('file-input').click());
+  document.getElementById('file-input').addEventListener('change',handleFileUpload);
+  document.getElementById('add-text-btn').addEventListener('click',addTextToLibrary);
+  
+  const dropZone=document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover',(e)=>{e.preventDefault();dropZone.classList.add('dragover');});
+  dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop',handleFileDrop);
+  
+  setTimeout(()=>{
+    dbg('⏰ Adding initial TVs...');
+    addTV();
+    setTimeout(()=>addTV(),400);
+    setTimeout(()=>addTV(),800);
+  },500);
+  
+  const loadingEl = document.getElementById('loading');
+  dbg('🎬 Hiding loading...');
+  loadingEl.classList.add('hide');
+  
+  updateHUD();
+  dbg('🎬 Starting animation...');
+  animate();
+  dbg('✅ INIT COMPLETE');
+}
+
+function setCameraPreset(i){
+  camPreset=(i+CAMERA_PRESETS.length)%CAMERA_PRESETS.length;
+  const p=CAMERA_PRESETS[camPreset];
+  camera.position.set(...p.pos);
+  camera.lookAt(new THREE.Vector3(...p.look));
+}
+
+function updateHUD(){
+  document.getElementById('tv-count').textContent=String(tvs.length);
+  document.getElementById('height').textContent=height.toFixed(1);
+}
+
+function createTV(y,mediaItem){
+  const group=new THREE.Group();
+  
+  const shellGeo=new THREE.BoxGeometry(TV.w,TV.h,TV.d);
+  const shellMat=new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:0.6,metalness:0.4});
+  const shell=new THREE.Mesh(shellGeo,shellMat);
+  shell.castShadow=true;
+  shell.receiveShadow=true;
+  group.add(shell);
+  
+  const bezelGeo=new THREE.PlaneGeometry(SCREEN.w*1.08,SCREEN.h*1.08);
+  const bezelMat=new THREE.MeshBasicMaterial({color:0x0a0a0a});
+  const bezel=new THREE.Mesh(bezelGeo,bezelMat);
+  bezel.position.set(0,0,TV.d/2+0.001);
+  group.add(bezel);
+  
+  const shape=new CANNON.Box(new CANNON.Vec3(TV.w/2,TV.h/2,TV.d/2));
+  const body=new CANNON.Body({mass:1,shape,sleepSpeedLimit:0.1,sleepTimeLimit:0.5});
+  body.position.set(0,y,0);
+  body.linearDamping=0.3;
+  body.angularDamping=0.3;
+  world.addBody(body);
+  
+  const screenEl=document.createElement('div');
+  screenEl.style.width=(SCREEN.w*300)+'px';
+  screenEl.style.height=(SCREEN.h*300)+'px';
+  screenEl.style.pointerEvents='none';
+  screenEl.style.backgroundColor='#000';
+  screenEl.style.display='flex';
+  screenEl.style.alignItems='center';
+  screenEl.style.justifyContent='center';
+  screenEl.style.overflow='hidden';
+  
+  if(!mediaItem){
+    screenEl.innerHTML='<div style="color:#666;font-size:24px;font-weight:600;">EMPTY</div>';
+  }else if(mediaItem.type==='text'){
+    const escaped=mediaItem.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    screenEl.innerHTML='<div style="color:#fff;font-size:15px;padding:20px;overflow:auto;max-height:100%;line-height:1.5;">'+escaped+'</div>';
+  }else if(mediaItem.type==='image'){
+    const img=document.createElement('img');
+    img.src=mediaItem.url;
+    img.style.maxWidth='100%';
+    img.style.maxHeight='100%';
+    img.style.objectFit='contain';
+    screenEl.appendChild(img);
+  }else if(mediaItem.type==='video'){
+    const vid=document.createElement('video');
+    vid.src=mediaItem.url;
+    vid.style.width='100%';
+    vid.style.height='100%';
+    vid.style.objectFit='cover';
+    vid.autoplay=true;
+    vid.loop=true;
+    vid.muted=true;
+    vid.playsInline=true;
+    screenEl.appendChild(vid);
+  }
+  
+  const cssObj=new THREE.CSS3DObject(screenEl);
+  cssObj.position.set(0,0,TV.d/2+0.002);
+  const cssPivot=new THREE.Object3D();
+  cssPivot.add(cssObj);
+  cssScene.add(cssPivot);
+  
+  const unit={group,body,cssPivot,cssObj,screenEl,settled:false,mediaItem};
+  scene.add(group);
+  tvs.push(unit);
+  return unit;
+}
+
+function addTV(){
+  const y=tvs.length?Math.max(...tvs.map(t=>t.group.position.y))+TV.h+0.6:3;
+  const media=mediaLibrary.length?mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)]:null;
+  dbg('📺 Adding TV #' + (tvs.length + 1) + ' at y=' + y.toFixed(2));
+  createTV(y,media);
+  updateHUD();
+  dbg('   Total TVs: ' + tvs.length);
+}
+
+function createGizmo(tv){
+  if(gizmoGroup){
+    scene.remove(gizmoGroup);
+  }
+  gizmoGroup=new THREE.Group();
+  const arrowLength=0.8;
+  const arrowX=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(0,0,0),arrowLength,0xff0000,0.2,0.15);
+  const arrowY=new THREE.ArrowHelper(new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,0),arrowLength,0x00ff00,0.2,0.15);
+  const arrowZ=new THREE.ArrowHelper(new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,0),arrowLength,0x0000ff,0.2,0.15);
+  arrowX.userData.axis='x';
+  arrowY.userData.axis='y';
+  arrowZ.userData.axis='z';
+  gizmoGroup.add(arrowX);
+  gizmoGroup.add(arrowY);
+  gizmoGroup.add(arrowZ);
+  const ringGeo=new THREE.TorusGeometry(0.5,0.02,16,32);
+  const ringMat=new THREE.MeshBasicMaterial({color:0xffff00});
+  const ring=new THREE.Mesh(ringGeo,ringMat);
+  ring.rotation.x=Math.PI/2;
+  ring.userData.axis='rotate';
+  gizmoGroup.add(ring);
+  gizmoGroup.position.copy(tv.body.position);
+  scene.add(gizmoGroup);
+}
+
+function removeGizmo(){
+  if(gizmoGroup){
+    scene.remove(gizmoGroup);
+    gizmoGroup=null;
+  }
+}
+
+function onMouseDown(e){
+  if(!selectMode||!selectedTV)return;
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  if(gizmoGroup){
+    const gizmoObjects=[];
+    gizmoGroup.traverse(child=>{if(child.userData.axis)gizmoObjects.push(child);});
+    const hits=raycaster.intersectObjects(gizmoObjects,true);
+    if(hits.length>0){
+      isDragging=true;
+      dragAxis=hits[0].object.userData.axis||hits[0].object.parent.userData.axis;
+      dragStart.set(mouse.x,mouse.y);
+      e.preventDefault();
+    }
+  }
+}
+
+function onMouseMove(e){
+  if(!isDragging||!selectedTV)return;
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  const deltaX=(mouse.x-dragStart.x)*5;
+  const deltaY=(mouse.y-dragStart.y)*5;
+  if(dragAxis==='x'){
+    selectedTV.body.position.x+=deltaX;
+  }else if(dragAxis==='y'){
+    selectedTV.body.position.y-=deltaY;
+  }else if(dragAxis==='z'){
+    selectedTV.body.position.z-=deltaY;
+  }else if(dragAxis==='rotate'){
+    const euler=new CANNON.Vec3();
+    selectedTV.body.quaternion.toEuler(euler);
+    euler.y+=deltaX;
+    selectedTV.body.quaternion.setFromEuler(euler.x,euler.y,euler.z);
+  }
+  selectedTV.body.velocity.set(0,0,0);
+  selectedTV.body.angularVelocity.set(0,0,0);
+  selectedTV.body.wakeUp();
+  if(gizmoGroup){
+    gizmoGroup.position.copy(selectedTV.body.position);
+  }
+  dragStart.set(mouse.x,mouse.y);
+}
+
+function onMouseUp(e){
+  isDragging=false;
+  dragAxis=null;
+}
+
+function onClick(e){
+  if(isDragging)return;
+  if(!selectMode)return;
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const meshes=tvs.map(t=>t.group.children[0]);
+  const hits=raycaster.intersectObjects(meshes,false);
+  if(hits.length){
+    const mesh=hits[0].object;
+    const tv=tvs.find(t=>t.group.children[0]===mesh);
+    if(tv)selectTV(tv);
+  }else{
+    deselectTV();
+  }
+}
+
+function selectTV(tv){
+  if(selectedTV){
+    selectedTV.group.children[0].material.emissive=new THREE.Color(0x000000);
+  }
+  selectedTV=tv;
+  tv.group.children[0].material.emissive=new THREE.Color(0x0a84ff);
+  tv.group.children[0].material.emissiveIntensity=0.5;
+  createGizmo(tv);
+}
+
+function deselectTV(){
+  if(selectedTV){
+    selectedTV.group.children[0].material.emissive=new THREE.Color(0x000000);
+    selectedTV=null;
+  }
+  removeGizmo();
+}
+
+function toggleSelectMode(){
+  selectMode=!selectMode;
+  document.getElementById('btn-select').classList.toggle('active',selectMode);
+  if(!selectMode){
+    deselectTV();
+  }
+}
+
+function toggleFreeze(){
+  freezePhysics=!freezePhysics;
+  const btn=document.getElementById('btn-freeze');
+  btn.classList.toggle('active',freezePhysics);
+  tvs.forEach(t=>{
+    if(freezePhysics){
+      t.body.mass=0;
+      t.body.updateMassProperties();
+    }else{
+      t.body.mass=1;
+      t.body.updateMassProperties();
+      t.body.wakeUp();
+    }
+  });
+}
+
+function cycleGravity(){
+  gravityMode=(gravityMode+1)%3;
+  const values=[-9.8,-3.0,0];
+  world.gravity.y=values[gravityMode];
+}
+
+function resetAll(){
+  tvs.forEach(t=>{
+    scene.remove(t.group);
+    cssScene.remove(t.cssPivot);
+    world.removeBody(t.body);
+  });
+  tvs=[];
+  deselectTV();
+  height=0;
+  updateHUD();
+}
+
+function toggleQuickMenu(){
+  const menu=document.getElementById('quick-menu');
+  menu.classList.toggle('open');
+}
+
+function openMediaUpload(){
+  document.getElementById('media-upload').classList.add('open');
+  updateLibraryDisplay();
+}
+
+function closeMediaUpload(){
+  document.getElementById('media-upload').classList.remove('open');
+}
+
+function handleFileDrop(e){
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const files=e.dataTransfer.files;
+  processFiles(files);
+}
+
+function handleFileUpload(e){
+  const files=e.target.files;
+  processFiles(files);
+  e.target.value='';
+}
+
+function processFiles(files){
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    const url=URL.createObjectURL(file);
+    if(file.type.startsWith('video/')){
+      mediaLibrary.push({type:'video',name:file.name,url,content:null});
+    }else if(file.type.startsWith('image/')){
+      mediaLibrary.push({type:'image',name:file.name,url,content:null});
+    }else if(file.type==='text/plain'){
+      const reader=new FileReader();
+      reader.onload=(e)=>{
+        mediaLibrary.push({type:'text',name:file.name,content:e.target.result,url:null});
+        updateLibraryDisplay();
+      };
+      reader.readAsText(file);
+      continue;
+    }
+  }
+  updateLibraryDisplay();
+}
+
+function addTextToLibrary(){
+  const text=document.getElementById('text-input').value.trim();
+  if(!text)return;
+  mediaLibrary.push({type:'text',name:'Text '+(mediaLibrary.length+1),content:text,url:null});
+  updateLibraryDisplay();
+  document.getElementById('text-input').value='';
+}
+
+function updateLibraryDisplay(){
+  const container=document.getElementById('library');
+  container.innerHTML='';
+  if(mediaLibrary.length===0){
+    container.innerHTML='<div style="color:#666;text-align:center;padding:20px;">No media files yet</div>';
+    return;
+  }
+  mediaLibrary.forEach((item,idx)=>{
+    const div=document.createElement('div');
+    div.className='lib-item';
+    const name=document.createElement('span');
+    name.textContent=item.name;
+    name.style.flex='1';
+    name.style.overflow='hidden';
+    name.style.textOverflow='ellipsis';
+    name.style.whiteSpace='nowrap';
+    const useBtn=document.createElement('button');
+    useBtn.textContent='Use';
+    useBtn.onclick=()=>{
+      const y=tvs.length?Math.max(...tvs.map(t=>t.group.position.y))+TV.h+0.6:3;
+      createTV(y,item);
+      updateHUD();
+    };
+    const delBtn=document.createElement('button');
+    delBtn.textContent='✕';
+    delBtn.onclick=()=>{
+      if(item.url)URL.revokeObjectURL(item.url);
+      mediaLibrary.splice(idx,1);
+      updateLibraryDisplay();
+    };
+    div.appendChild(name);
+    div.appendChild(useBtn);
+    div.appendChild(delBtn);
+    container.appendChild(div);
+  });
+}
+
+function onResize(){
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  cssRenderer.setSize(window.innerWidth,window.innerHeight);
+}
+
+let frameCount = 0;
+let lastFrameTime = Date.now();
+let animationRunning = true;
+
+function animate(){
+  if(!animationRunning) {
+    dbg('❌ Animation stopped');
+    return;
+  }
+  
+  try {
+    requestAnimationFrame(animate);
+    const now = Date.now();
+    const frameTime = now - lastFrameTime;
+    lastFrameTime = now;
+    
+    const dt=Math.min(clock.getDelta(),0.1);
+    frameCount++;
+    
+    if(frameCount <= 10) {
+      dbg('🎞️ Frame ' + frameCount + ': ' + frameTime + 'ms, TVs=' + tvs.length);
+    }
+    
+    // Safety check - if frame takes too long, something is wrong
+    if(frameTime > 1000) {
+      dbg('⚠️ SLOW FRAME: ' + frameTime + 'ms');
+    }
+  if(!freezePhysics){
+    try {
+      world.step(1/60,dt,3);
+    } catch(e) {
+      dbg('❌ Physics error: ' + e.message);
+      freezePhysics = true;
+    }
+  }
+  for(const t of tvs){
+    t.group.position.copy(t.body.position);
+    t.group.quaternion.copy(t.body.quaternion);
+    if(!t.settled&&t.body.sleepState===CANNON.Body.SLEEPING){
+      t.settled=true;
+    }
+    if(t.settled){
+      height=Math.max(height,t.body.position.y);
+    }
+    t.cssPivot.position.copy(t.group.position);
+    t.cssPivot.quaternion.copy(t.group.quaternion);
+    t.cssObj.position.set(0,0,TV.d/2+0.002);
+  }
+  if(gizmoGroup&&selectedTV){
+    gizmoGroup.position.copy(selectedTV.body.position);
+    gizmoGroup.quaternion.copy(selectedTV.body.quaternion);
+  }
+  updateHUD();
+  
+  // Render both layers
+  try {
+    renderer.render(scene,camera);
+  } catch(e) {
+    dbg('❌ WebGL render error: ' + e.message);
+  }
+  
+  try {
+    cssRenderer.render(cssScene,camera);
+  } catch(e) {
+    dbg('❌ CSS3D render error: ' + e.message);
+  }
+  
+  if(frameCount <= 10) {
+    dbg('   Rendered OK: WebGL=' + scene.children.length + ' CSS3D=' + cssScene.children.length);
+  }
+  
+  } catch(e) {
+    animationRunning = false;
+    dbg('❌ ANIMATION ERROR: ' + e.message);
+    dbg('   Stack: ' + e.stack);
+  }
+}
+
+// Global error handler
+window.onerror = function(msg, url, line, col, error) {
+  dbg('❌❌ GLOBAL ERROR: ' + msg);
+  dbg('   Line: ' + line + ', Col: ' + col);
+  if(error) dbg('   ' + error.stack);
+  return false;
+};
+
+// Unhandled promise rejections
+window.addEventListener('unhandledrejection', function(e) {
+  dbg('❌❌ UNHANDLED PROMISE: ' + e.reason);
+});
+
+// Immediate diagnostics
+dbg('🔍 DIAGNOSTICS START');
+dbg('   THREE: ' + typeof THREE);
+dbg('   CANNON: ' + typeof CANNON);
+
+window.addEventListener('load',()=>{
+  dbg('📦 Window loaded');
+  dbg('   THREE: ' + typeof THREE);
+  dbg('   CANNON: ' + typeof CANNON);
+  
+  if(typeof THREE!=='undefined'&&typeof CANNON!=='undefined'){
+    dbg('⏰ Init in 100ms...');
+    setTimeout(init,100);
+  }else{
+    dbg('⚠️ Libs not ready, waiting 500ms');
+    setTimeout(init,500);
+  }
+});
+</script>
+</body>
+</html>

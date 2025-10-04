@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeedFall Multi-Mode</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Courier New', monospace; 
+            overflow: hidden; 
+            background: #000;
+            color: #0ff;
+        }
+        
+        #container { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+        }
+        
+        /* Mode Selector */
+        #mode-selector {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #0ff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        #mode-selector h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .mode-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            color: #0ff;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .mode-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .mode-btn.active {
+            background: #0ff;
+            color: #000;
+            font-weight: bold;
+        }
+        
+        /* Info Panel */
+        #info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #0ff;
+            border-radius: 8px;
+            font-size: 12px;
+            min-width: 200px;
+        }
+        
+        #info div {
+            margin: 5px 0;
+        }
+        
+        /* Controls */
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #0ff;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ctrl-btn {
+            padding: 10px 20px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            color: #0ff;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .ctrl-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+        }
+        
+        .ctrl-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            z-index: 2000;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .loading.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">▶ LOADING MULTI-MODE...</div>
+    
+    <div id="container"></div>
+    
+    <div id="mode-selector">
+        <h3>⚙ Geometry Mode</h3>
+        <button class="mode-btn active" data-mode="flatscreen">📺 Flat CRT</button>
+        <button class="mode-btn" data-mode="clapboard">🎬 Clapboard</button>
+        <button class="mode-btn" data-mode="cube">📦 Cube Stack</button>
+        <button class="mode-btn" data-mode="pyramid">🔺 Pyramid</button>
+        <button class="mode-btn" data-mode="rounded">⬜ Rounded TV</button>
+    </div>
+    
+    <div id="info">
+        <div>📊 Mode: <b id="current-mode">Flat CRT</b></div>
+        <div>📺 TVs: <b id="tv-count">0</b></div>
+        <div>⬆ Height: <b id="height">0.0m</b></div>
+        <div>🎵 Videos: 13 segments</div>
+    </div>
+    
+    <div id="controls">
+        <button class="ctrl-btn" id="btn-drop">⬆ DROP TV</button>
+        <button class="ctrl-btn" id="btn-reset">🔄 RESET</button>
+        <button class="ctrl-btn" id="btn-nudge-left">← NUDGE</button>
+        <button class="ctrl-btn" id="btn-nudge-right">NUDGE →</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { CSS3DRenderer, CSS3DObject } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS3DRenderer.js';
+        import * as CANNON from 'cannon-es';
+
+        // Configuration
+        const CONFIG = {
+            youtubeId: 'uDUoMnp1z_g',
+            segments: [
+                { name: 'Out of Life', start: 0 },
+                { name: 'Flashing Lights', start: 136 },
+                { name: 'How to Break Off an Engagement', start: 272 },
+                { name: 'Nevermore', start: 408 },
+                { name: 'Bloodline', start: 544 },
+                { name: 'Resurrecting Atlantis', start: 680 },
+                { name: 'DJ Turn Me Up', start: 816 },
+                { name: 'Newly Single', start: 952 },
+                { name: 'Yet, Heard', start: 1088 },
+                { name: 'Magic Ride', start: 1224 },
+                { name: 'Reunion', start: 1360 },
+                { name: 'How to Win My Heart', start: 1496 },
+                { name: 'Hot Minute', start: 1632 }
+            ]
+        };
+
+        // State
+        const state = {
+            mode: 'flatscreen',
+            tvs: [],
+            segmentIndex: 0
+        };
+
+        // Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+        scene.fog = new THREE.Fog(0x0a0a0a, 15, 40);
+        
+        const cssScene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+        camera.position.set(0, 8, 14);
+        camera.lookAt(0, 3, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+        
+        const cssRenderer = new CSS3DRenderer();
+        cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        cssRenderer.domElement.style.position = 'absolute';
+        cssRenderer.domElement.style.top = '0';
+        cssRenderer.domElement.style.pointerEvents = 'none';
+        document.getElementById('container').appendChild(cssRenderer.domElement);
+
+        // Lighting
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        keyLight.position.set(8, 12, 10);
+        keyLight.castShadow = true;
+        scene.add(keyLight);
+
+        const rimLight = new THREE.DirectionalLight(0x00ffff, 0.3);
+        rimLight.position.set(-5, 5, -5);
+        scene.add(rimLight);
+
+        // Physics World
+        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
+        world.broadphase = new CANNON.SAPBroadphase(world);
+
+        // Ground
+        const groundShape = new CANNON.Plane();
+        const groundBody = new CANNON.Body({ mass: 0, shape: groundShape });
+        groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        world.addBody(groundBody);
+
+        const groundGeo = new THREE.PlaneGeometry(50, 50);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.receiveShadow = true;
+        scene.add(groundMesh);
+
+        const grid = new THREE.GridHelper(30, 30, 0x00ffff, 0x003333);
+        grid.position.y = 0.01;
+        scene.add(grid);
+
+        // Geometry Creators
+        function createGeometry(mode) {
+            const w = 0.6, h = 0.4, d = 0.05;
+            
+            switch(mode) {
+                case 'flatscreen': // Flat CRT TV
+                    return {
+                        visual: new THREE.BoxGeometry(w, h, d),
+                        physics: new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/2)),
+                        screenOffset: d/2 + 0.01,
+                        scale: 1
+                    };
+                    
+                case 'clapboard': // Clapboard/hopper style
+                    const shape = new THREE.Shape();
+                    shape.moveTo(0, 0);
+                    shape.lineTo(w, 0);
+                    shape.lineTo(w * 0.9, h);
+                    shape.lineTo(w * 0.1, h);
+                    const extrudeSettings = { depth: d, bevelEnabled: false };
+                    return {
+                        visual: new THREE.ExtrudeGeometry(shape, extrudeSettings),
+                        physics: new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/2)),
+                        screenOffset: d/2 + 0.01,
+                        scale: 1
+                    };
+                    
+                case 'cube': // Perfect cube
+                    const size = 0.5;
+                    return {
+                        visual: new THREE.BoxGeometry(size, size, size),
+                        physics: new CANNON.Box(new CANNON.Vec3(size/2, size/2, size/2)),
+                        screenOffset: size/2 + 0.01,
+                        scale: 0.9
+                    };
+                    
+                case 'pyramid': // Pyramid shape
+                    return {
+                        visual: new THREE.ConeGeometry(0.3, 0.5, 4),
+                        physics: new CANNON.Box(new CANNON.Vec3(0.3, 0.25, 0.3)),
+                        screenOffset: 0.3,
+                        scale: 0.7
+                    };
+                    
+                case 'rounded': // Rounded TV
+                    return {
+                        visual: new THREE.BoxGeometry(w, h, d * 2, 8, 8, 4),
+                        physics: new CANNON.Box(new CANNON.Vec3(w/2, h/2, d)),
+                        screenOffset: d + 0.01,
+                        scale: 1
+                    };
+                    
+                default:
+                    return createGeometry('flatscreen');
+            }
+        }
+
+        // Create TV
+        function createTV(segment) {
+            const geom = createGeometry(state.mode);
+            
+            // Physics
+            const body = new CANNON.Body({
+                mass: 5,
+                shape: geom.physics,
+                linearDamping: 0.01,
+                angularDamping: 0.01
+            });
+            
+            const spawnY = state.tvs.length === 0 ? 5 : Math.max(...state.tvs.map(t => t.body.position.y)) + 2;
+            body.position.set((Math.random() - 0.5) * 1, spawnY, 0);
+            world.addBody(body);
+
+            // Visual
+            const material = new THREE.MeshStandardMaterial({
+                color: state.mode === 'flatscreen' ? 0x1a1a1a : 0x222222,
+                roughness: 0.7,
+                metalness: state.mode === 'cube' ? 0.8 : 0.2
+            });
+            
+            const mesh = new THREE.Mesh(geom.visual, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+
+            // Edge glow
+            const edges = new THREE.EdgesGeometry(geom.visual);
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffff });
+            const edgeMesh = new THREE.LineSegments(edges, edgeMat);
+            mesh.add(edgeMesh);
+
+            // CSS3D video
+            let cssObject = null, cssPivot = null;
+            if (segment) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube.com/embed/${CONFIG.youtubeId}?start=${segment.start}&autoplay=1&mute=1&controls=1&playsinline=1`;
+                iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+                iframe.style.width = '320px';
+                iframe.style.height = '240px';
+                iframe.style.border = '0';
+                iframe.style.background = '#000';
+                
+                cssObject = new CSS3DObject(iframe);
+                cssObject.position.set(0, 0, geom.screenOffset);
+                cssObject.scale.set(geom.scale / 320, geom.scale / 320, 1);
+                
+                cssPivot = new THREE.Object3D();
+                cssPivot.add(cssObject);
+                cssScene.add(cssPivot);
+            }
+
+            const tv = { body, mesh, cssObject, cssPivot, segment };
+            state.tvs.push(tv);
+            updateInfo();
+            return tv;
+        }
+
+        // Drop TV
+        function dropTV() {
+            if (state.segmentIndex >= CONFIG.segments.length) {
+                state.segmentIndex = 0; // Loop back
+            }
+            const segment = CONFIG.segments[state.segmentIndex];
+            state.segmentIndex++;
+            createTV(segment);
+        }
+
+        // Reset
+        function reset() {
+            state.tvs.forEach(tv => {
+                world.removeBody(tv.body);
+                scene.remove(tv.mesh);
+                if (tv.cssPivot) cssScene.remove(tv.cssPivot);
+            });
+            state.tvs = [];
+            state.segmentIndex = 0;
+            updateInfo();
+        }
+
+        // Nudge
+        function nudge(dir) {
+            if (state.tvs.length === 0) return;
+            const topTV = state.tvs[state.tvs.length - 1];
+            topTV.body.applyImpulse(new CANNON.Vec3(dir * 2, 0, 0), topTV.body.position);
+        }
+
+        // Update Info
+        function updateInfo() {
+            document.getElementById('tv-count').textContent = state.tvs.length;
+            const maxY = state.tvs.length > 0 ? Math.max(...state.tvs.map(t => t.body.position.y)) : 0;
+            document.getElementById('height').textContent = maxY.toFixed(1) + 'm';
+        }
+
+        // Mode Change
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                state.mode = mode;
+                
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const modeNames = {
+                    flatscreen: 'Flat CRT',
+                    clapboard: 'Clapboard',
+                    cube: 'Cube Stack',
+                    pyramid: 'Pyramid',
+                    rounded: 'Rounded TV'
+                };
+                document.getElementById('current-mode').textContent = modeNames[mode];
+            });
+        });
+
+        // Controls
+        document.getElementById('btn-drop').addEventListener('click', dropTV);
+        document.getElementById('btn-reset').addEventListener('click', reset);
+        document.getElementById('btn-nudge-left').addEventListener('click', () => nudge(-1));
+        document.getElementById('btn-nudge-right').addEventListener('click', () => nudge(1));
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            world.step(1 / 60);
+
+            state.tvs.forEach(tv => {
+                tv.mesh.position.copy(tv.body.position);
+                tv.mesh.quaternion.copy(tv.body.quaternion);
+                
+                if (tv.cssPivot) {
+                    tv.cssPivot.position.copy(tv.mesh.position);
+                    tv.cssPivot.quaternion.copy(tv.mesh.quaternion);
+                }
+            });
+
+            updateInfo();
+            renderer.render(scene, camera);
+            cssRenderer.render(cssScene, camera);
+        }
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize - auto-drop all 13 segments
+        setTimeout(() => {
+            document.querySelector('.loading').classList.add('hidden');
+            CONFIG.segments.forEach((seg, i) => {
+                setTimeout(() => createTV(seg), i * 600);
+            });
+        }, 1000);
+
+        animate();
+    </script>
+</body>
+</html>

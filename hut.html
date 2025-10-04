@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>FEEDFALL v2 — Unified CRT Arcade (In‑World Gizmos)</title>
+<style>
+*{box-sizing:border-box}
+:root{ --ui:#00ffa6; --accent:#ff2b4f; --bg:#06080d; --ink:#d9fff0; --crt:#12f7a6; --grid:#183026 }
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:#cde;overflow:hidden;font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif}
+/* CRT overlay */
+#scan{position:fixed;inset:0;pointer-events:none;mix-blend-mode:overlay;z-index:3;opacity:.12;background:
+  repeating-linear-gradient( to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 2px, transparent 3px );}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:2; background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.35) 100%)}
+/* Stage roots */
+#stage{position:fixed;inset:0}
+#webgl,#css3d{position:absolute;inset:0;touch-action:none}
+/* Minimal HUD */
+#hud{position:fixed;left:12px;top:12px;z-index:10;color:var(--ui);font:600 12px/1.2 ui-monospace,Consolas,monospace;background:rgba(0,0,0,.35);border:1px solid var(--ui);padding:6px 8px;border-radius:10px;box-shadow:0 0 12px rgba(0,255,166,.22)}
+#hud #line{height:5px;width:120px;background:#0a121a;border:1px solid var(--ui);border-radius:6px;margin-top:4px}
+#hud #fill{height:100%;width:100%;background:linear-gradient(90deg,#ff4b4b,#ffd24b,#1aff5e);border-radius:6px}
+/* Action puck */
+#puck{position:fixed;right:14px;bottom:14px;z-index:12;display:flex;gap:8px;align-items:center}
+.puck{display:flex;gap:8px;background:rgba(0,0,0,.45);border:2px solid var(--ui);border-radius:999px;padding:6px 8px;box-shadow:0 0 14px rgba(0,255,166,.18)}
+.pbtn{border:0;background:transparent;color:var(--ui);font-weight:800;font-size:14px;padding:6px 8px;cursor:pointer}
+.pbtn:active{color:#00150e;background:var(--ui);border-radius:8px}
+#file{display:none}
+/* Test status */
+#test{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);font:11px/1.2 ui-monospace;color:#9f9;opacity:.45;z-index:9;pointer-events:none}
+/* TV Guide (in‑world CSS3D) */
+.guide{width:220px;height:150px;background:#031116;border:2px solid #0b3; color:#9ff; font:700 11px/1.4 ui-monospace; border-radius:10px; padding:8px; box-shadow:0 0 18px rgba(0,255,166,.15)}
+.guide h3{margin:0 0 6px 0;color:#7cffc6;font-size:12px}
+.guide .row{display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div id="loading" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;color:#0f0;font:700 14px ui-monospace;z-index:9999">LOADING FEEDFALL…</div>
+<div id="stage"><div id="webgl"></div><div id="css3d"></div></div>
+<div id="hud"><span id="score">SCORE 0 · HI 0</span><div>H:<span id="h">0.0</span> · ×<span id="streak">0</span></div><div id="line"><div id="fill"></div></div></div>
+<div id="puck"><div class="puck"><button class="pbtn" id="drop">DROP</button><button class="pbtn" id="upload">📼</button><button class="pbtn" id="mute">🔇</button><button class="pbtn" id="view">⟲</button></div></div>
+<input id="file" type="file" multiple accept="video/mp4,video/webm,image/*,.txt,text/plain" />
+<div id="scan"></div><div id="vignette"></div>
+<div id="test"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+/* =====================
+   FEEDFALL v2 — Unified CRT Arcade
+   In‑world TV‑themed gizmos & minimal UI
+   ===================== */
+
+// ---- Config
+const TV={w:0.62,h:0.42,d:0.46}; const SCREEN={w:TV.w*0.86,h:TV.h*0.70};
+const GAP_Y=0.05, PHYS_LIMIT=0.22, STAB_ALPHA=0.7; const AUTOFALL_MS=2200;
+let TOP_N=6;
+
+// ---- State
+let scene, cssScene, camera, renderer, cssRenderer, world, clock;
+let tvs=[], falling=null, focus=null, youTubeReady=false;
+let score=0, height=0, streak=0, hi=parseInt(localStorage.getItem('ff_hi')||'0');
+let stability=1, gameOver=false, muted=true; let localQ=[]; let playlist=["M7lc1UVf-VE","dQw4w9WgXcQ","kXYiU_JCYtU","e-ORhEE9VVg"]; let feedIndex=0;
+let audioCtx; const sounds={};
+
+function onYouTubeIframeAPIReady(){ youTubeReady=true }
+
+// ---- Boot
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', safeInit);
+} else {
+  safeInit();
+}
+function safeInit(){
+  try { init(); byId('loading').style.display='none'; dropTV(); }
+  catch (err){
+    console.error('Boot error:', err);
+    const L=byId('loading');
+    if(L){ L.innerHTML='⚠️ Startup error — open console for details'; L.style.color='#f66'; }
+  }
+}
+function init(){
+  clock=new THREE.Clock();
+  // scenes
+  scene=new THREE.Scene(); cssScene=new THREE.Scene(); scene.background=new THREE.Color(0x070b12); scene.fog=new THREE.Fog(0x070b12,5,18);
+  // camera
+  camera=new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.08, 120); camera.position.set(0,2.2,4.4); camera.lookAt(0,1.1,0);
+  // renderers
+  renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setSize(innerWidth,innerHeight); document.getElementById('webgl').appendChild(renderer.domElement);
+  cssRenderer=new THREE.CSS3DRenderer(); cssRenderer.setSize(innerWidth,innerHeight); document.getElementById('css3d').appendChild(cssRenderer.domElement); cssRenderer.domElement.style.pointerEvents='none';
+  // lights
+  scene.add(new THREE.AmbientLight(0x2a2a2a,1.0)); const key=new THREE.DirectionalLight(0xffffff,0.95); key.position.set(3,6,4); key.castShadow=true; scene.add(key); const rim=new THREE.DirectionalLight(0x77aaff,0.35); rim.position.set(-4,2,-2); scene.add(rim);
+  // physics
+  world=new CANNON.World(); world.gravity.set(0,-9.8,0); world.broadphase=new CANNON.SAPBroadphase(world); world.allowSleep=true; const floor=new CANNON.Body({mass:0,shape:new CANNON.Plane()}); floor.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(floor);
+  const grid=new THREE.GridHelper(16,32,0x00ffa6,0x19322a); grid.material.transparent=true; grid.material.opacity=.26; grid.position.y=.01; scene.add(grid);
+  const f=new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.MeshStandardMaterial({color:0x0b121c,roughness:.94})); f.rotation.x=-Math.PI/2; f.receiveShadow=true; scene.add(f);
+
+  // puck
+  byId('drop').onclick=()=>{ firstInteraction(); dropTV() };
+  byId('mute').onclick=()=>{ firstInteraction(); muted=!muted; byId('mute').textContent=muted?'🔇':'🔊'; tvs.forEach(t=>{ if(t.kind==='youtube' && t.yt){ try{ muted?t.yt.mute():t.yt.unMute(); }catch(e){} } if(t.kind==='video' && t.el){ t.el.muted=muted; t.el.play().catch(()=>{}) } }) };
+  byId('upload').onclick=()=> byId('file').click(); byId('file').addEventListener('change', handleFiles);
+  byId('view').onclick=()=> cycleView();
+
+  // pick / gestures
+  const stage=document.getElementById('stage'); stage.addEventListener('pointerdown', onPointerDown); stage.addEventListener('pointermove', onPointerMove); stage.addEventListener('pointerup', onPointerUp); stage.addEventListener('touchend', onTouchEnd, {passive:false});
+  addEventListener('resize', onResize);
+
+  // build gizmos & guide
+  buildGizmo(); buildGuide();
+
+  tests();
+  animate();
+}
+
+function firstInteraction(){ if(audioCtx) return; audioCtx=new (window.AudioContext||window.webkitAudioContext)(); const mk=(f0,f1,d,g=.25)=>()=>{ const o=audioCtx.createOscillator(),g1=audioCtx.createGain(); o.connect(g1); g1.connect(audioCtx.destination); o.frequency.setValueAtTime(f0,audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),audioCtx.currentTime+d); g1.gain.setValueAtTime(g,audioCtx.currentTime); g1.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+d); o.start(); o.stop(audioCtx.currentTime+d) }; sounds.drop=mk(240,140,.22,.22); sounds.land=mk(160,90,.12,.18); sounds.nudge=mk(340,280,.08,.12); sounds.collapse=mk(220,40,.9,.32) }
+function sfx(n){ if(audioCtx && sounds[n]) try{ sounds[n]() }catch(e){} }
+
+// ---- Utilities
+function byId(id){return document.getElementById(id)}
+function clamp(a,min,max){return Math.max(min,Math.min(max,a))}
+function updateHUD(){ byId('score').textContent=`SCORE ${score} · HI ${hi}`; byId('h').textContent=height.toFixed(1); byId('streak').textContent=streak; byId('fill').style.width=(stability*100)+'%' }
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); cssRenderer.setSize(innerWidth,innerHeight) }
+function cycleView(){ const opts=[ [0,2.2,4.4],[2.8,2.5,3.6],[-2.8,2.5,3.6],[0,5.0,0.1] ]; if(!cycleView.i) cycleView.i=0; cycleView.i=(cycleView.i+1)%opts.length; const p=opts[cycleView.i]; camera.position.set(p[0],p[1],p[2]); camera.lookAt(0,1.1,0) }
+
+// ---- Content
+function nextFeed(){ if(localQ.length){ return localQ.shift() } const id=playlist[feedIndex++ % playlist.length]; return {kind:'youtube',id} }
+function setYouTube(tv,id){
+  const url=`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&playsinline=1&enablejsapi=1&loop=1&playlist=${id}`;
+  clearSurface(tv);
+  const iframe=document.createElement('iframe');
+  iframe.allow='autoplay; encrypted-media; picture-in-picture';
+  iframe.frameBorder='0';
+  iframe.allowFullscreen=true;
+  iframe.style.width='100%';
+  iframe.style.height='100%';
+  iframe.src=url;
+  tv.surface.appendChild(iframe);
+  tv.el=iframe; tv.kind='youtube';
+  setTimeout(()=>{
+    if(youTubeReady && window.YT && YT.Player){
+      tv.yt=new YT.Player(iframe,{
+        events:{ onReady:(e)=>{ try{ if(muted) e.target.mute(); e.target.playVideo(); }catch(_){} } },
+        playerVars:{autoplay:1,controls:0,modestbranding:1,rel:0,playsinline:1,mute:1,loop:1,playlist:id}
+      });
+    }
+  }, 200);
+}
+function setVideo(tv,url){ clearSurface(tv); const v=document.createElement('video'); v.src=url; v.autoplay=true; v.loop=true; v.muted=muted; v.playsInline=true; v.style.width='100%'; v.style.height='100%'; v.style.objectFit='cover'; tv.surface.appendChild(v); tv.el=v; tv.kind='video'; v.play().catch(()=>{}) }
+function setImage(tv,url){ clearSurface(tv); const img=document.createElement('img'); img.src=url; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; tv.surface.appendChild(img); tv.el=img; tv.kind='image' }
+function setText(tv,text){ clearSurface(tv); const div=document.createElement('div'); div.textContent=text; div.style.width='100%'; div.style.height='100%'; div.style.background='#02060a'; div.style.color=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#d9fff0'; div.style.font='600 16px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace'; div.style.padding='8px'; div.style.overflow='auto'; tv.surface.appendChild(div); tv.el=div; tv.kind='text' }
+function clearSurface(tv){ tv.surface.innerHTML=''; tv.el=null; tv.yt=null; tv.kind='' }
+function apply(tv,item){ if(!item) return; if(item.kind==='youtube') setYouTube(tv,item.id); else if(item.kind==='video') setVideo(tv,item.url); else if(item.kind==='image') setImage(tv,item.url); else if(item.kind==='text') setText(tv,item.text) }
+
+// ---- Factory (TV + themed bits)
+function createTV(y=5){
+  const group=new THREE.Group();
+  const shell=new THREE.Mesh(new THREE.BoxGeometry(TV.w,TV.h,TV.d), new THREE.MeshStandardMaterial({color:0x0c1119,roughness:.6,metalness:.25})); shell.castShadow=true; shell.receiveShadow=true; group.add(shell);
+  // face rim + bezel for CRT vibe
+  const faceRim=new THREE.Mesh(new THREE.PlaneGeometry(SCREEN.w*1.02,SCREEN.h*1.02), new THREE.MeshBasicMaterial({color:0x26313a})); faceRim.position.set(0,0, TV.d/2+0.0006); group.add(faceRim);
+  const bezel=new THREE.Mesh(new THREE.PlaneGeometry(SCREEN.w,SCREEN.h), new THREE.MeshBasicMaterial({color:0x050a0e})); bezel.position.set(0,0, TV.d/2+0.0008); group.add(bezel);
+  // LED
+  const led=new THREE.Mesh(new THREE.PlaneGeometry(0.032,0.032), new THREE.MeshBasicMaterial({color:0x006655})); led.position.set(TV.w*0.36,-TV.h*0.36,TV.d/2+0.0012); group.add(led);
+  // VCR jog wheels (themed fine controls; purely visual until focused)
+  const wheelMat=new THREE.MeshStandardMaterial({color:0x0d1922, metalness:.4, roughness:.4});
+  const wL=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.02,24), wheelMat); wL.rotation.z=Math.PI/2; wL.position.set(-TV.w*0.35,-TV.h*0.33, TV.d/2+0.0013); group.add(wL);
+  const wR=wL.clone(); wR.position.x= TV.w*0.28; group.add(wR);
+  // CSS3D screen
+  const surf=document.createElement('div'); surf.style.width=(SCREEN.w*320).toFixed(0)+'px'; surf.style.height=(SCREEN.h*320).toFixed(0)+'px'; surf.style.pointerEvents='none';
+  const cssObj=new THREE.CSS3DObject(surf); cssObj.position.set(0,0,TV.d/2+0.0016); const pivot=new THREE.Object3D(); pivot.add(cssObj); cssScene.add(pivot);
+  // physics
+  const body=new CANNON.Body({mass:1, shape:new CANNON.Box(new CANNON.Vec3(TV.w/2,TV.h/2,TV.d/2)), sleepSpeedLimit:.12, sleepTimeLimit:.5}); body.position.set(0,y,0); body.linearDamping=.32; body.angularDamping=.34; world.addBody(body);
+  const tv={group,shell,body,cssPivot:pivot,cssObj, surface:surf, led, el:null, yt:null, kind:'', settled:false, filters:{b:1,c:1}, dials:{L:0, R:0}}; scene.add(group); tvs.push(tv);
+  // initial content
+  apply(tv, nextFeed());
+  // attach antenna “rabbit ears” (for themed gizmo anchor)
+  addRabbitEars(tv);
+  return tv;
+}
+
+function addRabbitEars(tv){ const base=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.04,12), new THREE.MeshStandardMaterial({color:0x1a2630, metalness:.3, roughness:.5})); base.position.set(0, TV.h/2+0.02, 0); tv.group.add(base); const earMat=new THREE.MeshStandardMaterial({color:0x94d4ff, metalness:.8, roughness:.2}); const rodGeo=new THREE.CylinderGeometry(0.008,0.008,0.35,12);
+  const earL=new THREE.Mesh(rodGeo, earMat); earL.position.set(-0.07, TV.h/2+0.21, 0.05); earL.rotation.z= 0.45; tv.group.add(earL);
+  const earR=new THREE.Mesh(rodGeo, earMat); earR.position.set( 0.07, TV.h/2+0.21,-0.05); earR.rotation.z=-0.45; tv.group.add(earR);
+}
+
+// ---- Upload handling
+function handleFiles(ev){ const files=[...ev.target.files]; for(const f of files){ const mt=(f.type||'').toLowerCase(); const ext=(f.name.split('.').pop()||'').toLowerCase(); if(mt.startsWith('video')){ localQ.push({kind:'video',url:URL.createObjectURL(f)}) } else if(mt.startsWith('image')||['png','jpg','jpeg','gif','webp'].includes(ext)){ localQ.push({kind:'image',url:URL.createObjectURL(f)}) } else { const r=new FileReader(); r.onload=()=> localQ.push({kind:'text',text:String(r.result)}); r.readAsText(f) } } ev.target.value=''; updateGuide() }
+
+// ---- Themed In‑world GIZMOS (antenna = translate, dish = rotate, dials = filters)
+const gizmo={root:new THREE.Group(), handles:{}, active:null, dragStart:null}; scene && scene.add && scene.add(gizmo.root);
+function buildGizmo(){
+  gizmo.root.clear(); gizmo.root.visible=false;
+  // Antenna base (translate XZ)
+  const antBase=new THREE.Group(); antBase.userData={type:'translate',axis:'xz'}; const base=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.05,12), new THREE.MeshBasicMaterial({color:0x42f5b0})); base.position.y=0.025; const wandL=new THREE.Mesh(new THREE.ConeGeometry(0.02,0.16,16), new THREE.MeshBasicMaterial({color:0x9fe9ff})); wandL.position.set(-0.06,0.14,0.06); wandL.rotation.z= 0.45; const wandR=wandL.clone(); wandR.position.set(0.06,0.14,-0.06); wandR.rotation.z=-0.45; antBase.add(base,wandL,wandR); antBase.position.set(0, TV.h/2+0.02, 0);
+  // Satellite dish (rotate Y)
+  const dishG=new THREE.Group(); dishG.userData={type:'rotate',axis:'y'}; const dish=new THREE.Mesh(new THREE.SphereGeometry(0.12,22,22,0,Math.PI), new THREE.MeshBasicMaterial({color:0xffe57a, wireframe:true})); dish.scale.set(1,1,0.5); const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.006,0.006,0.12,8), new THREE.MeshBasicMaterial({color:0xffe57a})); arm.position.set(0,0.06,0.09); dishG.add(dish,arm); dishG.position.set(-TV.w*0.25, TV.h/2+0.03, 0.0);
+  // VCR dials (brightness/contrast)
+  const dialMat=new THREE.MeshBasicMaterial({color:0xaad8ff}); const kn1=new THREE.Mesh(new THREE.TorusGeometry(0.055,0.01,10,28), dialMat); kn1.userData={type:'dial', prop:'b'}; kn1.position.set(TV.w*0.34, -TV.h*0.34, TV.d/2+0.0013);
+  const kn2=kn1.clone(); kn2.userData={type:'dial', prop:'c'}; kn2.position.x = TV.w*0.26;
+
+  gizmo.root.add(antBase, dishG, kn1, kn2); gizmo.handles={antBase, dishG, kn1, kn2};
+}
+
+function showGizmo(tv){ if(!tv) return hideGizmo(); gizmo.root.visible=true; updateGizmoPose(tv) }
+function hideGizmo(){ gizmo.root.visible=false; gizmo.active=null; gizmo.dragStart=null }
+function updateGizmoPose(tv){ gizmo.root.position.copy(tv.group.position); gizmo.root.quaternion.copy(tv.group.quaternion); }
+
+// picking for TVs & gizmo
+const ray=new THREE.Raycaster(); const v2=new THREE.Vector2(); let dragging=false; let dragPlane=null; let dragStartPoint=null; let dialStart=0;
+function ndc(x,y){ v2.x=(x/innerWidth)*2-1; v2.y=-(y/innerHeight)*2+1 }
+function pickMesh(meshes){ const hits=ray.intersectObjects(meshes,true); return hits[0]||null }
+
+function onPointerDown(e){ ndc(e.clientX,e.clientY); ray.setFromCamera(v2,camera);
+  // prefer gizmo handle if visible
+  if(gizmo.root.visible){ const hit=pickMesh(gizmo.root.children); if(hit){ gizmo.active=hit.object; dragging=true; dragStartPoint=planeHit(e); dialStart = (focus? (gizmo.active.userData.prop==='b'? focus.filters.b: focus.filters.c) : 1); return } }
+  // else pick a TV shell
+  const shells=tvs.map(t=>t.shell); const hit=pickMesh(shells); if(hit){ const tv=tvs.find(t=>t.shell===hit.object); setFocus(tv); dragging=true; gizmo.active={userData:{type:'translate',axis:'free'}}; dragStartPoint=planeHit(e); return }
+}
+function onPointerMove(e){ if(!dragging||!focus) return; const type=gizmo.active?.userData?.type; const axis=gizmo.active?.userData?.axis; if(!type){ return }
+  if(type==='translate'){ const p=planeHit(e); if(!p||!dragStartPoint) return; const d=new THREE.Vector3().subVectors(p, dragStartPoint); let dx=d.x, dz=d.z, dy=d.y; if(axis==='xz'){ dy=0 } moveTV(focus, dx, dy, dz, true); dragStartPoint=p; sfx('nudge') }
+  else if(type==='rotate'){ // rotate around Y based on cursor azimuth
+    const p=planeHit(e); if(!p||!dragStartPoint) return; const c=focus.group.position.clone(); const a1=Math.atan2(dragStartPoint.x-c.x, dragStartPoint.z-c.z); const a2=Math.atan2(p.x-c.x, p.z-c.z); rotateY(focus, a2-a1); dragStartPoint=p; sfx('nudge') }
+  else if(type==='dial'){ // brightness/contrast knobs
+    const delta = (e.movementX||0) - (e.movementY||0); const prop=gizmo.active.userData.prop; const v= clamp(dialStart + delta*0.005, 0.2, 2.0); if(prop==='b') focus.filters.b=v; else focus.filters.c=v; applyFilters(focus) }
+  updateGizmoPose(focus)
+}
+function onPointerUp(){ dragging=false; gizmo.active=null; dragStartPoint=null }
+function planeHit(e){ ndc(e.clientX,e.clientY); ray.setFromCamera(v2,camera); if(!dragPlane){ const geo=new THREE.PlaneGeometry(40,40); const mat=new THREE.MeshBasicMaterial({visible:false}); dragPlane=new THREE.Mesh(geo,mat); dragPlane.rotation.x=-Math.PI/2; dragPlane.position.set(0,0.001,0); scene.add(dragPlane) } const is=ray.intersectObject(dragPlane,true)[0]; return is? is.point.clone() : null }
+
+// focus + movement helpers
+function setFocus(tv){ focus=tv; tvs.forEach(t=> t.led.material.color.setHex(t===tv?0x00ffa6:0x006655)); if(tv){ showGizmo(tv); applyFilters(tv); bumpGuideTo(tv) } else hideGizmo() }
+function applyFilters(tv){ if(!tv||!tv.surface) return; const b=tv.filters.b||1, c=tv.filters.c||1; tv.surface.style.filter=`brightness(${b}) contrast(${c}) saturate(1.05)` }
+function moveTV(tv,dx,dy,dz,snap){ const p=tv.body.position; p.x+=dx; p.y=clamp(p.y+dy, TV.h/2, 50); p.z+=dz; if(snap){ p.x=Math.round(p.x/0.05)*0.05; p.z=Math.round(p.z/0.05)*0.05 } tv.body.velocity.setZero(); tv.body.angularVelocity.setZero() }
+function rotateY(tv,dr){ const q=tv.body.quaternion; const r=new CANNON.Quaternion(); r.setFromAxisAngle(new CANNON.Vec3(0,1,0), dr); tv.body.quaternion = q.mult(r); tv.body.angularVelocity.setZero() }
+
+// ---- Gestures (drop/nudge)
+function onTouchEnd(e){ if(e.changedTouches && e.changedTouches.length){ const t=e.changedTouches[0]; if(!onTouchEnd.s){ onTouchEnd.s={x:t.clientX,y:t.clientY} } const dy=onTouchEnd.s.y - t.clientY; const dx=t.clientX - onTouchEnd.s.x; if(dy>50 && !falling) { firstInteraction(); dropTV(); } if(falling && Math.abs(dx)>28){ const dir=dx>0?1:-1; falling.body.applyImpulse(new CANNON.Vec3(dir*2,0,0), falling.body.position); sfx('nudge') } } onTouchEnd.s=null }
+
+// ---- TV Guide (CSS3D, floating panel)
+let guide, guideObj; function buildGuide(){ const el=document.createElement('div'); el.className='guide'; el.innerHTML='<h3>TV GUIDE</h3><div id="grows"></div>'; guide=el; guideObj=new THREE.CSS3DObject(guide); guideObj.position.set(0.9, 0.9, 0.0); cssScene.add(guideObj); updateGuide() }
+function updateGuide(){ const c=document.getElementById('grows'); if(!c) return; const next = localQ.length? localQ.map(it=> it.kind.toUpperCase()).slice(0,5) : playlist.slice( (feedIndex)%playlist.length, (feedIndex)%playlist.length + 5 ); const rows = (Array.isArray(next)? next: [String(next)]).map((n,i)=> `<div class="row"><span>${String(i+1).padStart(2,'0')}</span><span>${n}</span></div>`).join('\n'); c.innerHTML=rows }
+function bumpGuideTo(tv){ if(!tv || !guideObj) return; guideObj.position.copy(tv.group.position.clone().add(new THREE.Vector3(0.9, 0.9, 0))); }
+
+// ---- Drop / Cull
+function dropTV(){ if(gameOver||falling) return; const y = tvs.length? Math.max(...tvs.map(t=>t.group.position.y))+TV.h+GAP_Y+2 : 5; falling=createTV(y); sfx('drop'); setFocus(falling) }
+
+// ---- Animate
+function animate(){ requestAnimationFrame(animate); const dt=Math.min(clock.getDelta(),.12); world.step(1/60,dt,3);
+  tvs.forEach(t=>{ t.group.position.copy(t.body.position); t.group.quaternion.copy(t.body.quaternion); t.cssPivot.position.copy(t.group.position); t.cssPivot.quaternion.copy(t.group.quaternion); const time=clock.elapsedTime; t.led.material.color.setHex(Math.sin(time*5)>0?0x00ffa6:0x004400); if(!t.settled && t.body.sleepState===CANNON.Body.SLEEPING){ t.settled=true; if(t===falling){ const bonus=Math.floor(t.body.position.y*10); score+=10+bonus; streak++; score+=streak*2; falling=null; sfx('land') } } if(t.settled){ height=Math.max(height,t.body.position.y) } });
+  if(focus) updateGizmoPose(focus);
+  stability=calcStability(); if(stability<0 && !gameOver) collapse();
+  autoCamera(dt); updateHUD(); renderer.render(scene,camera); cssRenderer.render(cssScene,camera)
+}
+function autoCamera(dt){ const top=tvs.length? Math.max(...tvs.map(t=>t.group.position.y)) : 1.0; const targetY=top+0.9; const baseZ=3.8; const targetZ=baseZ+Math.max(0,(top-1.0)*0.35); camera.position.y += (targetY - camera.position.y)*dt*1.8; camera.position.z += (targetZ - camera.position.z)*dt*1.5; camera.lookAt(0,Math.max(0.8, top*0.8),0) }
+function calcStability(){ if(tvs.length<2) return 1; const r=tvs.slice(-6).filter(t=>t.settled); if(r.length<2) return 1; let c=0,o=0; for(let i=1;i<r.length;i++){ const a=r[i], b=r[i-1]; const dx=a.body.position.x-b.body.position.x; const dz=a.body.position.z-b.body.position.z; const off=Math.hypot(dx,dz); c+=off/PHYS_LIMIT; const oh=Math.max(0,off-TV.w*0.30); o+=oh/(TV.w*0.70) } const n=r.length-1; return Math.max(0,Math.min(1,1-(c/n+STAB_ALPHA*(o/n)))) }
+function collapse(){ gameOver=true; tvs.slice(-3).forEach(t=> t.body.applyImpulse(new CANNON.Vec3((Math.random()-.5)*5,Math.random()*3,(Math.random()-.5)*5), t.body.position)); if(score>hi){ hi=score; localStorage.setItem('ff_hi', String(hi)) } sfx('collapse'); // playful headline
+  const el=document.createElement('div'); el.className='guide'; el.style.width='260px'; el.innerHTML='<h3>ATTENTION COLLAPSE</h3><div>• STACK OVERLOAD</div><div>• ALGORITHM FAILURE</div><div>• PLEASE RESEAT RABBIT EARS</div>'; const obj=new THREE.CSS3DObject(el); obj.position.copy( camera.position.clone().add(new THREE.Vector3(0, -0.6, -1)) ); cssScene.add(obj); setTimeout(()=> cssScene.remove(obj), 3000) }
+
+// ---- Tests
+function tests(){ const el=byId('test'); let pass=0, fail=0; function T(n,fn){ try{ if(fn()===false) throw new Error('assert false'); pass++ }catch(e){ console.warn('Test fail',n,e); fail++ } }
+  T('newline join/split',()=>{ const s=['a','b','c'].join('\n'); const arr=s.split(/\r?\n/); return arr.length===3 && arr[1]==='b' });
+  T('factory builds tv',()=>{ const t=createTV(2.2); const ok=t.surface && t.cssObj; scene.remove(t.group); cssScene.remove(t.cssPivot); world.removeBody(t.body); tvs.pop(); return !!ok });
+  T('youtube tpl url',()=>{ const id='abc123'; const u=`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&playsinline=1&enablejsapi=1&loop=1&playlist=${id}`; return /abc123/.test(u) });
+  T('filters apply',()=>{ const t=createTV(2.2); t.filters.b=1.4; t.filters.c=0.8; applyFilters(t); const ok=/brightness\(1.4\)/.test(t.surface.style.filter); scene.remove(t.group); cssScene.remove(t.cssPivot); world.removeBody(t.body); tvs.pop(); return ok });
+  el.textContent=`Tests: ${pass} passed, ${fail} failed`; el.style.color=fail?'#f88':'#9f9'
+}
+</script>
+</body>
+</html>

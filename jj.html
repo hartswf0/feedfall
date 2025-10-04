@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>FEEDFALL v2 — Unified Edition</title>
+<meta name="description" content="Stack TVs that play media. A unified game-as-media-installation. Single-file. Mobile-first. Three.js + Cannon + CSS3D." />
+<style>
+  :root{
+    --bg:#0a0b0e; --panel:#11141a; --ink:#e8f4ff; --muted:#9db0c4; --brand:#0a84ff;
+    --accent:#ff3366; --ok:#39d98a; --warn:#ffb020; --bad:#ff4d4f;
+    --glass:rgba(255,255,255,.08); --glass-2:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;overflow:hidden}
+  #stage{position:fixed;inset:0}
+  #webgl,#css3d{position:absolute;inset:0;touch-action:none}
+  /* HUD */
+  #hud{position:fixed;left:12px;top:env(safe-area-inset-top,10px);z-index:40;pointer-events:none}
+  .pill{display:inline-flex;gap:10px;align-items:center;background:var(--glass);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);padding:8px 12px;border-radius:999px;font-weight:600;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  /* Debug Panel */
+  #debug{position:fixed;right:12px;top:12px;z-index:50;background:rgba(0,0,0,0.85);border:2px solid #0f0;padding:12px;border-radius:8px;color:#0f0;font-family:monospace;font-size:11px;line-height:1.6;pointer-events:none;max-width:300px}
+  #debug b{color:#0ff}
+  .pill span{opacity:.85}
+  #stability{width:90px;height:8px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden}
+  #stability>i{display:block;height:100%;width:30%;background:linear-gradient(90deg,var(--ok),var(--warn));transition:width .15s ease}
+  /* Floating Remote (2D overlay default) */
+  #remote{position:fixed;right:12px;bottom:env(safe-area-inset-bottom,12px);z-index:50;display:flex;flex-direction:column;gap:10px}
+  .btn{width:56px;height:56px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:var(--glass);backdrop-filter:blur(14px);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(0,0,0,.35);cursor:pointer;transition:.15s transform,.2s background}
+  .btn:active{transform:scale(.95)}
+  .btn.toggle.active{background:var(--brand)}
+  .btn.small{width:44px;height:44px;font-size:18px;border-radius:14px}
+  .stack{display:flex;gap:10px}
+  /* Quick chips - top center for easy access */
+  #chips{position:fixed;left:50%;top:env(safe-area-inset-top,12px);transform:translateX(-50%);display:flex;flex-direction:row;gap:12px;z-index:45}
+  .chip{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:rgba(0,0,0,.75);border:2px solid rgba(0,255,123,.5);font-size:13px;font-weight:700;cursor:pointer;transition:.2s all;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,255,123,.25)}
+  .chip:hover{border-color:rgba(0,255,123,.8);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,255,123,.4)}
+  .chip:active{transform:translateY(0)}
+  .chip i{font-style:normal;opacity:.7;color:#888}
+  .chip b{color:#0ff}
+  /* Media modal */
+  #modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:100}
+  #modal.open{display:flex}
+  .sheet{width:min(520px,92vw);max-height:min(84vh,640px);overflow:auto;border-radius:20px;background:rgba(10,12,16,.96);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);padding:18px 16px 16px}
+  .sheet h2{margin:0 0 8px 0;font-size:18px}
+  .row{display:flex;gap:8px;margin:8px 0}
+  .row>input[type="text"], .row>textarea{flex:1;background:#0f141d;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px;font-size:14px}
+  .row>textarea{min-height:90px}
+  .row>button{white-space:nowrap}
+  .grid{display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-top:10px}
+  .item{display:contents}
+  .item span{display:flex;align-items:center;padding:10px;background:#0f141d;border:1px solid rgba(255,255,255,.1);border-radius:10px}
+  .item button{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:var(--glass);color:#fff;cursor:pointer}
+  .closeX{position:sticky;top:0;display:flex;justify-content:flex-end}
+  .closeX>button{width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:var(--glass);color:#fff;cursor:pointer}
+  /* On-screen gizmo tips */
+  #tips{position:fixed;right:80px;bottom:calc(env(safe-area-inset-bottom,12px) + 8px);font-size:12px;color:var(--muted);z-index:44;text-align:right;opacity:.85}
+  /* Collapse banner */
+  #banner{position:fixed;inset:0;display:none;place-items:center;background:radial-gradient(1200px 600px at 50% 20%,rgba(255,255,255,.06),transparent 60%),rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:90}
+  #banner.open{display:grid}
+  .headline{font-size:clamp(22px,5vw,44px);font-weight:900;letter-spacing:.02em;text-align:center;line-height:1.05}
+  .headline small{display:block;margin-top:10px;font-size:.5em;color:var(--muted);font-weight:600}
+  /* Touch helpers */
+  .touch{touch-action:none}
+  /* Dev Test Panel */
+  #tests{position:fixed;right:12px;top:12px;z-index:80;background:var(--glass);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(10px);padding:8px 10px;border-radius:12px;font:600 11px system-ui;max-width:50ch;display:none}
+  #tests.open{display:block}
+  #tests .ok{color:var(--ok)}
+  #tests .bad{color:var(--bad)}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="webgl" class="touch"></div>
+    <div id="css3d" class="touch"></div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="pill" title="Score | Height | Streak | Stability">
+      <span>🎯 <b id="score">0</b></span>
+      <span>⬆ <b id="height">0.0m</b></span>
+      <span>🔥 <b id="streak">0</b></span>
+      <span id="stability" aria-label="stability"><i style="width:30%"></i></span>
+    </div>
+  </div>
+
+  <!-- Debug Panel -->
+  <div id="debug">
+    <div><b>🎮 DEBUG MODE</b></div>
+    <div>Camera: <span id="dbg-cam">0, 0, 0</span></div>
+    <div>TVs: <span id="dbg-tvs">0</span></div>
+    <div>Falling: <span id="dbg-falling">-</span></div>
+    <div>Physics Bodies: <span id="dbg-bodies">0</span></div>
+    <div>Top Height: <span id="dbg-top">0.0m</span></div>
+    <div style="margin-top:8px;opacity:0.7;font-size:10px;line-height:1.5">
+      🖱️ <b>Drag</b> to orbit • <b>Scroll</b> to zoom<br>
+      ⌨️ Press <b>V</b> to cycle views<br>
+      ⌨️ Press <b>M</b> to toggle mode<br>
+      ⌨️ Press <b>R</b> to reset
+    </div>
+  </div>
+
+  <!-- Quick chips (modes & view) -->
+  <div id="chips">
+    <button class="chip" id="chip-mode"><i>Mode</i><b id="mode-label">Gallery</b></button>
+    <button class="chip" id="chip-view"><i>View</i><b id="view-label">Isometric</b></button>
+  </div>
+
+  <!-- Floating Retro Remote (2D overlay by default) -->
+  <div id="remote">
+    <div class="stack">
+      <button class="btn" id="btn-drop" title="Drop TV">⬆️</button>
+      <button class="btn toggle" id="btn-mute" title="Mute/Unmute">🔇</button>
+      <button class="btn" id="btn-focus" title="Focus Mode">🎥</button>
+    </div>
+    <div class="stack">
+      <button class="btn" id="btn-media" title="Open Media">📁</button>
+      <button class="btn" id="btn-reset" title="Reset">↺</button>
+      <button class="btn" id="btn-full" title="Fullscreen">⛶</button>
+    </div>
+    <div class="stack">
+      <button class="btn small" id="btn-left" title="Nudge left">◀</button>
+      <button class="btn small" id="btn-right" title="Nudge right">▶</button>
+    </div>
+  </div>
+  <div id="tips">Tap a TV to focus • Drag arrows to nudge • Swipe left/right mid‑fall</div>
+
+  <!-- Media Modal -->
+  <div id="modal" aria-hidden="true">
+    <div class="sheet">
+      <div class="closeX"><button id="modal-x">✕</button></div>
+      <h2>Media Library</h2>
+      <div class="row">
+        <input id="yt-input" type="text" placeholder="YouTube IDs or URLs (comma separated)"/>
+        <button id="yt-add" class="btn small" style="width:auto">Add</button>
+      </div>
+      <div class="row">
+        <input id="file" type="file" accept="video/*,image/*,.txt" multiple />
+        <button id="file-add" class="btn small" style="width:auto">Upload</button>
+      </div>
+      <div class="row">
+        <textarea id="text-input" placeholder="Paste a text note, caption, or slogan"></textarea>
+        <button id="text-add" class="btn small" style="width:auto">Add Text</button>
+      </div>
+      <div class="grid" id="lib"></div>
+    </div>
+  </div>
+
+  <!-- Collapse Banner -->
+  <div id="banner">
+    <div>
+      <div class="headline" id="headline">STACK OVERLOAD
+        <small>ALGORITHM FAILURE • ATTENTION COLLAPSE</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dev tests -->
+  <div id="tests" class="open"></div>
+
+  <!-- Import map for ES modules -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    // Standard ES module imports
+    import * as THREE from 'three';
+    import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    
+    // Cannon - use direct import
+    const CANNON = await import('https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js');
+
+    (async function main(){
+
+      // ------- Constants & State -------
+      const TV={w:.60,d:.45,h:.40}; // Match vs-stty.html - proper proportions
+      const SCREEN={w:TV.w*0.84,h:TV.h*0.68};
+      const CAMERA_MIN_Z=5, CAMERA_MAX_Z=14;
+
+      const state={
+        mode:'gallery', // 'gallery' = forgiving, no collapse | 'arcade' = collapse detection
+        view:'auto', // 'auto' = follows stack | 'spectator' = wide view
+        score:0, streak:0, height:0,
+        globalMuted:true,
+        falling:null, // current falling tv unit
+        focus:null, // focused tv
+        youTubeIDs:[],
+        media:[], // {type:'video'|'image'|'text'|'youtube', url?, content?, id?}
+        debris:[],
+        collapse:false,
+        initialSpawn:true, // prevents auto-drop during initial 13 TV setup
+      };
+
+      // ------- Three.js / CSS3D / Cannon -------
+      const scene=new THREE.Scene();
+      scene.background=new THREE.Color(0x101010);
+      scene.fog=new THREE.Fog(0x101010,12,30); // Match vs-stty.html
+
+      const cssScene=new THREE.Scene();
+
+      const camera=new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 200);
+      camera.position.set(0,3,6.5); // Match vs-stty.html
+
+      const renderer=new THREE.WebGLRenderer({antialias:true});
+      renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+      renderer.setSize(innerWidth,innerHeight);
+      renderer.shadowMap.enabled=true;
+      document.querySelector('#webgl').appendChild(renderer.domElement);
+
+      const cssRenderer=new CSS3DRenderer();
+      cssRenderer.setSize(innerWidth,innerHeight);
+      document.querySelector('#css3d').appendChild(cssRenderer.domElement);
+
+      // OrbitControls for debug viewing (proper scale like vs-stty)
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 3;
+      controls.maxDistance = 25;
+      controls.target.set(0, 3, 0); // Match TV scale
+      controls.maxPolarAngle = Math.PI * 0.48; // Don't go below ground
+      controls.update();
+      console.log('🎮 DEBUG MODE: Use mouse to orbit camera');
+
+      // Lights
+      const amb=new THREE.AmbientLight(0xffffff,1.4); scene.add(amb);
+      const key=new THREE.DirectionalLight(0xffffff,1.2); key.position.set(6,12,9); key.castShadow=true; scene.add(key);
+      const rim=new THREE.DirectionalLight(0x6688ff,.4); rim.position.set(-7,6,-5); scene.add(rim);
+
+      // Ground (match vs-stty.html - flat plane)
+      const floorGeo=new THREE.PlaneGeometry(60,60);
+      const floorMat=new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:0.95,metalness:0.05});
+      const floor=new THREE.Mesh(floorGeo,floorMat); floor.receiveShadow=true; floor.rotation.x=-Math.PI/2; scene.add(floor);
+      const grid=new THREE.GridHelper(26,52,0x444444,0x2b2b2b); grid.material.opacity=0.35; grid.material.transparent=true; grid.position.y=0.01; scene.add(grid);
+
+      // Physics world
+      const world=new CANNON.World({gravity:new CANNON.Vec3(0,-9.82,0)});
+      world.broadphase=new CANNON.SAPBroadphase(world);
+      world.allowSleep=true;
+
+      const defaultMat=new CANNON.Material('default');
+      const contact=new CANNON.ContactMaterial(defaultMat,defaultMat,{friction:.55,restitution:.1});
+      world.defaultContactMaterial=contact;
+      world.addContactMaterial(contact);
+
+      // Floor body
+      const plane=new CANNON.Body({mass:0,shape:new CANNON.Plane(),material:defaultMat});
+      plane.quaternion.setFromEuler(-Math.PI/2,0,0);
+      world.addBody(plane);
+
+      // ------- Utility -------
+      const $=sel=>document.querySelector(sel);
+      const $$=sel=>Array.from(document.querySelectorAll(sel));
+
+      function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+      function lerpVec3(out,a,b,t){ out.set(a.x+(b.x-a.x)*t, a.y+(b.y-a.y)*t, a.z+(b.z-a.z)*t) }
+
+      // ------- TV Factory -------
+      const tvs=[]; // {group, mesh, body, cssPivot, screenEl, settled, media}
+
+      function attachMediaToScreen(screenEl, media){
+        screenEl.innerHTML='';
+        if(!media){
+          screenEl.innerHTML='<div style="color:#888;font:600 16px system-ui">EMPTY</div>';
+          return;
+        }
+        if(media.type==='text'){
+          const d=document.createElement('div');
+          d.style.cssText='color:#fff;font:600 14px/1.6 system-ui;padding:16px;overflow:auto;max-height:100%';
+          d.textContent=media.content; screenEl.appendChild(d);
+        } else if(media.type==='image'){
+          const img=new Image(); img.src=media.url; img.style.cssText='max-width:100%;max-height:100%;object-fit:contain';
+          screenEl.appendChild(img);
+        } else if(media.type==='video'){
+          const v=document.createElement('video'); Object.assign(v,{src:media.url,muted:state.globalMuted,autoplay:true,loop:true,playsInline:true});
+          v.style.cssText='width:100%;height:100%;object-fit:cover'; screenEl.appendChild(v);
+        } else if(media.type==='youtube'){
+          const id = media.id;
+          const iframe=document.createElement('iframe');
+          const start = media.start || 0;
+          const params='?autoplay=1&mute='+(state.globalMuted?1:0)+'&controls=1&playsinline=1&start='+start;
+          iframe.src='https://www.youtube.com/embed/'+id+params;
+          iframe.allow='autoplay; encrypted-media; picture-in-picture;';
+          iframe.style.cssText='width:100%;height:100%;border:0';
+          screenEl.appendChild(iframe);
+        }
+      }
+
+      function createTV(y, media){
+        const group=new THREE.Group();
+
+        // Shell
+        const shellGeo=new THREE.BoxGeometry(TV.w,TV.h,TV.d);
+        const shellMat=new THREE.MeshStandardMaterial({color:0x1a1a1a,metalness:.2,roughness:.7});
+        const shell=new THREE.Mesh(shellGeo,shellMat); shell.castShadow=true; shell.receiveShadow=true; group.add(shell);
+
+        // Bezel
+        const bezelGeo=new THREE.PlaneGeometry(SCREEN.w*1.08,SCREEN.h*1.08);
+        const bezelMat=new THREE.MeshBasicMaterial({color:0x060709});
+        const bezel=new THREE.Mesh(bezelGeo,bezelMat); bezel.position.set(0,0,TV.d/2+0.001); group.add(bezel);
+
+        // CSS3D Screen
+        const screenEl=document.createElement('div');
+        screenEl.style.width=(SCREEN.w*320)+'px'; // Match vs-stty.html
+        screenEl.style.height=(SCREEN.h*320)+'px';
+        screenEl.style.background='#000';
+        screenEl.style.overflow='hidden';
+        screenEl.style.pointerEvents='none';
+        screenEl.style.display='flex';
+        screenEl.style.alignItems='center';
+        screenEl.style.justifyContent='center';
+        attachMediaToScreen(screenEl, media);
+
+        const cssObj=new CSS3DObject(screenEl);
+        cssObj.position.set(0,0,TV.d/2+0.002);
+        const cssPivot=new THREE.Object3D(); cssPivot.add(cssObj);
+        cssScene.add(cssPivot);
+
+        // Physics body
+        const shape=new CANNON.Box(new CANNON.Vec3(TV.w/2,TV.h/2,TV.d/2));
+        const body=new CANNON.Body({mass:1,shape,material:defaultMat});
+        body.position.set(0,y,0);
+        body.linearDamping=.3; body.angularDamping=.35;
+        world.addBody(body);
+
+        const unit={group,mesh:shell,body,cssPivot,screenEl,settled:false,media};
+        scene.add(group);
+        tvs.push(unit);
+        return unit;
+      }
+
+      // ------- Camera Control (auto/spectator/focus) -------
+      function updateCamera(){
+        const topY = Math.max(1.0, ...tvs.map(t=>t.group.position.y+TV.h*.5), 1.0);
+        // DEBUG MODE: OrbitControls handles camera, skip auto movement
+        // if(state.view==='auto'){
+        //   const targetZ = Math.max(CAMERA_MIN_Z, Math.min(CAMERA_MAX_Z, 5.5 + (topY*0.35)));
+        //   const desired = new THREE.Vector3(0, Math.max(1.8, Math.min(12, topY*0.6)), targetZ);
+        //   lerpVec3(camera.position, camera.position, desired, .06);
+        //   const look = new THREE.Vector3(0, Math.max(1.0, Math.min(10, topY*.5)), 0);
+        //   camera.lookAt(look);
+        // } else if(state.view==='spectator'){
+        //   lerpVec3(camera.position, camera.position, new THREE.Vector3(5, 8, 12), .05);
+        //   camera.lookAt(0,2.5,0);
+        // }
+        // if(state.focus){
+        //   const p=state.focus.group.position;
+        //   const desired=new THREE.Vector3(p.x+1.5, p.y+1.0, p.z+2.5);
+        //   lerpVec3(camera.position, camera.position, desired, .12);
+        //   camera.lookAt(p.x,p.y,p.z);
+        // }
+        controls.update(); // Update OrbitControls instead
+      }
+
+      // ------- Input: Touch/Mouse for Nudge & Focus -------
+      const raycaster=new THREE.Raycaster();
+      const mouse=new THREE.Vector2();
+      let dragging=false, dragStartX=0;
+
+      function screenToRayObjects(){ return tvs.map(t=>t.mesh); }
+
+      function pickTV(clientX,clientY){
+        mouse.x=(clientX/innerWidth)*2-1; mouse.y=-(clientY/innerHeight)*2+1;
+        raycaster.setFromCamera(mouse,camera);
+        const hits=raycaster.intersectObjects(screenToRayObjects(), true);
+        if(hits.length){ const mesh=hits[0].object; return tvs.find(t=>t.mesh===mesh) || null; }
+        return null;
+      }
+
+      function setFocus(tv){ state.focus=tv; updateFocusLED(); }
+      function clearFocus(){ state.focus=null; updateFocusLED(); }
+
+      function updateFocusLED(){
+        tvs.forEach(t=>{
+          t.mesh.material.emissive = new THREE.Color( state.focus===t ? 0x0a84ff : 0x000000 );
+          t.mesh.material.emissiveIntensity = state.focus===t ? 0.6 : 0.0;
+        });
+      }
+
+      function onStart(e){ dragging=true; dragStartX = 'touches' in e ? e.touches[0].clientX : e.clientX; }
+      function onMove(e){ if(!dragging||!state.falling) return; const x=('touches' in e? e.touches[0].clientX : e.clientX); const dx=(x-dragStartX)/innerWidth; state.falling.body.position.x += dx*2.2; dragStartX=x; }
+      function onEnd(){ dragging=false; }
+
+      function onTap(e){
+        const path=e.composedPath(); if(path.some(el=>el && (el.id==='remote'||el.id==='modal'||el.id==='banner'))) return;
+        const x='changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
+        const y='changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
+        const tv=pickTV(x,y); if(tv){ setFocus(tv); maybeBoostAudio(tv); }
+      }
+
+      for(const id of ['webgl','css3d']){
+        const el=document.getElementById(id);
+        el.addEventListener('pointerdown', onStart, {passive:false});
+        el.addEventListener('pointermove', onMove, {passive:false});
+        el.addEventListener('pointerup', onEnd, {passive:false});
+        el.addEventListener('click', onTap, {passive:true});
+      }
+
+      // ------- Remote Buttons -------
+      $('#btn-drop').addEventListener('click', dropTV);
+      $('#btn-left').addEventListener('click', ()=>nudge(-1));
+      $('#btn-right').addEventListener('click', ()=>nudge(1));
+      $('#btn-reset').addEventListener('click', resetAll);
+      $('#btn-full').addEventListener('click', ()=>{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(()=>{}); });
+      $('#btn-media').addEventListener('click', ()=>openModal(true));
+      $('#btn-mute').addEventListener('click', ()=>{state.globalMuted=!state.globalMuted; $('#btn-mute').classList.toggle('active',!state.globalMuted); syncMute();});
+      $('#btn-focus').addEventListener('click',()=>{ if(state.focus) clearFocus(); else if(tvs.length) setFocus(tvs[tvs.length-1]);});
+
+      $('#chip-mode').addEventListener('click', toggleMode);
+      $('#chip-view').addEventListener('click', toggleView);
+
+      function toggleMode(){ 
+        state.mode = state.mode==='gallery' ? 'arcade' : 'gallery'; 
+        $('#mode-label').textContent = state.mode==='gallery' ? 'Gallery' : 'Arcade'; 
+      }
+      
+      // Camera View Presets (proper scale like vs-stty.html)
+      const CAMERA_PRESETS = [
+        { name: 'Isometric', pos: [0, 3, 6.5], target: [0, 2, 0] },
+        { name: 'Top-Down', pos: [0, 10, 0.5], target: [0, 0, 0] },
+        { name: 'Front', pos: [0, 3, 10], target: [0, 2, 0] },
+        { name: 'Side', pos: [10, 3, 0], target: [0, 2, 0] },
+      ];
+      let currentPreset = 0;
+      
+      function toggleView(){ 
+        currentPreset = (currentPreset + 1) % CAMERA_PRESETS.length;
+        const preset = CAMERA_PRESETS[currentPreset];
+        
+        // Smoothly move camera to preset
+        const targetPos = new THREE.Vector3(...preset.pos);
+        const targetLook = new THREE.Vector3(...preset.target);
+        
+        camera.position.copy(targetPos);
+        controls.target.copy(targetLook);
+        controls.update();
+        
+        $('#view-label').textContent = preset.name;
+        console.log(`📷 View: ${preset.name}`);
+      }
+
+      function nudge(dir){ if(state.falling){ state.falling.body.position.x += 0.25*dir; state.falling.body.wakeUp(); }}
+
+      function maybeBoostAudio(tv){ const el = tv.screenEl.querySelector('video'); if(el){ el.muted = state.globalMuted ? true : false; } }
+      function syncMute(){ $$('video').forEach(v=>v.muted=state.globalMuted); }
+
+      // ------- Media Modal / Library -------
+      const modal=$('#modal');
+      $('#modal-x').onclick=()=>openModal(false);
+      $('#btn-media').onclick=()=>openModal(true);
+      function openModal(on){ modal.classList.toggle('open', !!on); modal.setAttribute('aria-hidden', String(!on)); if(on) renderLibrary(); }
+
+      $('#yt-add').onclick=()=>{
+        const raw=$('#yt-input').value.trim(); if(!raw) return;
+        const items=raw.split(',').map(s=>s.trim()).filter(Boolean).map(parseYouTubeID);
+        items.forEach(id=>{ if(id) { state.youTubeIDs.push(id); state.media.push({type:'youtube',id,name:'YouTube '+id}); }});
+        $('#yt-input').value=''; renderLibrary();
+      };
+
+      $('#file-add').onclick=()=>{ $('#file').click(); };
+      $('#file').addEventListener('change', e=>{
+        const files=[...e.target.files];
+        for(const f of files){
+          const url=URL.createObjectURL(f);
+          if(f.type.startsWith('video/')) state.media.push({type:'video',url,name:f.name});
+          else if(f.type.startsWith('image/')) state.media.push({type:'image',url,name:f.name});
+          else if(f.type==='text/plain'){
+            const reader=new FileReader(); reader.onload=ev=>{ state.media.push({type:'text',content:String(ev.target.result),name:f.name}); renderLibrary(); };
+            reader.readAsText(f);
+            continue;
+          }
+        }
+        renderLibrary();
+        e.target.value='';
+      });
+      $('#text-add').onclick=()=>{ const t=$('#text-input').value.trim(); if(!t) return; state.media.push({type:'text',content:t,name:'Note '+(state.media.length+1)}); $('#text-input').value=''; renderLibrary(); };
+
+      function renderLibrary(){
+        const grid=$('#lib'); grid.innerHTML='';
+        if(!state.media.length){ grid.innerHTML='<div style="opacity:.7;padding:8px 10px">No media yet. Add some above. \u{1F4E6}</div>'; return; }
+        state.media.forEach((m,i)=>{
+          const row=document.createElement('div'); row.className='item';
+          const label=document.createElement('span'); label.textContent=(m.name||m.type.toUpperCase());
+          const use=document.createElement('button'); use.textContent='Use'; use.onclick=()=>{ createTV(nextSpawnY(), pickNextMedia(i)); closeAfterUse(); };
+          const del=document.createElement('button'); del.textContent='✕'; del.onclick=()=>{ if(m.url) URL.revokeObjectURL(m.url); state.media.splice(i,1); renderLibrary(); };
+          row.appendChild(label); row.appendChild(use); row.appendChild(del); grid.appendChild(row);
+        });
+      }
+
+      function closeAfterUse(){ openModal(false); }
+
+      function parseYouTubeID(s){
+        try{
+          if(/^[A-Za-z0-9_-]{6,}$/.test(s)) return s;
+          const u=new URL(s); if(u.hostname.includes('youtube')||u.hostname==='youtu.be'){
+            if(u.hostname==='youtu.be') return u.pathname.slice(1);
+            const id=u.searchParams.get('v'); if(id) return id;
+          }
+        }catch{}
+        return null;
+      }
+
+      // ------- Queue Logic -------
+      function pickNextMedia(forceIndex){
+        if(typeof forceIndex==='number') return state.media[forceIndex];
+        const local = state.media.find(m=>m.type==='video'||m.type==='image'||m.type==='text');
+        if(local) return local;
+        if(state.youTubeIDs.length){
+          const id = state.youTubeIDs.shift(); state.youTubeIDs.push(id);
+          return {type:'youtube', id, name:'YouTube '+id};
+        }
+        return null;
+      }
+
+      function nextSpawnY(){ return tvs.length ? Math.max(...tvs.map(t=>t.group.position.y)) + TV.h + 0.7 : 3; }
+
+      // ------- Drop / Physics Loop / Stability -------
+      function dropTV(){
+        if(state.collapse) return;
+        const media = pickNextMedia();
+        const unit = createTV(nextSpawnY(), media);
+        unit.body.velocity.set(0,0,0); unit.body.angularVelocity.set(0,0,0);
+        state.falling = unit;
+      }
+
+      function settleCheck(t){
+        if(!t.settled && t.body.sleepState===CANNON.Body.SLEEPING){
+          t.settled=true; state.score+=10; state.streak+=1; state.height=Math.max(state.height, t.body.position.y);
+          updateHUD();
+          state.falling=null;
+          if(state.mode==='arcade') camera.position.x += (Math.random()-.5)*.2;
+        }
+      }
+
+      function updateHUD(){ $('#score').textContent = state.score; $('#height').textContent = state.height.toFixed(1)+'m'; $('#streak').textContent = state.streak; }
+
+      function updateDebug(){
+        $('#dbg-cam').textContent = `${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`;
+        $('#dbg-tvs').textContent = tvs.length;
+        $('#dbg-falling').textContent = state.falling ? 'YES' : 'NO';
+        $('#dbg-bodies').textContent = world.bodies.length;
+        const topY = tvs.length > 0 ? Math.max(...tvs.map(t=>t.body.position.y)) : 0;
+        $('#dbg-top').textContent = topY.toFixed(1)+'m';
+        $('#view-label').textContent = CAMERA_PRESETS[currentPreset].name;
+      }
+
+      function computeStability(){
+        let ke=0; for(const t of tvs){ const v=t.body.velocity; ke += v.x*v.x+v.y*v.y+v.z*v.z; }
+        const norm = Math.min(1, ke / (tvs.length? tvs.length*0.6 : 1));
+        const good = 1-norm; $('#stability>i').style.width = Math.max(6, Math.min(100, good*100))+'%';
+        return good;
+      }
+
+      function checkCollapse(){
+        if(!tvs.length) return false;
+        for(const t of tvs){ if(t.body.position.y < -2) return true; }
+        const tilts = tvs.map(t=>{ const e=t.body.quaternion; const v=new THREE.Vector3(0,1,0); const q=new THREE.Quaternion(e.x,e.y,e.z,e.w); v.applyQuaternion(q); return Math.abs(1-v.y); });
+        const avgTilt = tilts.reduce((a,b)=>a+b,0)/tilts.length;
+        return avgTilt> .55;
+      }
+
+      function spawnDebris(at){
+        for(let i=0;i<12;i++){
+          const s = .06 + Math.random()*.08;
+          const geo=new THREE.BoxGeometry(s,s*1.2,s*0.6);
+          const mat=new THREE.MeshStandardMaterial({color:0x2f3642, metalness:.3, roughness:.7});
+          const m=new THREE.Mesh(geo,mat); m.position.copy(at); m.castShadow=true; scene.add(m);
+          const body=new CANNON.Body({mass:.2,shape:new CANNON.Box(new CANNON.Vec3(s/2,s*.6,s*.3))});
+          body.position.set(at.x+(Math.random()-.5), at.y+(Math.random()*.5), at.z+(Math.random()-.5));
+          body.velocity.set((Math.random()-.5)*4, Math.random()*3+1, (Math.random()-.5)*4);
+          world.addBody(body);
+          state.debris.push({mesh:m, body});
+        }
+      }
+
+      function doCollapse(){
+        state.collapse=true;
+        spawnDebris(new THREE.Vector3(0, Math.max(state.height,1), 0));
+        $('#headline').textContent = pickHeadline();
+        $('#banner').classList.add('open');
+        setTimeout(()=>{ $('#banner').classList.remove('open'); resetAll(); }, 2200);
+      }
+
+      function pickHeadline(){
+        const hs=['STACK OVERLOAD','ALGORITHM FAILURE','ATTENTION COLLAPSE','SIGNAL INFLATION','FEED MALFUNCTION'];
+        return hs[Math.floor(Math.random()*hs.length)];
+      }
+
+      function resetAll(){
+        tvs.splice(0).forEach(t=>{ scene.remove(t.group); cssScene.remove(t.cssPivot); world.removeBody(t.body); });
+        state.debris.splice(0).forEach(d=>{ scene.remove(d.mesh); world.removeBody(d.body); });
+        Object.assign(state,{score:0,streak:0,height:0,falling:null,focus:null,collapse:false});
+        updateHUD(); updateFocusLED();
+      }
+
+      // ------- Animation Loop -------
+      const clock=new THREE.Clock();
+      function animate(){
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), .05);
+        if(state.mode==='gallery' && !state.initialSpawn && (!state.falling || state.falling.settled)){
+          if(Math.random()<0.005) dropTV();
+        }
+        world.step(1/60, dt, 3);
+        for(const t of tvs){
+          t.group.position.copy(t.body.position);
+          t.group.quaternion.copy(t.body.quaternion);
+          t.cssPivot.position.copy(t.group.position);
+          t.cssPivot.quaternion.copy(t.group.quaternion);
+          settleCheck(t);
+        }
+        for(const d of state.debris){ d.mesh.position.copy(d.body.position); d.mesh.quaternion.copy(d.body.quaternion); }
+        if(state.mode==='arcade' && !state.collapse){ if(checkCollapse()) doCollapse(); }
+        updateCamera();
+        updateDebug(); // Update debug panel info
+        renderer.render(scene,camera);
+        cssRenderer.render(cssScene,camera);
+      }
+      animate();
+
+      addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); cssRenderer.setSize(innerWidth,innerHeight); });
+
+      // ------- Start: seed 13 TVs with video timestamps -------
+      seedStart();
+      function seedStart(){
+        const videoId = 'uDUoMnp1z_g';
+        const segments = [
+          {name:'Out of Life', start:0},
+          {name:'Flashing Lights', start:136},
+          {name:'How to Break Off an Engagement', start:272},
+          {name:'Nevermore', start:408},
+          {name:'Bloodline', start:544},
+          {name:'Resurrecting Atlantis', start:680},
+          {name:'DJ Turn Me Up', start:816},
+          {name:'Newly Single', start:952},
+          {name:'Yet, Heard', start:1088},
+          {name:'Magic Ride', start:1224},
+          {name:'Reunion', start:1360},
+          {name:'How to Win My Heart', start:1496},
+          {name:'Hot Minute', start:1632}
+        ];
+        
+        // Add all segments to media library
+        segments.forEach(seg => {
+          state.media.push({type:'youtube', id:videoId, start:seg.start, name:seg.name});
+        });
+        
+        // Drop 13 TVs, one for each segment
+        segments.forEach((seg, i) => {
+          setTimeout(() => {
+            const media = {type:'youtube', id:videoId, start:seg.start, name:seg.name};
+            createTV(nextSpawnY(), media);
+            // Clear initialSpawn flag after last TV
+            if(i === segments.length - 1){
+              setTimeout(() => { state.initialSpawn = false; }, 2000);
+            }
+          }, i * 400);
+        });
+      }
+
+      // =====================
+      // Dev tests (added)
+      // =====================
+      const testsEl = document.getElementById('tests');
+      const showTests = new URL(location.href).searchParams.get('tests') !== '0';
+      if(showTests) testsEl.classList.add('open');
+
+      function log(ok, name, info=''){ const div=document.createElement('div'); div.innerHTML = (ok? '✅ <span class="ok">PASS</span> ' : '❌ <span class="bad">FAIL</span> ') + name + (info? ' — '+info : ''); testsEl.appendChild(div); }
+
+      try{ log(!!THREE && !!THREE.Scene, 'THREE loaded', THREE ? 'ok' : 'missing'); }catch(e){ log(false,'THREE loaded', e.message); }
+      try{ log(!!CANNON && !!CANNON.World, 'cannon-es loaded'); }catch(e){ log(false,'cannon-es loaded', e.message); }
+      try{ log(!!renderer && renderer.domElement instanceof HTMLCanvasElement, '#webgl has canvas'); }catch(e){ log(false,'#webgl has canvas', e.message); }
+      try{
+        const before = tvs.length; resetAll(); const b0=tvs.length; dropTV(); const after = tvs.length; log(b0===0 && after===1, 'dropTV spawns 1 TV', `before:${before} after:${after}`);
+      }catch(e){ log(false,'dropTV spawns 1 TV', e.message); }
+
+      // keyboard shortcuts
+      addEventListener('keydown', e=>{ 
+        const key = e.key.toLowerCase();
+        if(key==='t'){ testsEl.classList.toggle('open'); }
+        if(key==='v'){ toggleView(); } // Cycle camera views
+        if(key==='m'){ toggleMode(); } // Toggle mode
+        if(key==='r'){ resetAll(); } // Reset scene
+      });
+
+    })();
+  </script>
+</body>
+</html>

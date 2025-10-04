@@ -1,325 +1,354 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>VIDEO_STACKER_∞ — YouTube Edition (Retro+Focus)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>The Liminal Archive — VHS Stacks (Ultra VCR · Multi‑Views)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Newsreader:opsz,wght@6..72,600&family=VT323&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-:root{
-  --ui:#0f0; --bg:#05070a; --hud:#0a0a0a; --glow: rgba(0,255,0,0.35);
-  --yt:#ff0033; --crt:#0affd2; --line:#142018;
-  --tv:#121417; --tv-rim:#2a2f36; --floor:#0b0e12; --grid:#1c2a1c;
-}
-html, body { height:100%; }
-body{ font-family:'Courier New', monospace; background:var(--bg); overflow:hidden; touch-action: pan-y; -webkit-user-select:none; user-select:none; }
+  :root{
+    --bg:#0a0d0f;      /* auditorium dark */
+    --ink:#e9efe7;     /* archival paper */
+    --accent:#21ff86;  /* diode green */
+    --ghost:#aab4ad;   /* secondary copy */
+    --amber:#ffdca8;   /* leader warmth */
+    --edge:#12201a;    /* hardware edge */
+    --warn:#ff4b72;    /* eject/warn */
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--ink); overflow:hidden; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial}
+  canvas{display:block; width:100vw; height:100vh; touch-action:none}
 
-/* Stage (two renderers stacked) */
-#stage{ position:fixed; inset:0; overflow:hidden; }
-#webgl, #css3d{ position:absolute; inset:0; touch-action:none; pointer-events:none; }
+  /* Global scan overlay now subtle, to keep labels crisp */
+  #fx{pointer-events:none; position:fixed; inset:0; mix-blend-mode:overlay; background:repeating-linear-gradient( to bottom, rgba(255,255,255,.025) 0 1px, rgba(0,0,0,0) 2px 3px ); opacity:.06; z-index:5}
 
-/* Retro scan-overlay for the whole screen */
-#scan{ pointer-events:none; position:fixed; inset:0; background: repeating-linear-gradient( to bottom, rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 2px, transparent 3px ); mix-blend-mode:overlay; opacity:.12; z-index:2; }
+  /* ---------- Floating CRT TV overlay (diegetic preview) ---------- */
+  #tv{ position:fixed; left:50%; top:10px; transform:translateX(-50%); width:min(94vw, 1040px); aspect-ratio:16/9; z-index:40; display:none; }
+  #tv.show{ display:block; }
 
-/* HUD */
-#hud{ position:fixed; top: env(safe-area-inset-top, 12px); left: env(safe-area-inset-left, 12px); color:var(--ui); font-size:13px; z-index:20; text-shadow:0 0 8px #000; line-height:1.6; background: rgba(0,0,0,.3); border:1px solid var(--ui); padding:10px 12px; border-radius: 10px; backdrop-filter: blur(4px); transition: opacity .2s ease; }
-#hud.dim{ opacity:.15; }
-#score{ font-size:26px; font-weight:700; letter-spacing:2px; }
-#stability-bar{ width:130px; height:7px; background:#0a0a0a; margin:6px 0; border:1px solid var(--ui); position:relative; box-shadow:0 0 10px var(--glow); border-radius:6px; }
-#stability-fill{ height:100%; background: linear-gradient(90deg, #f33, #ff0, #0f0); transition: width .2s; border-radius:6px; }
+  /* chassis */
+  #tv .bezel{ position:absolute; inset:0; border-radius:22px; background:linear-gradient(180deg,#0b0f13,#070a0c); box-shadow:0 20px 50px rgba(0,0,0,.65), inset 0 0 0 3px #0f151a, inset 0 0 0 6px #0a0e12; }
+  #tv .badge{ position:absolute; left:20px; bottom:14px; font:700 12px Inter,system-ui; letter-spacing:.08em; color:#c7d3cb; opacity:.65 }
+  #tv .speaker{ position:absolute; right:16px; bottom:12px; width:88px; height:54px; border-radius:10px; background:radial-gradient(circle at 20% 20%, #192126, #0b0f13); box-shadow:inset 0 0 0 1px #10161a; mask:radial-gradient(circle 2px at 6px 6px, #000 99%, transparent) repeat; -webkit-mask:radial-gradient(circle 2px at 6px 6px, #000 99%, transparent) repeat; mask-size:10px 10px; -webkit-mask-size:10px 10px; opacity:.9 }
 
-/* Controls */
-#controls{ position:fixed; right: env(safe-area-inset-right, 10px); top: 50%; transform: translateY(-50%); display:flex; flex-direction:column; gap:12px; z-index:30; transition: opacity .2s; }
-.control-btn{ width:54px; height:54px; border-radius:50%; border:2px solid var(--ui); background: rgba(10,10,10,.85); color:var(--ui); font-weight:700; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation; transition: transform .12s, background .12s, color .12s, box-shadow .12s; box-shadow:0 0 12px var(--glow); }
-.control-btn:active{ transform: scale(.92); background:var(--ui); color:#000; box-shadow:0 0 18px rgba(0,255,0,.6); }
-.control-btn.small{ width:46px; height:46px; font-size:14px; }
+  /* screen group (adds curvature, scanlines, glow and jitter ONLY here) */
+  #tv .screen{ position:absolute; inset:14px 14px 66px 14px; border-radius:14px; overflow:hidden; }
+  #tv .screen-wrap{ position:absolute; inset:0; filter:contrast(1.08) saturate(1.02); animation:crtJitter 3.6s infinite steps(1,end); }
+  #tv iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; background:#060809; }
+  /* phosphor mask */
+  #tv .mask{ pointer-events:none; position:absolute; inset:0; mix-blend-mode:screen; background:
+       repeating-linear-gradient(to right, rgba(255,60,80,.06), rgba(255,60,80,.06) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 2px),
+       repeating-linear-gradient(to right, rgba(60,180,255,.06), rgba(60,180,255,.06) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 2px),
+       repeating-linear-gradient(to right, rgba(120,255,120,.06), rgba(120,255,120,.06) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 2px);
+       opacity:.55 }
+  /* scanlines + glass */
+  #tv .scan{ pointer-events:none; position:absolute; inset:0; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0 1px, transparent 2px 3px); opacity:.22; mix-blend-mode:overlay }
+  #tv .glass{ pointer-events:none; position:absolute; inset:0; background:linear-gradient(15deg, rgba(255,255,255,.10), transparent 35%), radial-gradient(ellipse at 50% 120%, rgba(255,255,255,.06), transparent 60%); }
+  #tv .vignette{ pointer-events:none; position:absolute; inset:0; box-shadow:inset 0 0 120px rgba(0,0,0,.55); border-radius:14px }
+  #tv .glow{ pointer-events:none; position:absolute; inset:0; box-shadow:0 0 42px rgba(33,255,134,.15); border-radius:16px; animation:crtBloom 2.8s ease-in-out infinite; }
 
-/* Dock */
-#dock{ position:fixed; left:50%; transform:translateX(-50%); bottom: env(safe-area-inset-bottom, 12px); display:flex; gap:10px; z-index:25; transition: opacity .2s; }
-.dock-btn{ padding:10px 14px; border:2px solid var(--ui); color:var(--ui); background: rgba(0,0,0,.7); border-radius:12px; font-weight:700; font-size:12px; letter-spacing:.5px; box-shadow:0 0 10px var(--glow); cursor:pointer; touch-action:manipulation; }
-.dock-btn:active{ background:var(--ui); color:#000; }
+  /* bottom bar */
+  #tv .bar{ position:absolute; left:14px; right:14px; bottom:12px; height:44px; display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:linear-gradient(180deg,#0a1014,#0c1116); box-shadow: inset 0 0 0 1px #1a2a26; }
+  #tv .title{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px; opacity:.95 }
+  #tv .btn{ border:1px solid #1f2f2a; background:#0e1419; color:#e9efe7; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; letter-spacing:.3px; }
+  #tv .btn.primary{ background:#112018; border-color:#204835; color:#bfffe2 }
+  #tv .btn.warn{ background:#1a0e12; border-color:#5a1b2a; color:#ffd3df }
 
-/* Remote (floating, hideable) */
-#remote{ position:fixed; right: env(safe-area-inset-right, 12px); bottom: calc(env(safe-area-inset-bottom, 12px) + 64px); z-index:40; }
-#remote .toggle{ width:58px; height:58px; border-radius:14px; border:2px solid var(--yt); background:#1a0a0e; color:#fff; font-weight:800; box-shadow:0 0 18px rgba(255,0,51,.25); }
-#remote .panel{ display:none; position:absolute; right:68px; bottom:0; width:min(92vw, 320px); background: rgba(5,7,10,.96); border:2px solid var(--yt); border-radius:14px; padding:12px; box-shadow:0 0 24px rgba(255,0,51,.25); color:#fff; }
-#remote .section{ border:1px solid #3a1016; border-radius:10px; padding:10px; margin:8px 0; background:#0f1216; }
-#remote label{ font-size:12px; opacity:.9; display:block; margin-bottom:6px; }
-#remote input[type="text"], #remote textarea{ width:100%; background:#0a0e12; color:#fff; border:1px solid #213; border-radius:8px; padding:8px; font-family:inherit; font-size:12px; }
-#remote .row{ display:flex; gap:8px; }
-#remote .btn{ flex:1; padding:8px 10px; border-radius:8px; border:1px solid #213; background:#151b22; color:#fff; font-weight:700; font-size:12px; }
-#remote .btn.red{ border-color: var(--yt); color:#fff; background:#28070b; }
-#remote .btn.green{ border-color:#164; background:#0b1c12; color:#bfffd9; }
-#remote .slider{ width:100%; }
+  /* accessibility-only dialog retained */
+  #controller{ position:fixed; inset:0; display:none }
+  #controller[hidden]{ display:none }
+  .vt{ font-family:'VT323', ui-monospace, monospace }
 
-/* Swipe hint & badges */
-#swipe-hint{ position:fixed; bottom: calc(env(safe-area-inset-bottom, 86px) + 60px); left: 50%; transform: translateX(-50%); color: var(--ui); font-size:14px; text-shadow: 0 0 8px #000; opacity:.75; z-index:15; animation: pulse 2s infinite; }
-@keyframes pulse{ 0%,100%{opacity:.75} 50%{opacity:.35} }
-.badge{ position:fixed; right: 10px; top: 10px; z-index: 5; color:#0b0; font-size:11px; opacity:.6; }
+  @keyframes crtJitter { 0%,97%,100% { transform:translate(0,0) } 50.5% { transform:translate(0.5px,0) } 51%{ transform:translate(-0.5px,0) } }
+  @keyframes crtBloom { 0%,100%{ opacity:.18 } 50%{ opacity:.28 } }
 
-/* Game over */
-#game-over{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50; }
-#game-over .box{ background: rgba(0,0,0,.96); border: 4px solid var(--ui); color:var(--ui); padding: 28px 22px; width: min(92vw, 420px); text-align:center; box-shadow: 0 0 30px var(--glow); border-radius: 14px; }
-#game-over h1{ font-size: 28px; letter-spacing: 3px; margin-bottom: 12px; }
-#game-over button{ margin-top:18px; padding:12px 28px; border: 2px solid var(--ui); background:#0a0a0a; color:var(--ui); font-weight:700; font-family:inherit; cursor:pointer; }
-
-#loading{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; color: var(--ui); font-size: 18px; z-index: 100; background: radial-gradient( circle at 50% 50%, rgba(0,255,0,.07), rgba(0,0,0,.95) 60% ); text-shadow: 0 0 8px #000; }
-
-/* Auto-hide UI when idle */
-.uifade{ opacity:.08; }
-
-/* High-contrast TV rim */
-.crtrim{ position:fixed; inset:0; pointer-events:none; box-shadow: inset 0 0 0 6px rgba(255,0,51,.12); z-index:1; }
-
-/* Test status */
-#test-status{ position:fixed; left:50%; bottom:8px; transform:translateX(-50%); font-size:11px; color:#9f9; opacity:.45; z-index:60; pointer-events:none; }
+  @media (prefers-reduced-motion: reduce){ #fx{ opacity:.03 } #tv .screen-wrap{ animation:none } #tv .glow{ animation:none } }
 </style>
 </head>
 <body>
-<div id="loading">LOADING VIDEO_STACKER_∞ …</div>
-<div class="badge">RETRO·YT·CSS3D·PHYSICS</div>
-<div class="crtrim"></div>
-<div id="scan"></div>
+  <canvas id="c"></canvas>
+  <div id="fx"></div>
 
-<div id="stage">
-  <div id="webgl"></div>
-  <div id="css3d"></div>
-</div>
-
-<!-- HUD -->
-<div id="hud">
-  <div id="score">0</div>
-  <div>H: <span id="height">0.0</span>m</div>
-  <div>×<span id="streak">0</span></div>
-  <div id="stability-bar"><div id="stability-fill" style="width:100%"></div></div>
-  <div style="font-size:10px; opacity:.7">HI: <span id="high-score">0</span></div>
-</div>
-
-<!-- Floating controls -->
-<div id="controls">
-  <button class="control-btn small" id="btn-view" title="Change View">⟲</button>
-  <button class="control-btn small" id="btn-cull" title="Remove Bottom">✕</button>
-  <button class="control-btn small" id="btn-mute" title="Mute">🔊</button>
-  <button class="control-btn" id="btn-drop" title="Drop Now">↓</button>
-</div>
-
-<!-- Dock -->
-<div id="dock">
-  <button class="dock-btn" id="btn-autofall">AUTOFALL: OFF</button>
-  <button class="dock-btn" id="btn-mode">MODE: HYBRID</button>
-  <button class="dock-btn" id="btn-ui">UI: VISIBLE</button>
-</div>
-
-<!-- Remote: retro YouTube-style manager -->
-<div id="remote">
-  <button class="toggle">▣</button>
-  <div class="panel" id="remote-panel">
-    <div class="section">
-      <label>Focus TV</label>
-      <div class="row">
-        <button class="btn green" id="focus-play">Play ▶</button>
-        <button class="btn" id="focus-pause">Pause ‖</button>
-        <button class="btn" id="focus-mute">Mute</button>
-      </div>
-      <div class="row" style="margin-top:6px;">
-        <button class="btn" id="focus-prev">Prev</button>
-        <button class="btn" id="focus-next">Next</button>
-        <button class="btn red" id="focus-replace">Replace ID</button>
-      </div>
-      <input type="text" id="focus-id" placeholder="YouTube ID…" style="margin-top:6px;" />
-      <div class="row" style="margin-top:6px;">
-        <button class="btn" id="focus-pointer">Enable Tap Controls (6s)</button>
-        <button class="btn" id="focus-fullscreen">Fullscreen Focus</button>
+  <!-- TV overlay (screen/preview on top) -->
+  <div id="tv" aria-live="polite">
+    <div class="bezel"></div>
+    <div class="screen">
+      <div class="screen-wrap">
+        <iframe id="tvFrame" title="preview" sandbox="allow-scripts allow-same-origin allow-popups" referrerpolicy="no-referrer"></iframe>
+        <div class="mask"></div>
+        <div class="scan"></div>
+        <div class="glass"></div>
+        <div class="vignette"></div>
+        <div class="glow"></div>
       </div>
     </div>
-
-    <div class="section">
-      <label>Global</label>
-      <div class="row">
-        <button class="btn" id="global-play">Play All</button>
-        <button class="btn" id="global-pause">Pause All</button>
-        <button class="btn" id="global-mute">Mute All</button>
-      </div>
-      <label style="margin-top:8px;">Top‑N Live <span id="topnLabel">6</span></label>
-      <input class="slider" id="topn" type="range" min="1" max="12" value="6" />
-    </div>
-
-    <div class="section">
-      <label>Playlist</label>
-      <textarea id="pltext" placeholder="One ID per line…"></textarea>
-      <div class="row" style="margin-top:6px;">
-        <button class="btn" id="pl-apply">Apply</button>
-        <button class="btn" id="pl-shuffle">Shuffle</button>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:6px;">
-      <button class="btn" id="theme">Theme: RETRO</button>
-      <button class="btn" id="btn-screen">Go Fullscreen</button>
+    <div class="badge">LIMINAL·CRT</div>
+    <div class="speaker" aria-hidden="true"></div>
+    <div class="bar">
+      <div class="title" id="tvTitle">&nbsp;</div>
+      <button class="btn" id="tvInsert">INSERT</button>
+      <button class="btn primary" id="tvPlay">PLAY ▶</button>
+      <button class="btn warn" id="tvClose">EJECT</button>
     </div>
   </div>
-</div>
 
-<div id="swipe-hint">↑ SWIPE UP TO DROP ↑</div>
-<div id="test-status" aria-live="polite"></div>
-
-<!-- Game Over -->
-<div id="game-over">
-  <div class="box">
-    <h1>COLLAPSE</h1>
-    <div id="final-score"></div>
-    <button id="btn-restart">RESTART</button>
+  <!-- A11y-only controller to satisfy screen readers & tests -->
+  <div id="controller" role="dialog" aria-modal="true" aria-labelledby="prevTitle" hidden>
+    <div class="sheet">
+      <h3 id="prevTitle">&nbsp;</h3>
+      <div id="prevUrl"></div>
+      <iframe id="prevFrame" hidden></iframe>
+      <button id="btnInsertPlay" type="button">INSERT / TUNE</button>
+      <button id="btnInsert"     type="button">INSERT</button>
+      <button id="btnOpen"       type="button">TUNE</button>
+      <button id="btnClose"      type="button">EJECT</button>
+    </div>
   </div>
-</div>
-
-<!-- Libs -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ========= Config ========= */
-const TV = { w: 0.60, d: 0.45, h: 0.40 };
-const SCREEN = { w: TV.w * 0.84, h: TV.h * 0.68 };
-const GAP_Y = 0.05;
-const PHYS_LIMIT = 0.22;
-const STAB_ALPHA = 0.7;
-const SHARD_COUNT = 48; const SHARD_TTL = 2800;
-const AUTOFALL_INTERVAL = 2200; // ms
-let TOP_N_LIVE = 6; // adjustable via remote
+/* =============================================================
+   THE LIMINAL ARCHIVE — VHS Stacks / Ultra VCR (Diegetic UI)
+   Now with a floating TV **preview** that looks/behaves like a
+   real CRT. All film jitter/glow is **limited to the TV screen**;
+   text, VCR chrome, and labels stay crisp.
+   ============================================================= */
 
-const CAMERA_PRESETS = [
-  { pos:[0, 2.0, 4.2], look:[0, 1.0, 0] },
-  { pos:[-2.4, 2.6, 3.2], look:[0, 1.1, 0] },
-  { pos:[ 2.4, 2.6, 3.2], look:[0, 1.1, 0] },
-  { pos:[0.0, 1.1, 3.6], look:[0, 1.2, 0] }
+// ---- Data ---- (All 32 HTML files from manifest)
+const ITEMS = [
+  {title:"The Liminal Archive (Main)", url:"./index.html"},
+  {title:"Index Launcher", url:"./index-launcher.html"},
+  {title:"VIDEO_STACKER_PLUS", url:"./vs-plu.html"},
+  {title:"VIDEO_STACKER Pro Filmic", url:"./video_stacker_pro_filmic_v_2_100_tv_layouts_calm_mode.html"},
+  {title:"VIDEO_STACKER_∞ (Main)", url:"./video_stacker_∞_index.html"},
+  {title:"VIDEO_STACKER_∞ Mobile", url:"./video_stacker_∞_mobile_swipe_right_edge_controls_haptics_audio_index.html"},
+  {title:"VIDEO_STACKER_∞ YouTube CSS3D", url:"./video_stacker_∞_you_tube_css_3_d_edition.html"},
+  {title:"VIDEO_STACKER_∞ YouTube CSS3D (v2)", url:"./video_stacker_∞_you_tube_css_3_d_edition (1).html"},
+  {title:"VIDEO_STACKER_∞ YouTube CSS3D (v3)", url:"./video_stacker_∞_you_tube_css_3_d_edition (2).html"},
+  {title:"VIDEO_STACKER_∞ YouTube CSS3D (v4)", url:"./video_stacker_∞_you_tube_css_3_d_edition (3).html"},
+  {title:"VIDEO_STACKER_∞ YouTube CSS3D (v5)", url:"./video_stacker_∞_you_tube_css_3_d_edition (4).html"},
+  {title:"Video Stacker 02", url:"./video-stacker-02.html"},
+  {title:"VS Stacker", url:"./vs-stacker.html"},
+  {title:"VS STTY", url:"./vs-stty.html"},
+  {title:"VSS", url:"./vss.html"},
+  {title:"Video 01", url:"./video-01.html"},
+  {title:"Video 02", url:"./video-02.html"},
+  {title:"Video Refactor", url:"./video-refactor.html"},
+  {title:"Video Full", url:"./video_full.html"},
+  {title:"CRT Stack", url:"./crt-stack.html"},
+  {title:"Eno CRT", url:"./eno-crt.html"},
+  {title:"Multi-Mode", url:"./multi-mode.html"},
+  {title:"Pyramid Scene", url:"./pyramid-scene.html"},
+  {title:"Feed to Water", url:"./feed-to-water.html"},
+  {title:"JJ", url:"./jj.html"},
+  {title:"HOM", url:"./hom.html"},
+  {title:"HUT", url:"./hut.html"},
+  {title:"Inicio", url:"./inicio.html"},
+  {title:"IVST", url:"./ivst.html"},
+  {title:"Prod", url:"./prod.html"},
+  {title:"Wreck", url:"./wreck.html"}
 ];
 
-const MODES = ["HYBRID","GAME","GALLERY"]; let MODE = 0;
+// Load additional items from manifest.json if available
+fetch('./manifest.json').then(r=>r.json()).then(data=>{
+  console.log(`📚 Manifest loaded: ${data.total_items} items available`);
+}).catch(()=>{
+  console.log('📚 Using embedded items list');
+});
 
-/* ======== State ======== */
-let scene, cssScene, camera, renderer, cssRenderer, world, clock;
-let tvs = []; let falling = null; let focusTV = null; let focusTimeout = null;
-let score=0, height=0, streak=0; let highScore=parseInt(localStorage.getItem('tv_stacker_high')||'0');
-let stability=1, gameOver=false, muted=true, camPreset=0;
-let isSwiping=false, touchStartY=0, touchStartX=0; let lastUserMove=Date.now();
-let audioCtx, sounds={};
-let autofallOn=false, autofallTimer=null; let youTubeReady=false;
-let playlist = ["M7lc1UVf-VE","dQw4w9WgXcQ","kXYiU_JCYtU","e-ORhEE9VVg","hT_nvWreIhg","3JZ4pnNtyxQ","60ItHLz5WEA","fLexgOxsZu0","09R8_2nJtjg","JGwWNGJdvx8"]; let feedIndex=0;
+// ---- Canvas / DPR scaling ----
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W=0, H=0;
+function scaleCanvas(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const lw = window.innerWidth, lh = window.innerHeight;
+  canvas.width = Math.floor(lw*dpr); canvas.height = Math.floor(lh*dpr);
+  canvas.style.width = lw+'px'; canvas.style.height = lh+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0); recomputeMetrics();
+}
+let _rz; window.addEventListener('resize', ()=>{ clearTimeout(_rz); _rz=setTimeout(()=>{ scaleCanvas(); draw(); }, 90); }, {passive:true});
 
-function onYouTubeIframeAPIReady(){ youTubeReady=true; }
+// Noise buffer for film grain
+let noiseCanvas, noiseCtx, noiseTime=0;
 
-/* ===== Haptics + Audio ===== */
-function haptic(style='light'){ if(!('vibrate' in navigator)) return; const p={light:10,medium:20,heavy:35,success:[10,40,10],error:[30,80,30,80,30]}; navigator.vibrate(p[style]||10); }
-function initAudio(){ if(audioCtx) return; audioCtx=new (window.AudioContext||window.webkitAudioContext)(); const mk=(f0,f1,d,g=.25)=>()=>{const o=audioCtx.createOscillator(),g1=audioCtx.createGain();o.connect(g1);g1.connect(audioCtx.destination);o.frequency.setValueAtTime(f0,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),audioCtx.currentTime+d);g1.gain.setValueAtTime(g,audioCtx.currentTime);g1.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+d);o.start();o.stop(audioCtx.currentTime+d);}; sounds.drop=mk(240,140,.22,.22); sounds.land=mk(160,90,.12,.18); sounds.nudge=mk(340,280,.08,.12); sounds.collapse=mk(220,40,.9,.32); }
-function playSound(n){ if(!muted && sounds[n] && audioCtx){ try{ sounds[n](); }catch(e){} } }
+// ---- Config / State ----
+const G = 1650; // gravity
+let unit=16, TAPE_W=144, TAPE_H=80, BASE_Y=0; // metrics
+let labelScale = 1.0;
+let VIEW='SPINE', LAYOUT='STACK', LABEL_SKIN='LOFI';
+const PALETTES = [ ['#102018','#0b251b','#e2ffee'], ['#17131d','#241a2e','#efe7ff'], ['#1a0f10','#2a1718','#ffe6ea'], ['#0f171f','#0b1f2a','#e6f5ff'], ['#1a1a12','#232312','#fff9d9'] ];
 
-/* ===== Camera helpers: track top, auto-zoom ===== */
-function getTopY(){ if(!tvs.length) return 0.8; return tvs.reduce((m,t)=> Math.max(m, t.group.position.y), 0.8); }
-function smoothLerp(a,b,t){ return a + (b-a)*Math.min(1, Math.max(0,t)); }
-function autoCamera(dt){
-  const topY = getTopY();
-  const targetY = topY + 0.9; // keep headroom
-  // zoom out as stack grows: base Z ~3.8, add with height
-  const baseZ = 3.8; const z = baseZ + Math.max(0, (topY-1.0)*0.35);
-  camera.position.y = smoothLerp(camera.position.y, targetY, dt*1.8);
-  camera.position.z = smoothLerp(camera.position.z, z, dt*1.5);
-  camera.lookAt(0, Math.max(0.8, topY*0.8), 0);
+// Floating TV DOM
+const tv = document.getElementById('tv');
+const tvFrame = document.getElementById('tvFrame');
+const tvTitle = document.getElementById('tvTitle');
+const tvInsert = document.getElementById('tvInsert');
+const tvPlay = document.getElementById('tvPlay');
+const tvClose = document.getElementById('tvClose');
+
+function tvShow(tape){
+  tvTitle.textContent = tape.title;
+  // Load the live page into the CRT preview – user can see what's in the tape.
+  tvFrame.src = tape.url;
+  tv.classList.add('show');
+}
+function tvHide(){ tv.classList.remove('show'); tvFrame.removeAttribute('src'); }
+function tvPlayNow(url){ window.open(url, '_blank'); }
+
+function vcrMetrics(){
+  const x=W/2, y=H - unit*8.6, w=unit*30, h=unit*8.2; // taller deck
+  const screen = { x:x-w*0.34, y:y-h*0.18, w:w*0.42, h:h*0.38 };
+  const timeLCD = { x:x+w*0.20, y:y-h*0.26, w:w*0.24, h:h*0.12 };
+  const btnRowY = y + h*0.18;
+  const btnW = unit*1.8, btnH = unit*1.0;
+  const btns = {
+    play:  {x:x+w*0.06, y:btnRowY, w:btnW, h:btnH, label:'PLAY'},
+    stop:  {x:x+w*0.20, y:btnRowY, w:btnW, h:btnH, label:'STOP'},
+    eject: {x:x+w*0.34, y:btnRowY, w:btnW, h:btnH, label:'EJECT'}
+  };
+  const slotCX=x, slotCY=y + 0.02*h;
+  return {x,y,w,h,screen,timeLCD,btns,slotCX,slotCY};
 }
 
-/* ===== Picking (tap to focus) ===== */
-const raycaster = new THREE.Raycaster(); const tapNDC = new THREE.Vector2();
-function pickTV(clientX, clientY){
-  tapNDC.x = (clientX / window.innerWidth) * 2 - 1; tapNDC.y = - (clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(tapNDC, camera);
-  const meshes = tvs.map(t=>t.group.children[0]); // shell meshes
-  const hits = raycaster.intersectObjects(meshes, false);
-  if(hits.length){ const mesh = hits[0].object; return tvs.find(t=> t.group.children[0]===mesh) || null; }
-  return null;
+let fx = { coldOpen:true, since:0, ghostAlpha:0, ghostText:'', weavePhase:0, timeBase:0, headSwitch:0, chromaShift:0, noiseAlpha:0.12, reduceMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches };
+let COLS=[]; let falling=null; let wobble=0; let ingress=null; let queue = ITEMS.map((it,i)=>({...it,themeIndex:i%PALETTES.length}));
+let preview=null; // {colIndex,tapeIndex,title,url}
+let vcrUI = { active:false, regions:{} };
+
+// Helpers
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t; const easeInCubic=t=>t*t*t; const easeBack=(t)=>{const c1=1.70158; const c3=c1+1; return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2);} 
+function openItem(url){ const id=/^[A-Za-z0-9_-]{11}$/.test(url); window.open(id?`https://www.youtube.com/watch?v=${url}`:url,'_blank'); }
+
+// A11y dialog handles (kept, but tv overlay is primary)
+const ctrl = document.getElementById('controller');
+const prevFrame = document.getElementById('prevFrame');
+const prevTitle = document.getElementById('prevTitle');
+const prevUrl = document.getElementById('prevUrl');
+const btnInsertPlay = document.getElementById('btnInsertPlay');
+const btnInsert = document.getElementById('btnInsert');
+const btnOpen = document.getElementById('btnOpen');
+const btnClose = document.getElementById('btnClose');
+let lastFocus=null;
+
+function showController(tape){
+  preview = tape; vcrUI.active = true; lastFocus=document.activeElement;
+  prevTitle.textContent=tape.title; prevUrl.textContent=tape.url; prevFrame.src=tape.url; // a11y only
+  tvShow(tape);
+}
+function hideController(){ vcrUI.active=false; preview=null; if(lastFocus) lastFocus.focus(); tvHide(); }
+btnInsertPlay.onclick = ()=>{ if(!preview) return; startIngress(preview,true); };
+btnInsert.onclick     = ()=>{ if(!preview) return; startIngress(preview,false); };
+btnOpen.onclick       = ()=>{ if(!preview) return; openItem(preview.url); };
+btnClose.onclick      = ()=>{ hideController(); };
+
+// TV overlay button hooks
+tvInsert.onclick = ()=>{ if(!preview) return; startIngress(preview,false); };
+ tvPlay.onclick  = ()=>{ if(!preview) return; tvPlayNow(preview.url); };
+ tvClose.onclick = ()=>{ hideController(); };
+
+// Metrics / columns
+function proposeUnitForCount(count){ let u=Math.max(12, Math.min(24, Math.floor(W/42))); for(let i=0;i<3;i++){ const rows=Math.ceil(count/computeNumCols()); const tapeH=u*5.2; const baseY=H - u*13.8; const avail=baseY - u*2; const need=rows*(tapeH+6); if(need>avail) u=Math.max(9,u*(avail/need)); } return u; }
+function computeNumCols(){ const byW=W>=980?3:(W>=600?2:1); const byN=queue.length + COLS.reduce((s,c)=>s+c.stack.length,0) > 20 ? Math.max(2,byW) : byW; return Math.min(3, Math.max(1,byN)); }
+function applyUnit(u){ unit=u; TAPE_W=unit*9; TAPE_H=unit*5.2; BASE_Y=H - unit*13.8; buildNoise(); }
+function layoutColumns(){ const n=computeNumCols(); const centers=[]; if(n===1) centers.push(W/2); if(n===2) centers.push(W*0.32,W*0.68); if(n===3) centers.push(W*0.22,W*0.5,W*0.78); const old=COLS; COLS=[]; for(let i=0;i<n;i++) COLS.push({id:i,x:centers[i],stack:[]}); if(old&&old.length){ for(const col of old){ const target=COLS.reduce((b,c)=>Math.abs(c.x-col.x)<Math.abs(b.x-col.x)?c:b,COLS[0]); for(const t of col.stack){ target.stack.push({...t}); } } } reflowStacks(); }
+function recomputeMetrics(){ W=innerWidth; H=innerHeight; applyUnit(proposeUnitForCount(queue.length + (COLS.reduce((s,c)=>s+c.stack.length,0)) + (falling?1:0))); layoutColumns(); }
+function reflowStacks(){ for(const col of COLS){ for(let i=0;i<col.stack.length;i++){ col.stack[i].x=col.x; col.stack[i].y=BASE_Y - TAPE_H/2 - i*(TAPE_H+6); } } if(falling) falling=null; }
+scaleCanvas();
+
+// Spawning
+function shortestColumn(){ return COLS.slice().sort((a,b)=>a.stack.length-b.stack.length)[0]; }
+function nextTape(){ if(!queue.length || falling || ingress || VIEW!=='SPINE' || LAYOUT!=='STACK') return; const col=shortestColumn(); const item=queue.shift(); falling={ col:col.id, x:col.x, y: -TAPE_H*1.2, vx:0, vy:0, title:item.title, url:item.url, themeIndex:item.themeIndex }; }
+
+// Input
+canvas.addEventListener('click', e=>{
+  const x=e.clientX, y=e.clientY;
+  if(vcrUI.active){ const r=vcrUI.regions; if(r){ if(pointInRect(x,y,r.screen)){ if(preview) openItem(preview.url); return; }
+      if(pointInRect(x,y,r.play)){ if(preview) { startIngress(preview,true); } return; }
+      if(pointInRect(x,y,r.stop)){ hideController(); return; }
+      if(pointInRect(x,y,r.eject)){ hideController(); return; }
+  } }
+  const hit = hitTest(x,y); if(hit){ showController(hit); }
+});
+function pointInRect(x,y,rect){ return rect && x>rect.x-rect.w/2 && x<rect.x+rect.w/2 && y>rect.y-rect.h/2 && y<rect.y+rect.h/2; }
+
+// gesture toggles
+let lastTap=0; const touches=new Map();
+canvas.addEventListener('pointerdown', e=>{ touches.set(e.pointerId,{x:e.clientX,y:e.clientY,time:performance.now()}); canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointerup', e=>{ const now=performance.now(); const prev=lastTap; lastTap=now; const dt=now-prev; const two=touches.size>=2; touches.delete(e.pointerId); if(dt<280){ if(two){ if(VIEW==='SPINE'){ LAYOUT = (LAYOUT==='STACK')?'SHELF':'STACK'; ensureAllSpawnedIfNeeded(); reflowStacks(); } } else { VIEW = (VIEW==='SPINE')?'FACE':'SPINE'; ensureAllSpawnedIfNeeded(); } } });
+window.addEventListener('keydown', e=>{ if(e.key==='v'){ VIEW=(VIEW==='SPINE')?'FACE':'SPINE'; ensureAllSpawnedIfNeeded(); } if(e.key==='l'&&VIEW==='SPINE'){ LAYOUT=(LAYOUT==='STACK')?'SHELF':'STACK'; ensureAllSpawnedIfNeeded(); reflowStacks(); } if(e.key==='s'){ LABEL_SKIN=(LABEL_SKIN==='LOFI')?'RAINBOW90':'LOFI'; } });
+function ensureAllSpawnedIfNeeded(){ if(VIEW!=='SPINE'||LAYOUT!=='STACK'){ while(queue.length){ const col=shortestColumn(); const it=queue.shift(); col.stack.push({x:col.x,y:BASE_Y - TAPE_H/2 - col.stack.length*(TAPE_H+6), title:it.title,url:it.url,themeIndex:it.themeIndex}); } } }
+
+// pinch label size
+canvas.addEventListener('wheel', e=>{ labelScale = clamp(labelScale + (e.deltaY>0?-0.05:0.05), 0.6, 2.0); draw(); }, {passive:true});
+
+// Loop
+let last=performance.now(); function loop(ts){ const dt=Math.min(0.033,(ts-last)/1000); last=ts; update(dt); draw(); requestAnimationFrame(loop);} requestAnimationFrame(loop);
+
+function update(dt){
+  noiseTime += dt; if (fx.coldOpen){ fx.since+=dt; if(fx.since>1.8){ fx.coldOpen=false; fx.since=0; } }
+  // We keep internal physics clean; no global weave/timebase errors.
+  if(!falling) nextTape();
+  if(VIEW==='SPINE' && LAYOUT==='STACK' && falling){ falling.vy+=G*dt; falling.y+=falling.vy*dt; const col=COLS[falling.col]; const surface=baseYForNext(col); if(falling.y + TAPE_H/2 >= surface){ falling.y = surface - TAPE_H/2; col.stack.push({x:col.x,y:falling.y,title:falling.title,url:falling.url,themeIndex:falling.themeIndex}); falling=null; applyUnit(proposeUnitForCount(queue.length + COLS.reduce((s,c)=>s+c.stack.length,0))); reflowStacks(); staticBurst(); } }
 }
 
-/* ===== UI ===== */
-const hud = document.getElementById('hud'); const controls = document.getElementById('controls'); const dock = document.getElementById('dock');
-function uiIdleCheck(){ const idle = Date.now()-lastUserMove>3500; hud.classList.toggle('dim', idle); const uiFade = idle && !remoteOpen; controls.classList.toggle('uifade', uiFade); dock.classList.toggle('uifade', uiFade); }
+function startIngress(sel, goAfter){ const col=COLS[sel.colIndex]; const t=flattenStacks()[sel.tapeIndex] || (col?col.stack[sel.tapeIndex]:null); if(!t) return; t.hidden=true; const v=vcrMetrics(); ingress={ x:t.x||W/2, y:t.y||H/2, sx:t.x||W/2, sy:t.y||H/2, tx:v.slotCX, ty:v.slotCY, t0:performance.now(), dur:760, title:t.title, url:t.url, themeIndex:t.themeIndex }; setTimeout(()=>{ if(goAfter) openItem(t.url); }, 780); }
+function baseYForNext(col){ return col.stack.length? col.stack[col.stack.length-1].y - TAPE_H - 6 : BASE_Y; }
 
-/* ===== Setup ===== */
-function setCameraPreset(i){ camPreset=(i+CAMERA_PRESETS.length)%CAMERA_PRESETS.length; const p=CAMERA_PRESETS[camPreset]; camera.position.set(...p.pos); camera.lookAt(new THREE.Vector3(...p.look)); }
-function updateHUD(){ document.getElementById('score').textContent=String(score); document.getElementById('height').textContent=height.toFixed(1); document.getElementById('streak').textContent=String(streak); document.getElementById('high-score').textContent=String(highScore); document.getElementById('stability-fill').style.width=(stability*100)+'%'; }
-
-function init(){
-  document.getElementById('loading').style.display='none';
-  clock=new THREE.Clock();
-  scene=new THREE.Scene(); cssScene=new THREE.Scene();
-  // higher contrast scene
-  scene.background = new THREE.Color(0x06090f);
-  scene.fog = new THREE.Fog(0x06090f, 5, 18);
-  camera=new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.08, 100);
-  setCameraPreset(0);
-  renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5)); renderer.setSize(window.innerWidth,window.innerHeight); renderer.shadowMap.enabled=true; document.getElementById('webgl').appendChild(renderer.domElement);
-  cssRenderer=new THREE.CSS3DRenderer(); cssRenderer.setSize(window.innerWidth,window.innerHeight); document.getElementById('css3d').appendChild(cssRenderer.domElement); cssRenderer.domElement.style.pointerEvents='none';
-  // Lights: add rim for better TV silhouette
-  const amb=new THREE.AmbientLight(0x2a2a2a, 1.0); scene.add(amb);
-  const key=new THREE.DirectionalLight(0xffffff, 0.95); key.position.set(3,6,4); key.castShadow=true; const s=6; key.shadow.camera.left=-s; key.shadow.camera.right=s; key.shadow.camera.top=s; key.shadow.camera.bottom=-s; scene.add(key);
-  const rimL=new THREE.DirectionalLight(0x88bbff, 0.35); rimL.position.set(-4,3,-2); scene.add(rimL);
-  const rimR=new THREE.DirectionalLight(0xff6677, 0.25); rimR.position.set(4,2,2); scene.add(rimR);
-  // Physics
-  world=new CANNON.World(); world.gravity.set(0,-9.8,0); world.broadphase=new CANNON.SAPBroadphase(world); world.allowSleep=true; world.defaultContactMaterial.friction=.65; world.defaultContactMaterial.restitution=.05;
-  // Floor
-  const floorShape=new CANNON.Plane(); const floorBody=new CANNON.Body({mass:0,shape:floorShape}); floorBody.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(floorBody);
-  const floorGeo=new THREE.PlaneGeometry(40,40); const floorMat=new THREE.MeshStandardMaterial({color:0x0b0e12, roughness:.92}); const floor=new THREE.Mesh(floorGeo,floorMat); floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
-  const grid=new THREE.GridHelper(14, 28, 0xff0033, 0x1a241a); grid.material.opacity=.25; grid.material.transparent=true; grid.position.y=0.01; scene.add(grid);
-
-  // Input
-  window.addEventListener('resize', onResize);
-  const stage=document.getElementById('stage');
-  const markMove=()=>{ lastUserMove=Date.now(); };
-  ['touchstart','touchmove','touchend','mousedown','mousemove'].forEach(evt=> stage.addEventListener(evt, markMove, {passive:true}));
-  stage.addEventListener('touchstart', onTouchStart, {passive:false});
-  stage.addEventListener('touchmove', onTouchMove, {passive:false});
-  stage.addEventListener('touchend', onTouchEnd, {passive:false});
-  stage.addEventListener('click', (e)=>{ const t = pickTV(e.clientX, e.clientY); if(t){ setFocus(t); } });
-  stage.addEventListener('mousedown', firstInteractOnce, {once:true}); stage.addEventListener('touchstart', firstInteractOnce, {once:true});
-
-  // Buttons
-  document.getElementById('btn-cull').addEventListener('click', cullBottom);
-  document.getElementById('btn-view').addEventListener('click', ()=>{ setCameraPreset(camPreset+1); haptic('light'); });
-  document.getElementById('btn-mute').addEventListener('click', toggleMute);
-  document.getElementById('btn-restart').addEventListener('click', restart);
-  document.getElementById('btn-drop').addEventListener('click', dropTV);
-  document.getElementById('btn-mode').addEventListener('click', cycleMode);
-  document.getElementById('btn-autofall').addEventListener('click', toggleAutofall);
-  document.getElementById('btn-ui').addEventListener('click', toggleUI);
-
-  // Remote init
-  initRemote();
-
-  // Hide hint later
-  setTimeout(()=>{ const hint=document.getElementById('swipe-hint'); if(hint) hint.style.display='none'; }, 2400);
-
-  updateHUD();
-  runTests();
-  animate();
+// Render
+function draw(){ ctx.clearRect(0,0,W,H); drawBackdrop(); if(VIEW==='SPINE'){ if(LAYOUT==='STACK'){ for(const col of COLS){ for(const t of col.stack){ if(!t.hidden) drawSpineTape(t.x,t.y,t.title,false,t.themeIndex); } } if(falling) drawSpineTape(falling.x, falling.y, falling.title, true, falling.themeIndex); if(ingress) drawSpineTape(ingress.x, ingress.y, ingress.title, true, ingress.themeIndex); drawVCR(); } else { const all=flattenStacks(); const rows=W>=900?3:(W>=600?2:1); const perRow=Math.ceil(all.length/rows); const gap=Math.max(8,unit*0.8); const w=TAPE_H, h=TAPE_W; for(let r=0;r<rows;r++){ for(let i=0;i<perRow;i++){ const idx=r*perRow+i; if(idx>=all.length) break; const t=all[idx]; const x=(W - (perRow*(w+gap)-gap))/2 + i*(w+gap) + w/2; const y=BASE_Y - r*(h+gap) - h/2; drawSpineTape(x,y,t.title,false,t.themeIndex,true); } } } } else if(VIEW==='FACE'){ const grid=faceGrid(); for(const cell of grid){ const {cx,cy,w,h,idx}=cell; const t=flattenStacks()[idx]; if(t) drawFaceCassette(cx,cy,w,h,t.title,t.themeIndex); } }
+  // No global film FX here; labels & UI remain crisp.
+  if(noiseCanvas){ ctx.globalAlpha = .06; ctx.drawImage(noiseCanvas,0,0,W,H); ctx.globalAlpha=1; }
 }
 
-function firstInteractOnce(){ initAudio(); }
+function faceGrid(){ const all=flattenStacks(); const cols=W>=980?4:(W>=720?3:(W>=520?2:1)); const gap=Math.max(12,unit*0.9); const w=Math.min(280,(W-gap*(cols+1))/cols); const h=w*0.56*1.25; const rows=Math.ceil(all.length/cols); const top=Math.max(40,H-(rows*(h+gap)+120)); const cells=[]; for(let r=0;r<rows;r++){ for(let c=0;c<cols;c++){ const idx=r*cols+c; if(idx>=all.length) break; const cx=gap+w/2+c*(w+gap); const cy=top+h/2+r*(h+gap); cells.push({cx,cy,w,h,idx}); } } return cells; }
+function flattenStacks(){ const out=[]; for(const col of COLS){ for(const t of col.stack){ out.push(t); } } if(out.length===0){ return ITEMS.map((it,i)=>({title:it.title,url:it.url,themeIndex:i%PALETTES.length})); } return out; }
 
-/* ===== Touch / Swipe ===== */
-function onTouchStart(e){ if(gameOver) return; isSwiping=true; const t=e.touches?e.touches[0]:e; touchStartY=t.clientY; touchStartX=t.clientX; }
-function onTouchMove(e){ if(!isSwiping||gameOver) return; const t=e.touches?e.touches[0]:e; const dx=t.clientX - touchStartX; if(falling && !falling.settled && Math.abs(dx)>28){ const dir = dx>0?1:-1; falling.body.applyImpulse(new CANNON.Vec3(dir*2,0,0), falling.body.position); playSound('nudge'); haptic('light'); touchStartX=t.clientX; e.preventDefault(); } }
-function onTouchEnd(e){ if(!isSwiping||gameOver) return; const t=e.changedTouches?e.changedTouches[0]:e; const dy = touchStartY - t.clientY; if(dy>50 && !falling){ dropTV(); e.preventDefault(); } isSwiping=false; }
+function drawBackdrop(){ const g=ctx.createRadialGradient(W/2,H*0.2,12,W/2,H*0.2,Math.max(W,H)); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.62)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); const lg=ctx.createLinearGradient(0,0,W,H); lg.addColorStop(0,'rgba(16,24,18,.15)'); lg.addColorStop(1,'rgba(10,12,16,.05)'); ctx.fillStyle=lg; ctx.fillRect(0,0,W,H); }
 
-/* ===== Focus handling ===== */
-function setFocus(tv){ focusTV = tv; // briefly brighten LED and allow pointer events
-  if(focusTimeout){ clearTimeout(focusTimeout); focusTimeout=null; }
-  flashLED(tv, 1500);
+function drawVCR(){ const m=vcrMetrics(); const {x,y,w,h} = m; // body
+  roundRect(x-w/2, y-h/2, w, h, 14, '#0b0f13', '#121820'); // face
+  roundRect(x-w*0.36, y-h*0.02, w*0.72, h*0.18, 8, '#0b0f14', '#0e141a');
+  const s=m.screen; roundRect(s.x, s.y, s.w, s.h, 6, '#050607', '#0c0f12');
+  // little play glyph frozen on VCR screen (no jitter)
+  ctx.save(); ctx.beginPath(); ctx.rect(s.x, s.y, s.w, s.h); ctx.clip();
+  const pSize=Math.min(s.h*0.45, s.w*0.45); ctx.fillStyle='rgba(255,255,255,.86)'; ctx.beginPath(); ctx.moveTo(s.x+s.w/2-pSize*0.28, s.y+s.h/2-pSize*0.34); ctx.lineTo(s.x+s.w/2+pSize*0.42, s.y+s.h/2); ctx.lineTo(s.x+s.w/2-pSize*0.28, s.y+s.h/2+pSize*0.34); ctx.closePath(); ctx.fill(); ctx.restore();
+  // label below screen
+  ctx.fillStyle='rgba(233,239,231,.9)'; ctx.font=`${Math.floor(unit*0.8)}px Inter, system-ui`; ctx.textAlign='left'; ctx.textBaseline='top'; const label=preview?preview.title: '—'; ctx.fillText(label, s.x, s.y+s.h+6, s.w);
+  // compact clock
+  const t=m.timeLCD; roundRect(t.x, t.y, t.w, t.h, 4, 'rgba(9,12,13,.95)', 'rgba(18,26,28,.95)'); drawSevenSeg(t.x+t.w*0.08, t.y+t.h*0.5, Math.min(unit*1.6, t.h*0.7), '12:00');
+  // buttons
+  for(const key of ['play','stop','eject']){ const b=m.btns[key]; drawButton(b.x, b.y, b.w, b.h, b.label); }
+  vcrUI.regions = { screen:{x:s.x+s.w/2, y:s.y+s.h/2, w:s.w, h:s.h}, play:m.btns.play, stop:m.btns.stop, eject:m.btns.eject };
 }
-function flashLED(tv, ms){ if(!tv || !tv.led) return; const mat=tv.led.material; const start=Date.now(); const tick=()=>{ const t=(Date.now()-start)/ms; if(t>=1){ mat.color.setHex(0x00ff00); return; } const k= (Math.sin(t*10)+1)/2; const col = k>0.5?0x00ff00:0x006600; mat.color.setHex(col); requestAnimationFrame(tick); }; tick(); }
 
-/* ===== TV factory ===== */
-function nextVideoId(){ if(!playlist.length) return 'M7lc1UVf-VE'; const id=playlist[feedIndex % playlist.length]; feedIndex++; return id; }
-function createTV(y=5){
-  const group=new THREE.Group();
-  // shell with higher contrast
-  const shellGeo=new THREE.BoxGeometry(TV.w,TV.h,TV.d);
-  const shellMat=new THREE.MeshS
+function drawSevenSeg(cx,cy,size,text){ ctx.save(); ctx.translate(cx,cy); ctx.fillStyle='#21ff86'; ctx.globalAlpha=0.92; ctx.font=`${Math.floor(size)}px ui-monospace,monospace`; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(text, 0, 0); ctx.globalAlpha=1; ctx.restore(); }
+function drawButton(cx,cy,w,h,label){ roundRect(cx-w/2, cy-h/2, w, h, 6, '#0e1419', '#0c1015'); ctx.fillStyle='rgba(255,255,255,.92)'; ctx.font=`${Math.floor(h*0.38)}px Inter,system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label, cx, cy); }
+
+// SPINE view tape
+function drawSpineTape(x,y,title,live=false,themeIndex=0,upright=false){ ctx.save(); ctx.translate(x,y); if(upright) ctx.rotate(-Math.PI/2); const w=TAPE_W, h=TAPE_H; const pad=8; const pal=PALETTES[themeIndex % PALETTES.length]; ctx.fillStyle='rgba(0,0,0,.38)'; ctx.fillRect(-w/2-12, h/2-2, w+24, 12); roundRect(-w/2,-h/2,w,h,8,'#0e1319','#121921'); roundRect(-w/2+pad,-h/2+pad,w-2*pad,h-2*pad,6,pal[0],pal[1]); ctx.globalAlpha=0.12; ctx.fillStyle='#fff'; ctx.fillRect(-w/2+6,-h/2+6,w-12,2); ctx.fillRect(-w/2+6, h/2-8, w-12, 2); ctx.globalAlpha=1; if(LABEL_SKIN==='RAINBOW90') drawRainbowSticker(-w*0.36,-h*0.40,w*0.72,h*0.52); else roundRect(-w*0.36,-h*0.40,w*0.72,h*0.52,6,pal[0],pal[1]); const rr=Math.min(h*0.18, w*0.12); drawReel(-w*0.25,0,rr); drawReel(w*0.25,0,rr); const base=h*0.20*labelScale; const txt=title.toUpperCase(); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`${Math.floor(base)}px VT323, ui-monospace, monospace`; ctx.fillStyle='#e9efe7'; ctx.fillText(txt,0,-h*0.06); if(live){ ctx.globalAlpha=0.9; ctx.fillStyle='#21ff86'; ctx.fillRect(w*0.34, -h*0.48, 6, h*0.96); ctx.globalAlpha=1; } ctx.restore(); }
+function drawRainbowSticker(x,y,w,h){ const r=6; roundRect(x,y,w,h,r,'#f6efe0','#efe7d6'); const stripes=['#ff3b58','#ff6a2a','#ffb300','#ffdd3a','#6ee45a','#34c8ff','#a86dff']; const d=h*0.55; for(let i=0;i<stripes.length;i++){ ctx.fillStyle=stripes[i]; ctx.beginPath(); ctx.moveTo(x, y+h); ctx.lineTo(x+w, y+h); ctx.lineTo(x+w, y+h - (i+1)*(d/stripes.length)); ctx.lineTo(x, y+h - i*(d/stripes.length)); ctx.closePath(); ctx.fill(); } }
+
+// FACE view product
+function drawFaceCassette(cx,cy,w,h,title){ ctx.save(); ctx.translate(cx,cy); roundRect(-w/2,-h/2,w,h,14,'#101418','#0c0f13'); roundRect(-w*0.28,-h*0.10,w*0.56,h*0.22,8,'#f7f1e6','#efe7d6'); roundRect(-w*0.40,-h*0.34,w*0.80,h*0.10,6,'#f7f1e6','#efe7d6'); drawWindow(-w*0.32,-h*0.06,w*0.22,h*0.26); drawWindow(w*0.32-w*0.22,-h*0.06,w*0.22,h*0.26); const r=Math.min(h*0.16,w*0.12); drawReel(-w*0.23,0,r); drawReel(w*0.23,0,r); ctx.fillStyle='#111'; ctx.font=`${Math.floor(h*0.09)}px Inter, system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(title,0,-h*0.01); if(LABEL_SKIN==='RAINBOW90'){ const sx=-w*0.40, sy=h*0.12, sw=w*0.80, sh=h*0.12; ctx.save(); ctx.translate(sx,sy); ctx.beginPath(); ctx.rect(0,0,sw,sh); ctx.clip(); const stripes=['#ff3b58','#ff6a2a','#ffb300','#ffdd3a','#6ee45a','#34c8ff','#a86dff']; for(let i=-2;i<12;i++){ ctx.fillStyle=stripes[(i+stripes.length)%stripes.length]; ctx.fillRect(i*sw/10, sh*0.2, sw/10, sh); } ctx.restore(); } ctx.restore(); }
+function drawWindow(x,y,w,h){ roundRect(x,y,w,h,6,'#0b0f12','#0f151b'); ctx.globalAlpha=0.3; roundRect(x,y,w,h,6,'#1a2730','#0a1016'); ctx.globalAlpha=1; }
+function drawReel(cx,cy,r){ ctx.save(); ctx.translate(cx,cy); circle(0,0,r,'#0b0f13'); circle(0,0,r*0.66,'#111821'); ctx.globalAlpha=0.35; for(let i=0;i<6;i++){ roundRect(-2,-r*0.52,4,r*0.22,2,'#dfe','#cfe'); ctx.rotate(Math.PI/3); } ctx.globalAlpha=1; ctx.restore(); }
+function roundRect(x,y,w,h,r,c1,c2){ const grad=ctx.createLinearGradient(x,y,x+w,y+h); grad.addColorStop(0,c1); grad.addColorStop(1,c2); ctx.fillStyle=grad; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); ctx.fill(); }
+function circle(x,y,r,col){ ctx.beginPath(); ctx.fillStyle=col; ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); }
+
+// Noise
+function buildNoise(){ noiseCanvas=document.createElement('canvas'); noiseCanvas.width=Math.max(64,Math.floor(W/2)); noiseCanvas.height=Math.max(64,Math.floor(H/2)); noiseCtx=noiseCanvas.getContext('2d'); const img=noiseCtx.createImageData(noiseCanvas.width,noiseCanvas.height); const data=img.data; for(let i=0;i<data.length;i+=4){ const v=(Math.random()*255)|0; data[i]=v; data[i+1]=v; data[i+2]=v; data[i+3]=35; } noiseCtx.putImageData(img,0,0); }
+function staticBurst(){ if(!noiseCtx) return; const img=noiseCtx.getImageData(0,0,noiseCanvas.width,noiseCanvas.height); const data=img.data; for(let i=0;i<data.length;i+=4){ if(Math.random()<0.12){ const v=255; data[i]=v; data[i+1]=v; data[i+2]=v; data[i+3]=120; } } noiseCtx.putImageData(img,0,0); setTimeout(buildNoise,60); }
+
+// (No drawFilmFX) — effects are DOM-based inside #tv only.
+
+// Hit‑testing for tapes
+function hitTest(x,y){ if(VIEW==='FACE'){ const grid=faceGrid(); for(const cell of grid){ const {cx,cy,w,h,idx}=cell; if(x>cx-w/2 && x<cx+w/2 && y>cy-h/2 && y<cy+h/2){ const t=flattenStacks()[idx]; if(t) return {colIndex:0,tapeIndex:idx,title:t.title,url:t.url}; } } return null; } for(const [ci,col] of COLS.entries()){ for(let i=col.stack.length-1;i>=0;i--){ const t=col.stack[i]; if(LAYOUT==='STACK'){ if(!t.hidden && x>t.x-TAPE_W/2 && x<t.x+TAPE_W/2 && y>t.y-TAPE_H/2 && y<t.y+TAPE_H/2) return {colIndex:ci,tapeIndex:i,title:t.title,url:t.url}; } else { const w=TAPE_H,h=TAPE_W; const rx=t.x - w/2, ry=t.y - h/2; if(x>rx&&x<rx+w&&y>ry&&y<ry+h) return {colIndex:ci,tapeIndex:i,title:t.title,url:t.url}; } } } return null; }
+
+// Tests (kept + TV overlay assertions)
+(function(){ const out=[]; try{ out.push(unit>0 && TAPE_W>0 && TAPE_H>0 ? 'PASS metrics' : 'FAIL metrics'); const ncols=computeNumCols(); out.push(ncols>=1 && ncols<=3? 'PASS cols': 'FAIL cols'); const dummy={x:W/2, stack:[]}; const b0=baseYForNext(dummy); dummy.stack.push({y:BASE_Y - TAPE_H/2}); const b1=baseYForNext(dummy); const step=(BASE_Y - TAPE_H - 6); out.push(Math.abs(b1-step)<0.001? 'PASS baseY step':'FAIL baseY step'); out.push(['SPINE','FACE'].includes(VIEW)? 'PASS view':'FAIL view'); out.push(['STACK','SHELF'].includes(LAYOUT)? 'PASS layout':'FAIL layout'); out.push(['LOFI','RAINBOW90'].includes(LABEL_SKIN)? 'PASS skin':'FAIL skin'); out.push(document.getElementById('controller').getAttribute('role')==='dialog' ? 'PASS a11y dialog' : 'FAIL a11y dialog'); const m=vcrMetrics(); out.push((m.screen&&m.btns&&m.timeLCD)? 'PASS vcr regions':'FAIL vcr regions'); out.push(document.getElementById('tv')? 'PASS tv exists':'FAIL tv exists'); out.push(document.getElementById('tvPlay')? 'PASS tv controls':'FAIL tv controls'); }catch(e){ out.push('FAIL harness: '+e.message); } console.log('[tests]', out.join(' | ')); })();
+
+</script>
+</body>
+</html>

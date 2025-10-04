@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed → Water</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+    #container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    canvas { display: block; }
+    iframe { border: none; background: #000; }
+    
+    /* Feed UI overlay at top */
+    .feed-ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
+      z-index: 200;
+      pointer-events: none;
+    }
+    .feed-header {
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+    }
+    .feed-logo {
+      font-weight: 700;
+      font-size: 16px;
+      color: #fff;
+    }
+    
+    /* Info text */
+    #info {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      letter-spacing: 3px;
+      opacity: 0.3;
+      text-align: center;
+      pointer-events: none;
+      z-index: 100;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  
+  <div class="feed-ui">
+    <div class="feed-header">
+      <span class="feed-logo">∞</span>
+      <span>For You</span>
+      <span style="opacity: 0.3">Following</span>
+    </div>
+  </div>
+  
+  <div id="info">
+    Scroll through feed · Videos fall into the deep
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // ===== CONFIG =====
+    const VIDEO_ID = 'uDUoMnp1z_g';
+    const VIDEO_SOURCES = [
+      { id: 'uDUoMnp1z_g', start: 0, title: 'Out of Life' },
+      { id: 'uDUoMnp1z_g', start: 136, title: 'Flashing Lights' },
+      { id: 'uDUoMnp1z_g', start: 272, title: 'How to Break Off an Engagement' },
+      { id: 'uDUoMnp1z_g', start: 408, title: 'Nevermore' },
+      { id: 'uDUoMnp1z_g', start: 544, title: 'Bloodline' },
+      { id: 'uDUoMnp1z_g', start: 680, title: 'Resurrecting Atlantis' },
+      { id: 'uDUoMnp1z_g', start: 816, title: 'DJ Turn Me Up' },
+      { id: 'uDUoMnp1z_g', start: 952, title: 'Newly Single' },
+      { id: 'uDUoMnp1z_g', start: 1088, title: 'Yet, Heard' },
+      { id: 'uDUoMnp1z_g', start: 1224, title: 'Magic Ride' },
+      { id: 'uDUoMnp1z_g', start: 1360, title: 'Reunion' },
+      { id: 'uDUoMnp1z_g', start: 1496, title: 'How to Win My Heart' },
+      { id: 'uDUoMnp1z_g', start: 1632, title: 'Hot Minute' }
+    ];
+
+    // ===== STATE =====
+    let scene, camera, renderer, cssRenderer;
+    let feedItems = [];
+    let waterPlane, causticsMesh;
+    let scrollOffset = 0;
+    let time = 0;
+
+    const FEED_ITEM_HEIGHT = 1.2; // vertical spacing in feed
+    const FEED_START_Y = 4; // where feed begins (top of screen)
+    const WATER_Y = -2; // water surface level
+    const TRANSITION_Y = 0.5; // where items start "falling out" of feed
+
+    // ===== CSS3D RENDERER =====
+    class CSS3DObject extends THREE.Object3D {
+      constructor(element) {
+        super();
+        this.element = element;
+        this.element.style.position = 'absolute';
+      }
+    }
+
+    class CSS3DRenderer {
+      constructor() {
+        let _width, _height, _widthHalf, _heightHalf;
+        const cache = { camera: { fov: 0, style: '' }, objects: new WeakMap() };
+        const domElement = document.createElement('div');
+        domElement.style.overflow = 'hidden';
+        this.domElement = domElement;
+        const cameraElement = document.createElement('div');
+        cameraElement.style.transformStyle = 'preserve-3d';
+        cameraElement.style.pointerEvents = 'none';
+        domElement.appendChild(cameraElement);
+
+        this.setSize = function(width, height) {
+          _width = width;
+          _height = height;
+          _widthHalf = _width / 2;
+          _heightHalf = _height / 2;
+          domElement.style.width = width + 'px';
+          domElement.style.height = height + 'px';
+          cameraElement.style.width = width + 'px';
+          cameraElement.style.height = height + 'px';
+        };
+
+        function epsilon(value) {
+          return Math.abs(value) < 1e-10 ? 0 : value;
+        }
+
+        function getCameraCSSMatrix(matrix) {
+          const elements = matrix.elements;
+          return 'matrix3d(' +
+            epsilon(elements[0]) + ',' + epsilon(-elements[1]) + ',' + epsilon(elements[2]) + ',' + epsilon(elements[3]) + ',' +
+            epsilon(elements[4]) + ',' + epsilon(-elements[5]) + ',' + epsilon(elements[6]) + ',' + epsilon(elements[7]) + ',' +
+            epsilon(elements[8]) + ',' + epsilon(-elements[9]) + ',' + epsilon(elements[10]) + ',' + epsilon(elements[11]) + ',' +
+            epsilon(elements[12]) + ',' + epsilon(-elements[13]) + ',' + epsilon(elements[14]) + ',' + epsilon(elements[15]) + ')';
+        }
+
+        function getObjectCSSMatrix(matrix) {
+          const elements = matrix.elements;
+          return 'translate(-50%,-50%)matrix3d(' +
+            epsilon(elements[0]) + ',' + epsilon(elements[1]) + ',' + epsilon(elements[2]) + ',' + epsilon(elements[3]) + ',' +
+            epsilon(-elements[4]) + ',' + epsilon(-elements[5]) + ',' + epsilon(-elements[6]) + ',' + epsilon(-elements[7]) + ',' +
+            epsilon(elements[8]) + ',' + epsilon(elements[9]) + ',' + epsilon(elements[10]) + ',' + epsilon(elements[11]) + ',' +
+            epsilon(elements[12]) + ',' + epsilon(elements[13]) + ',' + epsilon(elements[14]) + ',' + epsilon(elements[15]) + ')';
+        }
+
+        function renderObject(object, scene, camera, cameraCSSMatrix) {
+          if (object instanceof CSS3DObject) {
+            const style = getObjectCSSMatrix(object.matrixWorld);
+            const element = object.element;
+            const cachedObject = cache.objects.get(object);
+            if (!cachedObject || cachedObject.style !== style) {
+              element.style.transform = style;
+              cache.objects.set(object, { style: style });
+            }
+            if (element.parentNode !== cameraElement) {
+              cameraElement.appendChild(element);
+            }
+          }
+          for (let i = 0; i < object.children.length; i++) {
+            renderObject(object.children[i], scene, camera, cameraCSSMatrix);
+          }
+        }
+
+        this.render = function(scene, camera) {
+          const fov = camera.projectionMatrix.elements[5] * _heightHalf;
+          if (cache.camera.fov !== fov) {
+            domElement.style.perspective = camera.isPerspectiveCamera ? fov + 'px' : '';
+            cache.camera.fov = fov;
+          }
+          if (scene.autoUpdate) scene.updateMatrixWorld();
+          if (!camera.parent) camera.updateMatrixWorld();
+          const cameraCSSMatrix = 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse);
+          const style = cameraCSSMatrix + 'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)';
+          if (cache.camera.style !== style) {
+            cameraElement.style.transform = style;
+            cache.camera.style = style;
+          }
+          renderObject(scene, scene, camera, cameraCSSMatrix);
+        };
+      }
+    }
+
+    // ===== CAUSTICS SHADER =====
+    const causticsVertexShader = `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+
+    const causticsFragmentShader = `
+      uniform float time;
+      varying vec2 vUv;
+      
+      float caustic(vec2 uv, float t) {
+        vec2 p = mod(uv * 6.28, 6.28) - 3.14;
+        float c = 1.0;
+        for (int i = 0; i < 5; i++) {
+          float ti = t * (1.0 - float(i) * 0.1);
+          p = vec2(
+            p.x + cos(ti - p.y),
+            p.y + sin(ti + p.x)
+          );
+          c += 1.0 / length(p * 0.5);
+        }
+        return pow(c * 0.05, 2.0);
+      }
+      
+      void main() {
+        vec2 uv = vUv * 3.0;
+        float c = caustic(uv, time * 0.4) + caustic(uv * 1.3, time * 0.3);
+        vec3 waterColor = vec3(0.05, 0.15, 0.3);
+        gl_FragColor = vec4(waterColor * c, c * 0.6);
+      }
+    `;
+
+    // ===== CREATE FEED ITEM =====
+    function createFeedItem(videoSource, index) {
+      const group = new THREE.Group();
+      
+      // Initial position in feed
+      const startY = FEED_START_Y - (index * FEED_ITEM_HEIGHT);
+      group.position.set(0, startY, 0);
+
+      // Video container with phone aspect ratio
+      const w = 0.56; // phone width
+      const h = 1.0; // phone height (9:16 ish)
+      
+      // Border/frame
+      const frameGeo = new THREE.PlaneGeometry(w + 0.04, h + 0.04);
+      const frameMat = new THREE.MeshBasicMaterial({ 
+        color: 0x1a1a1a,
+        transparent: true,
+        opacity: 0.9
+      });
+      const frame = new THREE.Mesh(frameGeo, frameMat);
+      frame.position.z = -0.01;
+      group.add(frame);
+
+      // Glow behind (from screen light)
+      const glowGeo = new THREE.PlaneGeometry(w * 1.4, h * 1.4);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: 0x4488ff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending
+      });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.z = -0.15;
+      group.add(glow);
+
+      // Point light
+      const light = new THREE.PointLight(0x6699ff, 0, 2.5);
+      light.position.z = 0.3;
+      group.add(light);
+
+      // YouTube iframe
+      const pxW = 320, pxH = 568; // portrait aspect
+      const iframe = document.createElement('iframe');
+      iframe.style.width = pxW + 'px';
+      iframe.style.height = pxH + 'px';
+      iframe.style.borderRadius = '8px';
+      iframe.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
+      iframe.src = `https://www.youtube.com/embed/${videoSource.id}?start=${videoSource.start}&autoplay=1&mute=${index === 0 ? 0 : 1}&loop=1&playlist=${videoSource.id}&controls=1&modestbranding=1&rel=0`;
+      
+      const cssObj = new CSS3DObject(iframe);
+      const scale = h / (pxH * 0.001);
+      cssObj.scale.set(scale * 0.001, scale * 0.001, 1);
+      group.add(cssObj);
+
+      scene.add(group);
+
+      return {
+        group,
+        iframe,
+        cssObj,
+        glow,
+        light,
+        frame,
+        videoSource,
+        index,
+        baseY: startY,
+        inWater: false,
+        fallVelocity: 0,
+        wobble: Math.random() * Math.PI * 2,
+        sinkSpeed: 0.005 + Math.random() * 0.003
+      };
+    }
+
+    // ===== CREATE WATER =====
+    function createWater() {
+      // Water surface
+      const waterGeo = new THREE.PlaneGeometry(12, 20, 100, 100);
+      const waterMat = new THREE.MeshStandardMaterial({
+        color: 0x001428,
+        metalness: 0.9,
+        roughness: 0.15,
+        transparent: true,
+        opacity: 0.85,
+        side: THREE.DoubleSide
+      });
+      waterPlane = new THREE.Mesh(waterGeo, waterMat);
+      waterPlane.rotation.x = -Math.PI / 2;
+      waterPlane.position.y = WATER_Y;
+      waterPlane.position.z = 2;
+      scene.add(waterPlane);
+
+      waterPlane.geometry.originalPositions = new Float32Array(
+        waterPlane.geometry.attributes.position.array
+      );
+
+      // Caustics
+      const causticsGeo = new THREE.PlaneGeometry(10, 18);
+      const causticsMat = new THREE.ShaderMaterial({
+        vertexShader: causticsVertexShader,
+        fragmentShader: causticsFragmentShader,
+        uniforms: { time: { value: 0 } },
+        transparent: true,
+        blending: THREE.AdditiveBlending
+      });
+      causticsMesh = new THREE.Mesh(causticsGeo, causticsMat);
+      causticsMesh.rotation.x = -Math.PI / 2;
+      causticsMesh.position.y = WATER_Y + 0.02;
+      causticsMesh.position.z = 2;
+      scene.add(causticsMesh);
+
+      // Underwater depth plane
+      const depthGeo = new THREE.PlaneGeometry(15, 25);
+      const depthMat = new THREE.MeshBasicMaterial({
+        color: 0x000a14,
+        transparent: true,
+        opacity: 0.9
+      });
+      const depth = new THREE.Mesh(depthGeo, depthMat);
+      depth.position.y = WATER_Y - 3;
+      depth.position.z = 0;
+      scene.add(depth);
+
+      // Cave walls in background
+      const wallMat = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        roughness: 0.95
+      });
+      
+      const backWall = new THREE.PlaneGeometry(15, 15);
+      const back = new THREE.Mesh(backWall, wallMat);
+      back.position.z = -5;
+      back.position.y = 1;
+      scene.add(back);
+
+      const leftWall = new THREE.PlaneGeometry(12, 15);
+      const left = new THREE.Mesh(leftWall, wallMat.clone());
+      left.rotation.y = Math.PI / 2;
+      left.position.x = -6;
+      left.position.y = 1;
+      scene.add(left);
+
+      const rightWall = new THREE.PlaneGeometry(12, 15);
+      const right = new THREE.Mesh(rightWall, wallMat.clone());
+      right.rotation.y = -Math.PI / 2;
+      right.position.x = 6;
+      right.position.y = 1;
+      scene.add(right);
+    }
+
+    // ===== INIT =====
+    function init() {
+      scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0x000000, 8, 20);
+
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 1, 4.5);
+      camera.lookAt(0, 1, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000);
+      document.getElementById('container').appendChild(renderer.domElement);
+
+      cssRenderer = new CSS3DRenderer();
+      cssRenderer.setSize(window.innerWidth, window.innerHeight);
+      cssRenderer.domElement.style.position = 'absolute';
+      cssRenderer.domElement.style.top = 0;
+      document.getElementById('container').appendChild(cssRenderer.domElement);
+
+      // Lighting
+      const ambient = new THREE.AmbientLight(0x1a1a2e, 0.3);
+      scene.add(ambient);
+
+      const topLight = new THREE.DirectionalLight(0x4477aa, 0.4);
+      topLight.position.set(0, 8, 2);
+      scene.add(topLight);
+
+      const underwater = new THREE.PointLight(0x2266aa, 0.6, 12);
+      underwater.position.set(0, WATER_Y - 1, 2);
+      scene.add(underwater);
+
+      createWater();
+
+      // Create feed items
+      VIDEO_SOURCES.forEach((source, i) => {
+        feedItems.push(createFeedItem(source, i));
+      });
+
+      // Scroll handler
+      let scrollTimeout;
+      window.addEventListener('wheel', (e) => {
+        scrollOffset += e.deltaY * 0.001;
+        scrollOffset = Math.max(0, Math.min(scrollOffset, VIDEO_SOURCES.length * FEED_ITEM_HEIGHT - 3));
+        
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          // Snap to nearest item
+          const nearestIndex = Math.round(scrollOffset / FEED_ITEM_HEIGHT);
+          scrollOffset = nearestIndex * FEED_ITEM_HEIGHT;
+        }, 150);
+      }, { passive: true });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        cssRenderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+    }
+
+    // ===== ANIMATE =====
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.016;
+
+      // Animate water
+      if (waterPlane) {
+        const positions = waterPlane.geometry.attributes.position.array;
+        const original = waterPlane.geometry.originalPositions;
+        for (let i = 0; i < positions.length; i += 3) {
+          const x = original[i];
+          const z = original[i + 2];
+          positions[i + 1] = 
+            Math.sin(x * 0.4 + time * 0.6) * 0.12 +
+            Math.cos(z * 0.3 + time * 0.5) * 0.1;
+        }
+        waterPlane.geometry.attributes.position.needsUpdate = true;
+        waterPlane.geometry.computeVertexNormals();
+      }
+
+      if (causticsMesh) {
+        causticsMesh.material.uniforms.time.value = time;
+      }
+
+      // Update feed items
+      feedItems.forEach(item => {
+        // Calculate target Y based on scroll and whether it's in water
+        let targetY = item.baseY + scrollOffset;
+
+        if (targetY < TRANSITION_Y && !item.inWater) {
+          // Start falling into water
+          item.inWater = true;
+          item.fallVelocity = 0;
+        }
+
+        if (item.inWater) {
+          // Physics for falling/sinking
+          item.fallVelocity += 0.002; // gravity
+          targetY -= item.fallVelocity;
+          
+          // Hit water surface
+          if (item.group.position.y > WATER_Y && targetY <= WATER_Y) {
+            targetY = WATER_Y;
+            item.fallVelocity = -item.fallVelocity * 0.3; // bounce
+          }
+          
+          // Sink slowly in water
+          if (item.group.position.y <= WATER_Y) {
+            targetY -= item.sinkSpeed;
+            
+            // Wobble in water
+            item.group.rotation.z = Math.sin(time * 0.8 + item.wobble) * 0.15;
+            item.group.rotation.x = Math.cos(time * 0.6 + item.wobble) * 0.1;
+          }
+        }
+
+        // Smooth movement
+        item.group.position.y += (targetY - item.group.position.y) * 0.1;
+
+        // Glow intensity based on position
+        const distanceFromCenter = Math.abs(item.group.position.y - 1);
+        const glowIntensity = Math.max(0, 1 - distanceFromCenter * 0.3);
+        const pulse = Math.sin(time * 2 + item.index * 0.5) * 0.1 + 0.9;
+        
+        item.glow.material.opacity = glowIntensity * 0.4 * pulse;
+        item.light.intensity = glowIntensity * 1.2 * pulse;
+
+        // Fade out when deep underwater
+        if (item.group.position.y < WATER_Y - 4) {
+          const fadeDepth = (WATER_Y - 4 - item.group.position.y) / 3;
+          const opacity = Math.max(0, 1 - fadeDepth);
+          item.frame.material.opacity = opacity * 0.9;
+          item.iframe.style.opacity = opacity;
+        }
+      });
+
+      renderer.render(scene, camera);
+      cssRenderer.render(scene, camera);
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

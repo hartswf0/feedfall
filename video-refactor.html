@@ -139,13 +139,10 @@ const SHARD_COUNT = 64; // debris count
 const SHARD_TTL = 3000; // debris lifetime
 const MAX_IFRAMES = 18; // perf guard
 
-// Provide a seed list of YouTube IDs (safe/muted inline)
-const YT_FEED = [
-  'M7FIvfx5J10','ScMzIvxBSi4','ysz5S6PUM-U','aqz-KE-bpKQ','l-gQLqv9f4o',
-  'e-ORhEE9VVg','kXYiU_JCYtU','dQw4w9WgXcQ','hTWKbfoikeg','CGyEd0aKWZE',
-  'Zi_XLOBDo_Y','60ItHLz5WEA','JGwWNGJdvx8','fJ9rUzIMcZQ','Wch3gJG2GJ4',
-  'J---aiyznGQ','3JZ4pnNtyxQ','OPf0YbXqDm0','ktvTqknDobU','CevxZvSJLk8'
-];
+// Using working 13-segment video with timestamps
+const VIDEO_ID = 'uDUoMnp1z_g';
+const TIMESTAMPS = [0, 136, 272, 408, 544, 680, 816, 952, 1088, 1224, 1360, 1496, 1632];
+const YT_FEED = Array(13).fill(VIDEO_ID); // All use same video ID
 
 // ======== State ========
 let glRenderer, cssRenderer, scene, camera, world, clock;
@@ -203,7 +200,7 @@ function haptic(style='light'){
 // ======== YouTube glue ========
 let YT_API_READY=false;
 window.onYouTubeIframeAPIReady=()=>{ YT_API_READY=true; };
-function nextVideoId(){ const id = YT_FEED[feedIndex % YT_FEED.length]; feedIndex++; return id; }
+function nextVideoId(){ const id = VIDEO_ID; const start = TIMESTAMPS[feedIndex % TIMESTAMPS.length]; feedIndex++; return {id, start}; }
 
 function buildYTElement(playerVars={}){
   // shell container so we can style/mute badge, and pointer-events can pass through when needed
@@ -219,12 +216,12 @@ function buildYTElement(playerVars={}){
   // Instantiate later when API ready to avoid blocking
   const whenReady=()=>{
     if(!YT_API_READY) { requestAnimationFrame(whenReady); return; }
-    const id = nextVideoId();
+    const {id, start} = nextVideoId();
     const player=new YT.Player(slot.id, {
       width:320, height:180,
       videoId:id,
       playerVars: Object.assign({
-        autoplay:1, controls:0, modestbranding:1, rel:0, playsinline:1, mute:1, origin:location.origin
+        autoplay:1, controls:0, modestbranding:1, rel:0, playsinline:1, mute:1, origin:location.origin, start:start
       }, playerVars||{}),
       events:{ onReady:(e)=>{ try{ e.target.mute(); e.target.playVideo(); }catch(_){} } }
     });

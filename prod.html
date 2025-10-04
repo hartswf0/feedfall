@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CRT Cabinet Stack</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  background: #0b0f15;
+  color: #fff;
+  touch-action: none;
+}
+
+#container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#webgl-canvas, #css3d-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#css3d-canvas {
+  pointer-events: none;
+}
+
+.youtube-container {
+  pointer-events: auto;
+  background: #000;
+}
+
+/* Overlays */
+#start-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(11, 15, 21, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+#start-overlay.hidden {
+  display: none;
+}
+
+#start-button {
+  padding: 20px 40px;
+  font-size: 18px;
+  background: #fff;
+  color: #0b0f15;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+#start-button:active {
+  transform: scale(0.95);
+}
+
+/* UI Controls */
+#ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+#top-controls {
+  position: absolute;
+  top: env(safe-area-inset-top, 20px);
+  right: env(safe-area-inset-right, 20px);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 20px;
+}
+
+.icon-button:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#help-text {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  text-align: center;
+  max-width: 90%;
+  pointer-events: none;
+}
+
+/* Drawer Controls */
+.drawer-controls {
+  position: absolute;
+  background: rgba(20, 25, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 15px;
+  pointer-events: auto;
+  display: none;
+  min-width: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drawer-controls.visible {
+  display: block;
+}
+
+.drawer-controls h3 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.control-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.control-btn {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.control-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #fff;
+  width: 0%;
+  transition: width 0.3s linear;
+}
+
+/* Loading */
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  opacity: 0.5;
+  z-index: 50;
+}
+
+/* Theme variations */
+body.light-theme {
+  background: #e8e8e8;
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+  <canvas id="webgl-canvas"></canvas>
+  <div id="css3d-canvas"></div>
+  
+  <div id="start-overlay">
+    <button id="start-button" aria-label="Start experience">Tap to Start</button>
+  </div>
+  
+  <div id="ui-overlay">
+    <div id="top-controls">
+      <button class="icon-button" id="mute-toggle" aria-label="Toggle mute" title="Mute All">🔊</button>
+      <button class="icon-button" id="theme-toggle" aria-label="Toggle theme" title="Toggle Theme">🌓</button>
+    </div>
+    
+    <div id="help-text">
+      Tap screen to play/pause • Click 🔊 to unmute all
+    </div>
+  </div>
+  
+  <div id="loading">Loading...</div>
+</div>
+
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+
+<script>
+// ============================================================================
+// DATA MODEL
+// ============================================================================
+const VIDEO_ID = 'uDUoMnp1z_g';
+const TIMESTAMPS = [
+  0,      // 00:00 Out of Life
+  136,    // 02:16 Flashing Lights
+  272,    // 04:32 How to Break Off an Engagement
+  408,    // 06:48 Nevermore
+  544,    // 09:04 Bloodline
+  680,    // 11:20 Resurrecting Atlantis
+  816,    // 13:36 DJ Turn Me Up
+  952,    // 15:52 Newly Single
+  1088,   // 18:08 Yet, Heard
+  1224,   // 20:24 Magic Ride
+  1360,   // 22:40 Reunion
+  1496,   // 24:56 How to Win My Heart
+  1632    // 27:12 Hot Minute
+];
+
+// Create 13 TVs in a grid wall - one for each timestamp
+const TVS = [
+  { id: 'tv01', pos: [-1.4, 1.8, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[0], label: 'Out of Life' },
+  { id: 'tv02', pos: [-0.7, 1.8, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[1], label: 'Flashing Lights' },
+  { id: 'tv03', pos: [0, 1.8, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[2], label: 'Break Off' },
+  { id: 'tv04', pos: [0.7, 1.8, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[3], label: 'Nevermore' },
+  { id: 'tv05', pos: [1.4, 1.8, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[4], label: 'Bloodline' },
+  
+  { id: 'tv06', pos: [-1.05, 1.1, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[5], label: 'Resurrecting' },
+  { id: 'tv07', pos: [-0.35, 1.1, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[6], label: 'DJ Turn Me Up' },
+  { id: 'tv08', pos: [0.35, 1.1, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[7], label: 'Newly Single' },
+  { id: 'tv09', pos: [1.05, 1.1, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[8], label: 'Yet, Heard' },
+  
+  { id: 'tv10', pos: [-1.05, 0.4, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[9], label: 'Magic Ride' },
+  { id: 'tv11', pos: [-0.35, 0.4, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[10], label: 'Reunion' },
+  { id: 'tv12', pos: [0.35, 0.4, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[11], label: 'Win My Heart' },
+  { id: 'tv13', pos: [1.05, 0.4, 0], videoId: VIDEO_ID, timestamp: TIMESTAMPS[12], label: 'Hot Minute' }
+];
+
+// ============================================================================
+// STATE
+// ============================================================================
+let scene, camera, renderer, css3dRenderer, cssScene;
+let composer;
+let raycaster, mouse, touchStart;
+let tvObjects = {};
+let currentOpenDrawer = null;
+let globalMuted = true;
+let audioUnlocked = false;
+
+// ============================================================================
+// INIT
+// ============================================================================
+function init() {
+  const container = document.getElementById('container');
+  const canvas = document.getElementById('webgl-canvas');
+  
+  // WebGL Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0f0f0f);
+  // Dark background for contrast
+  
+  // Camera - fixed straight front view
+  camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100
+  );
+  camera.position.set(0, 1.1, 4.0); // Pull back to see full wall
+  camera.lookAt(0, 1.1, 0);
+  
+  // WebGL Renderer - higher quality
+  const dpr = Math.min(window.devicePixelRatio, 2); // Higher DPR for sharpness
+  renderer = new THREE.WebGLRenderer({ 
+    canvas, 
+    antialias: true, 
+    alpha: false,
+    powerPreference: 'high-performance'
+  });
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  
+  // CSS3D Scene & Renderer (using official THREE.CSS3DRenderer)
+  cssScene = new THREE.Scene();
+  css3dRenderer = new THREE.CSS3DRenderer();
+  css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+  css3dRenderer.domElement.style.position = 'absolute';
+  css3dRenderer.domElement.style.top = '0';
+  css3dRenderer.domElement.style.pointerEvents = 'none';
+  document.getElementById('css3d-canvas').replaceWith(css3dRenderer.domElement);
+  
+  // Lighting - bright front lighting to see screens clearly
+  const ambient = new THREE.AmbientLight(0xffffff, 0.9);
+  scene.add(ambient);
+  
+  // Key light from front/above
+  const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  keyLight.position.set(0, 3, 5);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  scene.add(keyLight);
+  
+  // Fill from sides
+  const fillLeft = new THREE.DirectionalLight(0x6688ff, 0.5);
+  fillLeft.position.set(-3, 1, 2);
+  scene.add(fillLeft);
+  
+  const fillRight = new THREE.DirectionalLight(0xff8866, 0.5);
+  fillRight.position.set(3, 1, 2);
+  scene.add(fillRight);
+  
+  // Rim light from behind
+  const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+  rimLight.position.set(0, 2, -2);
+  scene.add(rimLight);
+  
+  // Floor
+  const floorGeo = new THREE.PlaneGeometry(20, 20);
+  const floorMat = new THREE.MeshStandardMaterial({ 
+    color: 0x1a1a1a, 
+    roughness: 0.8,
+    metalness: 0.2
+  });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.5;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  
+  // Wall
+  const wallGeo = new THREE.PlaneGeometry(20, 20);
+  const wallMat = new THREE.MeshStandardMaterial({ 
+    color: 0x2a2a2a, 
+    roughness: 0.9 
+  });
+  const wall = new THREE.Mesh(wallGeo, wallMat);
+  wall.position.z = -2;
+  wall.receiveShadow = true;
+  scene.add(wall);
+  
+  // Shadow plane
+  const shadowGeo = new THREE.CircleGeometry(1.2, 32);
+  const shadowMat = new THREE.MeshBasicMaterial({ 
+    color: 0x000000, 
+    opacity: 0.3, 
+    transparent: true 
+  });
+  const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = -0.49;
+  scene.add(shadow);
+  
+  // Create TV stack
+  createTVStack();
+  
+  // Raycaster
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+  
+  // Touch handling (for tap detection only)
+  renderer.domElement.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      touchStart = { 
+        x: e.touches[0].clientX, 
+        y: e.touches[0].clientY 
+      };
+    }
+  }, { passive: true });
+  
+  // Load YouTube API
+  loadYouTubeAPI();
+  
+  // UI Events
+  setupUIEvents();
+  
+  // Resize
+  window.addEventListener('resize', onResize);
+  
+  // Animation loop
+  animate();
+  
+  // Hide loading and log complete scene structure
+  setTimeout(() => {
+    document.getElementById('loading').style.display = 'none';
+    
+    console.log('\n\n🎬 === SCENE SUMMARY ===');
+    console.log(`Total TVs created: ${Object.keys(tvObjects).length}`);
+    console.log(`Camera position:`, camera.position);
+    console.log(`Camera target: (0, 1.1, 0)`);
+    console.log(`Camera FOV: ${camera.fov}°`);
+    console.log(`Camera aspect: ${camera.aspect.toFixed(3)}`);
+    console.log(`\nWebGL Scene children: ${scene.children.length}`);
+    console.log(`CSS3D Scene children: ${cssScene.children.length}`);
+    
+    // Test projection
+    const testPos = new THREE.Vector3(-1.4, 1.8, 0.251);
+    testPos.project(camera);
+    console.log('\n🧪 TEST PROJECTION (tv01 screen):');
+    console.log(`  3D Position: [-1.4, 1.8, 0.251]`);
+    console.log(`  Projected NDC:`, testPos);
+    console.log(`  Screen X: ${((testPos.x + 1) / 2 * window.innerWidth).toFixed(1)}px`);
+    console.log(`  Screen Y: ${((1 - testPos.y) / 2 * window.innerHeight).toFixed(1)}px`);
+    
+    console.log('\n📺 TV WALL LAYOUT:');
+    console.log('Top Row (y=1.8):    tv01  tv02  tv03  tv04  tv05');
+    console.log('Middle Row (y=1.1): tv06  tv07  tv08  tv09');
+    console.log('Bottom Row (y=0.4): tv10  tv11  tv12  tv13');
+    
+    console.log('\n🎯 COORDINATE SYSTEM:');
+    console.log('X-axis: Left (-) to Right (+)');
+    console.log('Y-axis: Bottom to Top');
+    console.log('Z-axis: Back to Front (camera at z=4.0)');
+    console.log('Screen planes at z=0.251 (front of TV)');
+    
+    console.log('\n🎨 RENDERING PIPELINE:');
+    console.log('1. WebGL renderer draws 3D geometry (TVs, LEDs, bezels)');
+    console.log('2. CSS3D renderer overlays iframes at same positions');
+    console.log('3. Both renderers share same camera transform');
+  }, 2000);
+}
+
+// ============================================================================
+// CREATE TV STACK
+// ============================================================================
+function createTVStack() {
+  TVS.forEach((tv, idx) => {
+    const group = new THREE.Group();
+    group.position.set(...tv.pos);
+    
+    // Cabinet drawer shell - cinematic material
+    const shellGeo = new THREE.BoxGeometry(0.6, 0.5, 0.4);
+    const shellMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a1a, 
+      roughness: 0.7,
+      metalness: 0.4,
+      envMapIntensity: 1.0
+    });
+    const shell = new THREE.Mesh(shellGeo, shellMat);
+    shell.castShadow = true;
+    shell.receiveShadow = true;
+    group.add(shell);
+    
+    // CRT bezel - darker, more cinematic
+    const bezelGeo = new THREE.BoxGeometry(0.48, 0.36, 0.02);
+    const bezelMat = new THREE.MeshStandardMaterial({ 
+      color: 0x0a0a0a,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+    const bezel = new THREE.Mesh(bezelGeo, bezelMat);
+    bezel.position.z = 0.25;
+    group.add(bezel);
+    
+    // Screen plane (WebGL placeholder)
+    const screenGeo = new THREE.PlaneGeometry(0.42, 0.315); // Slightly smaller screens
+    const screenMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const screenPlane = new THREE.Mesh(screenGeo, screenMat);
+    screenPlane.position.z = 0.251;
+    screenPlane.userData.tvId = tv.id;
+    screenPlane.userData.clickable = 'screen';
+    group.add(screenPlane);
+    
+    // Glass overlay with scanlines (shader-like effect via texture)
+    const glassGeo = new THREE.PlaneGeometry(0.42, 0.315);
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x88ccff,
+      transparent: true,
+      opacity: 0.08,
+      roughness: 0.1,
+      metalness: 0.5,
+      reflectivity: 0.8
+    });
+    const glass = new THREE.Mesh(glassGeo, glassMat);
+    glass.position.z = 0.26;
+    group.add(glass);
+    
+    // Power LED - use MeshStandardMaterial for emissive
+    const ledGeo = new THREE.CircleGeometry(0.01, 8);
+    const ledMat = new THREE.MeshStandardMaterial({ 
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 1.5,
+      roughness: 0.5,
+      metalness: 0.0
+    });
+    const led = new THREE.Mesh(ledGeo, ledMat);
+    led.position.set(0.3, -0.18, 0.251);
+    group.add(led);
+    
+    // Drawer handle
+    const handleGeo = new THREE.BoxGeometry(0.15, 0.03, 0.03);
+    const handleMat = new THREE.MeshStandardMaterial({ 
+      color: 0xcccccc,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(0, -0.22, 0.26);
+    handle.userData.tvId = tv.id;
+    handle.userData.clickable = 'handle';
+    group.add(handle);
+    
+    // CSS3D iframe container
+    const iframe = document.createElement('iframe');
+    iframe.style.width = '420px';
+    iframe.style.height = '315px';
+    iframe.style.border = 'none';
+    iframe.style.background = '#000';
+    iframe.setAttribute('allow', 'autoplay; encrypted-media');
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.className = 'youtube-container';
+    iframe.id = `player-${tv.id}`;
+    
+    // Set iframe src immediately so it's visible
+    iframe.src = `https://www.youtube.com/embed/${tv.videoId}?start=${tv.timestamp}&autoplay=1&mute=1&controls=1&loop=1&playlist=${tv.videoId}`;
+    
+    // CSS3D iframe - using official THREE.CSS3DObject
+    const css3dObject = new THREE.CSS3DObject(iframe);
+    css3dObject.position.set(tv.pos[0], tv.pos[1], tv.pos[2] + 0.251);
+    css3dObject.rotation.set(0, 0, 0);
+    // Scale: iframe is 420x315, screen is 0.42x0.315, so scale = 0.42/420 = 0.001
+    css3dObject.scale.set(0.001, 0.001, 1);
+    cssScene.add(css3dObject);
+    
+    // Comprehensive position logging
+    console.log(`\n=== TV ${tv.id} (${tv.label}) ===`);
+    console.log(`  World Position: [${tv.pos[0]}, ${tv.pos[1]}, ${tv.pos[2]}]`);
+    console.log(`  Timestamp: ${tv.timestamp}s`);
+    console.log(`  WebGL Group Position:`, group.position);
+    console.log(`  Screen Plane Position (local):`, screenPlane.position);
+    console.log(`  Screen Plane Position (world): [${tv.pos[0]}, ${tv.pos[1]}, ${tv.pos[2] + 0.251}]`);
+    console.log(`  CSS3D iframe Position:`, css3dObject.position);
+    console.log(`  CSS3D Scale:`, css3dObject.scale);
+    console.log(`  iframe ID: ${iframe.id}`);
+    console.log(`  iframe src: ${iframe.src.substring(0, 80)}...`);
+    
+    scene.add(group);
+    
+    // Store references
+    tvObjects[tv.id] = {
+      group,
+      css3dObject,
+      screenPlane,
+      glass,
+      led,
+      handle,
+      iframe,
+      drawer: group,
+      isOpen: false,
+      player: null
+    };
+  });
+}
+
+// Using official THREE.CSS3DRenderer and THREE.CSS3DObject from CDN
+
+
+// ============================================================================
+// YOUTUBE API
+// ============================================================================
+let YT;
+let apiReady = false;
+
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) {
+    onYouTubeIframeAPIReady();
+    return;
+  }
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  const firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
+
+window.onYouTubeIframeAPIReady = function() {
+  YT = window.YT;
+  apiReady = true;
+  initPlayers();
+};
+
+function initPlayers() {
+  console.log('\n🎵 === YOUTUBE API READY ===');
+  console.log('Initializing 13 YouTube players...');
+  
+  TVS.forEach(tv => {
+    const obj = tvObjects[tv.id];
+    
+    console.log(`\n  Initializing player: ${tv.id} (${tv.label})`);
+    console.log(`    iframe element:`, obj.iframe);
+    console.log(`    iframe.id: ${obj.iframe.id}`);
+    
+    // The iframe already has an ID and src set
+    obj.player = new YT.Player(obj.iframe.id, {
+      events: {
+        onReady: e => {
+          console.log(`✅ ${tv.id} player ready - auto-playing`);
+          console.log(`    Player object:`, e.target);
+          e.target.playVideo();
+        },
+        onStateChange: e => {
+          const states = ['unstarted', 'ended', 'playing', 'paused', 'buffering', 'cued'];
+          const stateStr = states[e.data + 1] || 'unknown';
+          console.log(`${tv.id} state: ${stateStr} (${e.data})`);
+          
+          if (e.data === YT.PlayerState.PLAYING) {
+            obj.led.material.color.setHex(0x00ff00);
+            obj.led.material.emissive.setHex(0x00ff00);
+            obj.led.material.emissiveIntensity = 2.0;
+          } else {
+            obj.led.material.color.setHex(0xff0000);
+            obj.led.material.emissive.setHex(0xff0000);
+            obj.led.material.emissiveIntensity = 1.5;
+          }
+        }
+      }
+    });
+  });
+}
+
+// ============================================================================
+// UI EVENTS
+// ============================================================================
+function setupUIEvents() {
+  // Start button
+  document.getElementById('start-button').addEventListener('click', () => {
+    console.log('\n▶️ START BUTTON CLICKED - Initiating playback...');
+    document.getElementById('start-overlay').classList.add('hidden');
+    audioUnlocked = true;
+    globalMuted = false;
+    document.getElementById('mute-toggle').textContent = '🔊';
+    
+    // Unmute and play all
+    TVS.forEach(tv => {
+      const obj = tvObjects[tv.id];
+      if (obj.player) {
+        console.log(`Starting playback on ${tv.id}`);
+        try {
+          obj.player.unMute();
+          obj.player.playVideo();
+        } catch(e) {
+          console.log(`Error playing ${tv.id}:`, e);
+        }
+      }
+    });
+  });
+
+// Mute toggle
+document.getElementById('mute-toggle').addEventListener('click', () => {
+  globalMuted = !globalMuted;
+  document.getElementById('mute-toggle').textContent = globalMuted ? '🔇' : '🔊';
+  TVS.forEach(tv => {
+    const obj = tvObjects[tv.id];
+    if (obj.player) {
+      if (globalMuted) {
+        obj.player.mute();
+      } else {
+        obj.player.unMute();
+      }
+    }
+  });
+});
+
+// Theme toggle
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  document.body.classList.toggle('light-theme');
+  if (document.body.classList.contains('light-theme')) {
+    scene.background.setHex(0xf5f5f5);
+  } else {
+    scene.background.setHex(0x0a0a0a);
+  }
+});
+
+// No drawer controls needed
+
+// Click/tap raycasting
+renderer.domElement.addEventListener('click', onCanvasClick);
+renderer.domElement.addEventListener('touchend', onCanvasTouchEnd);
+
+// Page visibility
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    TVS.forEach(tv => {
+      const obj = tvObjects[tv.id];
+      if (obj.player && obj.player.pauseVideo) {
+        obj.player.pauseVideo();
+      }
+    });
+  }
+});
+}
+
+function onCanvasClick(e) {
+mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+checkIntersections();
+}
+
+function onCanvasTouchEnd(e) {
+if (e.changedTouches.length === 0) return;
+const touch = e.changedTouches[0];
+
+// Check if it was a tap (not a drag)
+if (touchStart) {
+  const dx = touch.clientX - touchStart.x;
+  const dy = touch.clientY - touchStart.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist > 20) return; // Was a drag
+}
+
+mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+checkIntersections();
+}
+
+function checkIntersections() {
+raycaster.setFromCamera(mouse, camera);
+
+// Collect all clickable objects
+const clickables = [];
+TVS.forEach(tv => {
+  const obj = tvObjects[tv.id];
+  clickables.push(obj.screenPlane);
+});
+
+const intersects = raycaster.intersectObjects(clickables, false);
+
+if (intersects.length > 0) {
+  const hit = intersects[0].object;
+  const tvId = hit.userData.tvId;
+  togglePlay(tvId);
+}
+}
+
+
+function togglePlay(tvId) {
+const obj = tvObjects[tvId];
+if (!obj.player) return;
+
+try {
+  const state = obj.player.getPlayerState();
+  if (state === YT.PlayerState.PLAYING) {
+    obj.player.pauseVideo();
+  } else {
+    obj.player.playVideo();
+  }
+} catch(e) {
+  console.log('Player not ready');
+}
+}
+
+
+// ============================================================================
+// PERSISTENCE
+// ============================================================================
+function saveState() {
+try {
+  const state = {};
+  TVS.forEach(tv => {
+    const obj = tvObjects[tv.id];
+    if (obj.player && obj.player.getCurrentTime) {
+      state[tv.id] = obj.player.getCurrentTime();
+    }
+  });
+  localStorage.setItem('crt-cabinet-state', JSON.stringify(state));
+} catch(e) {
+  console.log('localStorage not available');
+}
+}
+
+function loadState() {
+try {
+  const saved = localStorage.getItem('crt-cabinet-state');
+  if (saved) {
+    const state = JSON.parse(saved);
+    TVS.forEach(tv => {
+      if (state[tv.id] !== undefined) {
+        tv.savedTime = state[tv.id];
+      }
+    });
+  }
+} catch(e) {
+  console.log('localStorage not available');
+}
+}
+
+// ============================================================================
+// ANIMATION LOOP
+// ============================================================================
+function animate() {
+requestAnimationFrame(animate);
+
+// All TVs playing continuously
+TVS.forEach(tv => {
+  const obj = tvObjects[tv.id];
+  if (obj.player && obj.player.playVideo) {
+    obj.player.playVideo();
+  }
+});
+
+// Subtle LED pulse
+const time = Date.now() * 0.001;
+TVS.forEach(tv => {
+  const obj = tvObjects[tv.id];
+  obj.led.material.emissiveIntensity = 1.5 + Math.sin(time * 2) * 0.5;
+});
+
+// Update camera matrix before rendering
+camera.updateMatrixWorld();
+
+// Render both with same camera state
+renderer.render(scene, camera);
+css3dRenderer.render(cssScene, camera);
+}
+
+// ============================================================================
+// RESIZE
+// ============================================================================
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ============================================================================
+// START
+// ============================================================================
+loadState();
+init();
+</script>
+
+</body>
+</html>

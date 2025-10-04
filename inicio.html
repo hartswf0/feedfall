@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Out of Life: Submerged Memory Temple — Mexico City</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Courier New', monospace;
+  background: #000;
+  overflow: hidden;
+  color: #0ff;
+}
+
+#container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#css-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.yt-surface {
+  background: #000;
+  border: 2px solid #00ffaa;
+  box-shadow: 0 0 20px rgba(0, 255, 170, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.yt-surface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 255, 255, 0.05) 0%,
+    transparent 50%,
+    rgba(255, 0, 136, 0.05) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.yt-surface iframe {
+  pointer-events: auto;
+}
+
+.tv-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  color: #0ff;
+  padding: 6px;
+  font-size: 11px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  border-top: 1px solid #00ffaa;
+  text-shadow: 0 0 8px #0ff;
+  z-index: 2;
+}
+
+#info {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  color: #0ff;
+  font-size: 13px;
+  text-shadow: 0 0 10px #0ff;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 15px;
+  border: 1px solid #00ffaa;
+  max-width: 300px;
+  line-height: 1.6;
+}
+
+#info h1 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #ff0088;
+  text-shadow: 0 0 10px #ff0088;
+}
+
+#controls {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  color: #0ff;
+  font-size: 12px;
+  text-shadow: 0 0 10px #0ff;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px;
+  border: 1px solid #00ffaa;
+}
+
+.control-btn {
+  background: rgba(0, 255, 170, 0.2);
+  border: 1px solid #00ffaa;
+  color: #0ff;
+  padding: 8px 15px;
+  margin: 5px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  text-shadow: 0 0 5px #0ff;
+  transition: all 0.3s;
+}
+
+.control-btn:hover {
+  background: rgba(0, 255, 170, 0.4);
+  box-shadow: 0 0 15px rgba(0, 255, 170, 0.6);
+}
+
+#loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #0ff;
+  font-size: 18px;
+  text-shadow: 0 0 20px #0ff;
+  z-index: 2000;
+  text-align: center;
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading" class="pulse">
+  <div>INICIANDO TRANSMISIÓN...</div>
+  <div style="font-size: 12px; margin-top: 10px;">Cargando memoria sumergida</div>
+</div>
+
+<div id="container"></div>
+<div id="css-container"></div>
+
+<div id="info">
+  <h1>ATLÁNTIDA SUMERGIDA</h1>
+  <div>13 Fragmentos Temporales</div>
+  <div style="margin-top: 8px; font-size: 11px; color: #00ffaa;">
+    Ciudad de México<br>
+    Zona de Memoria<br>
+    Instalación: FeedFall × Memory Temple
+  </div>
+</div>
+
+<div id="controls">
+  <div style="margin-bottom: 8px;">CONTROLES:</div>
+  <button class="control-btn" onclick="toggleExhibit()">AUTO ÓRBITA</button>
+  <button class="control-btn" onclick="resetCamera()">RESETEAR CÁMARA</button>
+  <button class="control-btn" onclick="toggleInfo()">INFO</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================
+// CONFIGURATION
+// ============================================
+
+const VIDEO_ID = 'uDUoMnp1z_g';
+const SCREEN_RATIO = 16 / 9;
+
+const TIMESTAMPS = [
+  { label: 'Out of Life', time: 0 },
+  { label: 'Flashing Lights', time: 136 },
+  { label: 'How to Break Off an Engagement', time: 272 },
+  { label: 'Nevermore', time: 408 },
+  { label: 'Bloodline', time: 544 },
+  { label: 'Resurrecting Atlantis', time: 680 },
+  { label: 'DJ Turn Me Up', time: 816 },
+  { label: 'Newly Single', time: 952 },
+  { label: 'Yet, Heard', time: 1088 },
+  { label: 'Magic Ride', time: 1224 },
+  { label: 'Reunion', time: 1360 },
+  { label: 'How to Win My Heart', time: 1496 },
+  { label: 'Hot Minute', time: 1632 }
+];
+
+const TV = { w: 0.64, h: 0.42, d: 0.08 };
+
+// ============================================
+// THREE.JS CSS3DRenderer (inline)
+// ============================================
+
+THREE.CSS3DObject = function(element) {
+  THREE.Object3D.call(this);
+  this.element = element;
+  this.element.style.position = 'absolute';
+  this.addEventListener('removed', function() {
+    this.traverse(function(object) {
+      if (object.element instanceof Element && object.element.parentNode !== null) {
+        object.element.parentNode.removeChild(object.element);
+      }
+    });
+  });
+};
+
+THREE.CSS3DObject.prototype = Object.create(THREE.Object3D.prototype);
+THREE.CSS3DObject.prototype.constructor = THREE.CSS3DObject;
+
+THREE.CSS3DSprite = function(element) {
+  THREE.CSS3DObject.call(this, element);
+};
+
+THREE.CSS3DSprite.prototype = Object.create(THREE.CSS3DObject.prototype);
+THREE.CSS3DSprite.prototype.constructor = THREE.CSS3DSprite;
+
+THREE.CSS3DRenderer = function() {
+  const _this = this;
+  let _width, _height;
+  let _widthHalf, _heightHalf;
+
+  const cache = { camera: { fov: 0, style: '' }, objects: new WeakMap() };
+
+  const domElement = document.createElement('div');
+  domElement.style.overflow = 'hidden';
+
+  this.domElement = domElement;
+
+  const cameraElement = document.createElement('div');
+  cameraElement.style.transformStyle = 'preserve-3d';
+  cameraElement.style.pointerEvents = 'none';
+  domElement.appendChild(cameraElement);
+
+  this.getSize = function() {
+    return { width: _width, height: _height };
+  };
+
+  this.setSize = function(width, height) {
+    _width = width;
+    _height = height;
+    _widthHalf = _width / 2;
+    _heightHalf = _height / 2;
+
+    domElement.style.width = width + 'px';
+    domElement.style.height = height + 'px';
+
+    cameraElement.style.width = width + 'px';
+    cameraElement.style.height = height + 'px';
+  };
+
+  function epsilon(value) {
+    return Math.abs(value) < 1e-10 ? 0 : value;
+  }
+
+  function getCameraCSSMatrix(matrix) {
+    const elements = matrix.elements;
+    return 'matrix3d(' +
+      epsilon(elements[0]) + ',' +
+      epsilon(-elements[1]) + ',' +
+      epsilon(elements[2]) + ',' +
+      epsilon(elements[3]) + ',' +
+      epsilon(elements[4]) + ',' +
+      epsilon(-elements[5]) + ',' +
+      epsilon(elements[6]) + ',' +
+      epsilon(elements[7]) + ',' +
+      epsilon(elements[8]) + ',' +
+      epsilon(-elements[9]) + ',' +
+      epsilon(elements[10]) + ',' +
+      epsilon(elements[11]) + ',' +
+      epsilon(elements[12]) + ',' +
+      epsilon(-elements[13]) + ',' +
+      epsilon(elements[14]) + ',' +
+      epsilon(elements[15]) +
+    ')';
+  }
+
+  function getObjectCSSMatrix(matrix, cameraCSSMatrix) {
+    const elements = matrix.elements;
+    const matrix3d = 'matrix3d(' +
+      epsilon(elements[0]) + ',' +
+      epsilon(elements[1]) + ',' +
+      epsilon(elements[2]) + ',' +
+      epsilon(elements[3]) + ',' +
+      epsilon(-elements[4]) + ',' +
+      epsilon(-elements[5]) + ',' +
+      epsilon(-elements[6]) + ',' +
+      epsilon(-elements[7]) + ',' +
+      epsilon(elements[8]) + ',' +
+      epsilon(elements[9]) + ',' +
+      epsilon(elements[10]) + ',' +
+      epsilon(elements[11]) + ',' +
+      epsilon(elements[12]) + ',' +
+      epsilon(elements[13]) + ',' +
+      epsilon(elements[14]) + ',' +
+      epsilon(elements[15]) +
+    ')';
+
+    if (isIE) {
+      return 'translate(-50%,-50%)' +
+        'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)' +
+        cameraCSSMatrix +
+        matrix3d;
+    }
+
+    return 'translate(-50%,-50%)' + matrix3d;
+  }
+
+  function renderObject(object, scene, camera, cameraCSSMatrix) {
+    if (object instanceof THREE.CSS3DObject) {
+      object.onBeforeRender(_this, scene, camera);
+
+      let style;
+
+      if (object instanceof THREE.CSS3DSprite) {
+        const cameraMat = new THREE.Matrix4();
+        cameraMat.extractRotation(camera.matrixWorldInverse);
+        const objMat = new THREE.Matrix4();
+        objMat.extractRotation(object.matrixWorld);
+        objMat.premultiply(cameraMat);
+        objMat.copyPosition(object.matrixWorld);
+        const objectMatrix = objMat;
+        style = getObjectCSSMatrix(objectMatrix, cameraCSSMatrix);
+      } else {
+        style = getObjectCSSMatrix(object.matrixWorld, cameraCSSMatrix);
+      }
+
+      const element = object.element;
+      const cachedObject = cache.objects.get(object);
+
+      if (cachedObject === undefined || cachedObject.style !== style) {
+        element.style.transform = style;
+        const objectData = { style: style };
+        cache.objects.set(object, objectData);
+      }
+
+      element.style.display = object.visible ? '' : 'none';
+
+      if (element.parentNode !== cameraElement) {
+        cameraElement.appendChild(element);
+      }
+
+      object.onAfterRender(_this, scene, camera);
+    }
+
+    for (let i = 0, l = object.children.length; i < l; i++) {
+      renderObject(object.children[i], scene, camera, cameraCSSMatrix);
+    }
+  }
+
+  const isIE = /Trident/i.test(navigator.userAgent);
+
+  this.render = function(scene, camera) {
+    const fov = camera.projectionMatrix.elements[5] * _heightHalf;
+
+    if (cache.camera.fov !== fov) {
+      domElement.style.perspective = camera.isPerspectiveCamera ? fov + 'px' : '';
+      cache.camera.fov = fov;
+    }
+
+    if (scene.autoUpdate === true) scene.updateMatrixWorld();
+    if (camera.parent === null) camera.updateMatrixWorld();
+
+    let tx = 0, ty = 0;
+    if (camera.isOrthographicCamera) {
+      tx = -(camera.right + camera.left) / 2;
+      ty = (camera.top + camera.bottom) / 2;
+    }
+
+    const cameraCSSMatrix = camera.isOrthographicCamera ?
+      'scale(' + fov + ')' + 'translate(' + epsilon(tx) + 'px,' + epsilon(ty) + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse) :
+      'translateZ(' + fov + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse);
+
+    const style = cameraCSSMatrix +
+      'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)';
+
+    if (cache.camera.style !== style && !isIE) {
+      cameraElement.style.transform = style;
+      cache.camera.style = style;
+    }
+
+    renderObject(scene, scene, camera, cameraCSSMatrix);
+  };
+};
+
+// ============================================
+// GLOBAL STATE
+// ============================================
+
+let scene, camera, renderer, cssScene, cssRenderer;
+let tvs = [];
+let YT_READY = false;
+let pendingPlayerCbs = [];
+let exhibitMode = true;
+let infoVisible = true;
+
+// ============================================
+// PYRAMID POSITION GENERATOR
+// ============================================
+
+function generatePyramidPositions(rows = [1, 2, 3, 4, 3]) {
+  const positions = [];
+  const GAP_X = 0.15, GAP_Y = 0.12;
+  
+  let tvIndex = 0;
+  let currentY = 0;
+  
+  rows.forEach((count, rowIndex) => {
+    const rowWidth = (count * TV.w) + ((count - 1) * GAP_X);
+    const startX = -rowWidth / 2 + TV.w / 2;
+    
+    for (let i = 0; i < count; i++) {
+      positions.push({
+        x: startX + (i * (TV.w + GAP_X)),
+        y: currentY,
+        z: rowIndex * -0.1, // Slight depth variation
+        index: tvIndex++
+      });
+    }
+    currentY += TV.h + GAP_Y;
+  });
+  
+  return positions;
+}
+
+// ============================================
+// STATIC TV CREATION
+// ============================================
+
+function createStaticTV(position, timestamp, index) {
+  const g = new THREE.Group();
+  
+  // TV Shell with cyberpunk materials
+  const shell = new THREE.Mesh(
+    new THREE.BoxGeometry(TV.w, TV.h, TV.d),
+    new THREE.MeshStandardMaterial({
+      color: 0x0a0a0a,
+      roughness: 0.4,
+      metalness: 0.8,
+      emissive: 0x003333,
+      emissiveIntensity: 0.2
+    })
+  );
+  shell.castShadow = true;
+  shell.receiveShadow = true;
+  g.add(shell);
+
+  // Neon bezel
+  const bezel = new THREE.Mesh(
+    new THREE.BoxGeometry(TV.w * 0.86, TV.h * 0.72, 0.02),
+    new THREE.MeshStandardMaterial({
+      color: 0x001a1a,
+      roughness: 0.3,
+      metalness: 0.9,
+      emissive: 0x00ffaa,
+      emissiveIntensity: 0.3
+    })
+  );
+  bezel.position.z = TV.d / 2 + 0.01;
+  g.add(bezel);
+
+  // Glow effect
+  const glowGeo = new THREE.PlaneGeometry(TV.w * 0.92, TV.h * 0.78);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x00ffaa,
+    transparent: true,
+    opacity: 0.15,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.position.z = TV.d / 2 + 0.03;
+  g.add(glow);
+
+  // CSS3D YouTube iframe
+  const pxW = 384, pxH = Math.round(pxW / SCREEN_RATIO);
+  const surface = document.createElement('div');
+  surface.className = 'yt-surface';
+  surface.style.width = pxW + 'px';
+  surface.style.height = pxH + 'px';
+
+  // Label overlay
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'tv-label';
+  labelDiv.textContent = `${index + 1}: ${timestamp.label}`;
+  surface.appendChild(labelDiv);
+
+  // YouTube player
+  let player = null;
+  const makePlayer = () => {
+    const iframe = document.createElement('iframe');
+    iframe.width = pxW;
+    iframe.height = pxH;
+    iframe.src = `https://www.youtube.com/embed/${VIDEO_ID}?start=${timestamp.time}&autoplay=1&mute=0&controls=1&modestbranding=1&rel=0&playsinline=1&enablejsapi=1`;
+    iframe.frameBorder = '0';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    iframe.allowFullscreen = true;
+    surface.insertBefore(iframe, labelDiv);
+    
+    player = { element: iframe };
+  };
+
+  if (YT_READY) makePlayer();
+  else pendingPlayerCbs.push(makePlayer);
+
+  const cssObj = new THREE.CSS3DObject(surface);
+  const scale = (TV.w * 0.86) / pxW;
+  cssObj.scale.set(scale, scale, 1);
+  cssObj.position.z = TV.d / 2 + 0.012;
+
+  // Position in pyramid
+  g.position.set(position.x, position.y, position.z);
+
+  scene.add(g);
+  cssScene.add(cssObj);
+
+  return { group: g, css: cssObj, player, label: timestamp.label, glowMat, index };
+}
+
+// ============================================
+// ATMOSPHERIC EFFECTS
+// ============================================
+
+function createAtmosphere() {
+  // Volumetric fog layers
+  scene.fog = new THREE.FogExp2(0x001a1a, 0.08);
+
+  // Ground plane (water surface)
+  const waterGeo = new THREE.PlaneGeometry(20, 20, 32, 32);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x003344,
+    roughness: 0.1,
+    metalness: 0.9,
+    transparent: true,
+    opacity: 0.6,
+    emissive: 0x002222,
+    emissiveIntensity: 0.3
+  });
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = -0.5;
+  water.receiveShadow = true;
+  scene.add(water);
+
+  // Animate water
+  const waterVertices = waterGeo.attributes.position;
+  function animateWater() {
+    const time = Date.now() * 0.0005;
+    for (let i = 0; i < waterVertices.count; i++) {
+      const x = waterVertices.getX(i);
+      const y = waterVertices.getY(i);
+      const wave = Math.sin(x * 2 + time) * 0.02 + Math.cos(y * 2 + time * 0.7) * 0.02;
+      waterVertices.setZ(i, wave);
+    }
+    waterVertices.needsUpdate = true;
+  }
+
+  // Particle system (bubbles/memory fragments)
+  const particleCount = 200;
+  const particleGeo = new THREE.BufferGeometry();
+  const particlePositions = new Float32Array(particleCount * 3);
+  const particleVelocities = [];
+
+  for (let i = 0; i < particleCount; i++) {
+    particlePositions[i * 3] = (Math.random() - 0.5) * 15;
+    particlePositions[i * 3 + 1] = Math.random() * 8 - 2;
+    particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 15;
+    particleVelocities.push(Math.random() * 0.01 + 0.005);
+  }
+
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+  const particleMat = new THREE.PointsMaterial({
+    color: 0x00ffaa,
+    size: 0.05,
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending
+  });
+
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+
+  function animateParticles() {
+    const positions = particles.geometry.attributes.position.array;
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3 + 1] += particleVelocities[i];
+      if (positions[i * 3 + 1] > 6) {
+        positions[i * 3 + 1] = -2;
+      }
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+  }
+
+  return { animateWater, animateParticles };
+}
+
+// ============================================
+// LIGHTING
+// ============================================
+
+function setupLighting() {
+  // Ambient underwater glow
+  const ambient = new THREE.AmbientLight(0x002233, 0.4);
+  scene.add(ambient);
+
+  // Key light from above (sun through water)
+  const keyLight = new THREE.DirectionalLight(0x00ccff, 0.8);
+  keyLight.position.set(5, 10, 5);
+  keyLight.castShadow = true;
+  keyLight.shadow.camera.left = -8;
+  keyLight.shadow.camera.right = 8;
+  keyLight.shadow.camera.top = 8;
+  keyLight.shadow.camera.bottom = -8;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  scene.add(keyLight);
+
+  // Colored rim lights (cyberpunk neon)
+  const rimLeft = new THREE.PointLight(0x00ffaa, 1.2, 10);
+  rimLeft.position.set(-4, 3, 2);
+  scene.add(rimLeft);
+
+  const rimRight = new THREE.PointLight(0xff0088, 1.2, 10);
+  rimRight.position.set(4, 3, 2);
+  scene.add(rimRight);
+
+  // Bottom fill (cave glow)
+  const bottomFill = new THREE.PointLight(0x0088ff, 0.6, 8);
+  bottomFill.position.set(0, -1, 3);
+  scene.add(bottomFill);
+
+  // Spotlight on pyramid apex
+  const spotlight = new THREE.SpotLight(0xffffff, 1.5);
+  spotlight.position.set(0, 8, 3);
+  spotlight.angle = Math.PI / 6;
+  spotlight.penumbra = 0.4;
+  spotlight.decay = 2;
+  spotlight.distance = 12;
+  spotlight.castShadow = true;
+  scene.add(spotlight);
+
+  return { rimLeft, rimRight, bottomFill };
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+function init() {
+  // WebGL Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000a0a);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(
+    50,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100
+  );
+  camera.position.set(0, 2.5, 7);
+  camera.lookAt(0, 2, 0);
+
+  // WebGL Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.getElementById('container').appendChild(renderer.domElement);
+
+  // CSS3D Scene & Renderer
+  cssScene = new THREE.Scene();
+  cssRenderer = new THREE.CSS3DRenderer();
+  cssRenderer.setSize(window.innerWidth, window.innerHeight);
+  document.getElementById('css-container').appendChild(cssRenderer.domElement);
+
+  // Setup environment
+  const lights = setupLighting();
+  const atmosphere = createAtmosphere();
+
+  // Generate pyramid positions
+  const positions = generatePyramidPositions([1, 2, 3, 4, 4]);
+
+  // Create all 14 TVs
+  positions.forEach((pos, i) => {
+    const tv = createStaticTV(pos, TIMESTAMPS[i], i);
+    tvs.push(tv);
+  });
+
+  // Hide loading screen
+  setTimeout(() => {
+    document.getElementById('loading').style.display = 'none';
+  }, 2000);
+
+  // Handle window resize
+  window.addEventListener('resize', onWindowResize, false);
+
+  // Start animation
+  animate(atmosphere, lights);
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  cssRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ============================================
+// ANIMATION LOOP
+// ============================================
+
+function animate(atmosphere, lights) {
+  requestAnimationFrame(() => animate(atmosphere, lights));
+
+  const time = Date.now() * 0.0001;
+
+  // Animate atmosphere
+  atmosphere.animateWater();
+  atmosphere.animateParticles();
+
+  // Pulsing rim lights
+  lights.rimLeft.intensity = 1.0 + Math.sin(time * 2) * 0.3;
+  lights.rimRight.intensity = 1.0 + Math.cos(time * 1.7) * 0.3;
+  lights.bottomFill.intensity = 0.5 + Math.sin(time * 3) * 0.2;
+
+  // TV glow pulsing
+  tvs.forEach((tv, i) => {
+    if (tv.glowMat) {
+      const phase = time * 2 + i * 0.3;
+      tv.glowMat.opacity = 0.1 + Math.sin(phase) * 0.08;
+    }
+  });
+
+  // Camera orbit in exhibit mode
+  if (exhibitMode) {
+    const radius = 7;
+    const speed = 0.05;
+    camera.position.x = Math.sin(time * speed) * radius;
+    camera.position.z = Math.cos(time * speed) * radius;
+    camera.position.y = 2.5 + Math.sin(time * 0.3) * 0.5;
+    camera.lookAt(0, 2, 0);
+  }
+
+  // Render
+  renderer.render(scene, camera);
+  cssRenderer.render(cssScene, camera);
+}
+
+// ============================================
+// YOUTUBE API READY
+// ============================================
+
+function onYouTubeIframeAPIReady() {
+  YT_READY = true;
+  pendingPlayerCbs.forEach(cb => cb());
+  pendingPlayerCbs = [];
+}
+
+// Load YouTube API
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+// Make function global for YouTube API callback
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+// ============================================
+// CONTROLS (GLOBAL)
+// ============================================
+
+window.toggleExhibit = function() {
+  exhibitMode = !exhibitMode;
+  if (!exhibitMode) {
+    camera.position.set(0, 2.5, 7);
+    camera.lookAt(0, 2, 0);
+  }
+};
+
+window.resetCamera = function() {
+  exhibitMode = false;
+  camera.position.set(0, 2.5, 7);
+  camera.lookAt(0, 2, 0);
+};
+
+window.toggleInfo = function() {
+  infoVisible = !infoVisible;
+  document.getElementById('info').style.display = infoVisible ? 'block' : 'none';
+};
+
+// Start when DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+// ============================================
+// MOUSE INTERACTION (Optional)
+// ============================================
+
+let mouseX = 0, mouseY = 0;
+let targetX = 0, targetY = 0;
+
+document.addEventListener('mousemove', (e) => {
+  if (!exhibitMode) {
+    mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+    mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+  }
+});
+
+// Keyboard controls
+document.addEventListener('keydown', (e) => {
+  switch(e.key) {
+    case ' ':
+      toggleExhibit();
+      break;
+    case 'r':
+      resetCamera();
+      break;
+    case 'i':
+      toggleInfo();
+      break;
+  }
+});

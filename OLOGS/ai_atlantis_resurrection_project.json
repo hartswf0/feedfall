@@ -1,0 +1,208 @@
+{
+  "step1": {
+    "chapters": [
+      {
+        "id": "atlantean_archive",
+        "title": "The Atlantean Archive: Fragment Resurrection",
+        "world_seed": "Scattered textual and symbolic fragments of Atlantis across cultures are reconstructed through diffusion models and cross-cultural pattern recognition",
+        "premises": [
+          "Atlantis exists not as single myth but as distributed cultural memory across civilizations",
+          "AI can identify and synthesize mythic patterns across linguistic and cultural boundaries",
+          "Textual fragments contain embedded worldbuilding instructions that can be computationally decoded",
+          "Decolonial approach requires including non-Western Atlantis-adjacent myths (Drexciya, Lemuria, Mu)"
+        ],
+        "AI_protocols": [
+          "Large language models trained on mythological corpora from multiple cultures",
+          "Multimodal diffusion models for reconstructing visual/architectural elements",
+          "Cross-lingual semantic embedding spaces for pattern recognition",
+          "Archaeological data fusion with speculative generation"
+        ],
+        "goals": [
+          "Create comprehensive Atlantean cultural database from global sources",
+          "Generate coherent but culturally diverse Atlantean worldbuilding elements",
+          "Preserve indigenous and non-Western underwater/lost civilization narratives"
+        ]
+      },
+      {
+        "id": "sensory_resurrection",
+        "title": "Sensory Resurrection: Embodied Atlantean Experience",
+        "world_seed": "AI-generated Atlantean environments become experientially accessible through immersive technologies that privilege non-visual sensory modalities",
+        "premises": [
+          "Atlantean experience transcends visual representation and requires full sensory engagement",
+          "Underwater environments demand non-terrestrial sensory frameworks",
+          "AI can generate consistent haptic, acoustic, and olfactory Atlantean experiences",
+          "Embodied myth creates stronger cultural resonance than textual myth"
+        ],
+        "AI_protocols": [
+          "Procedural audio generation for underwater soundscapes and Atlantean languages",
+          "Haptic synthesis models for water pressure, temperature, and texture simulation",
+          "Scent generation algorithms based on marine and botanical databases",
+          "Spatial audio processing for three-dimensional Atlantean architecture"
+        ],
+        "goals": [
+          "Create full-body Atlantean experience that transcends visual media",
+          "Develop non-Western sensory frameworks for mythic engagement",
+          "Enable collective embodied mythology through shared sensory spaces"
+        ]
+      },
+      {
+        "id": "living_mythology",
+        "title": "Living Mythology: Community-AI Myth Weaving",
+        "world_seed": "Human communities collaborate with AI systems to continuously evolve and adapt Atlantean mythology for contemporary cultural and political contexts",
+        "premises": [
+          "Myths must evolve with living communities or become museum artifacts",
+          "AI can serve as collaborative partner rather than replacement for human creativity",
+          "Decolonial mythology requires community ownership and cultural self-determination",
+          "Atlantean resurrection should generate new mythologies rather than preserve old ones"
+        ],
+        "AI_protocols": [
+          "Interactive storytelling systems that respond to community input",
+          "Cultural adaptation algorithms that modify myths based on local contexts",
+          "Collaborative filtering for community-generated mythic content",
+          "Ethical AI frameworks ensuring community control over generated mythology"
+        ],
+        "goals": [
+          "Establish community ownership over AI-generated mythic content",
+          "Create adaptive mythology that evolves with cultural needs",
+          "Generate new decolonial future imaginaries rooted in Atlantean themes"
+        ]
+      },
+      {
+        "id": "speculative_atlantis",
+        "title": "Speculative Atlantis: Future Archaeology",
+        "world_seed": "AI models generate possible Atlantean futures that never were, creating alternative timelines for decolonial technological and social development",
+        "premises": [
+          "Atlantis represents unrealized potential for alternative civilizational development",
+          "AI can explore counterfactual histories and speculative futures",
+          "Decolonial futurism requires imagining non-Western technological trajectories",
+          "Speculative archaeology reveals present possibilities through imagined pasts"
+        ],
+        "AI_protocols": [
+          "Counterfactual generation models for alternative historical timelines",
+          "Technological speculation engines based on non-Western knowledge systems",
+          "Social system simulation for alternative Atlantean governance structures",
+          "Environmental modeling for sustainable Atlantean technologies"
+        ],
+        "goals": [
+          "Generate alternative technological and social development pathways",
+          "Create decolonial future imaginaries through speculative past",
+          "Explore non-extractive relationships between civilization and ocean"
+        ]
+      },
+      {
+        "id": "critical_reflection",
+        "title": "Critical Reflection: Decolonizing the Resurrection Machine",
+        "world_seed": "Meta-analysis of the AI resurrection process itself, examining power dynamics, cultural appropriation risks, and decolonial methodology",
+        "premises": [
+          "AI systems embed the biases and power structures of their training data and creators",
+          "Myth resurrection risks cultural appropriation and neo-colonial knowledge extraction",
+          "Decolonial AI requires continuous critical reflection and community accountability",
+          "Technology itself is not neutral and requires political analysis"
+        ],
+        "AI_protocols": [
+          "Bias detection algorithms for generated mythic content",
+          "Provenance tracking for cultural knowledge sources",
+          "Community feedback loops for ethical evaluation",
+          "Decolonial AI frameworks for power-aware system design"
+        ],
+        "goals": [
+          "Maintain critical awareness of AI system limitations and biases",
+          "Ensure community accountability in mythic knowledge generation",
+          "Develop frameworks for decolonial AI mythology creation"
+        ]
+      }
+    ]
+  },
+  "step2": {
+    "entities": [
+      {
+        "id": "atlantis_myth_seed",
+        "role": "myth",
+        "name": "Atlantis Myth Constellation",
+        "function": "Distributed cultural memory spanning Plato's dialogues, Bacon's utopia, Drexciya, and global flood/lost civilization narratives"
+      },
+      {
+        "id": "atlantean_archive",
+        "role": "artifact",
+        "name": "Atlantean Archive",
+        "function": "Comprehensive database of textual, visual, and cultural fragments related to Atlantis across multiple civilizations and time periods"
+      },
+      {
+        "id": "memory_kernel",
+        "role": "technology",
+        "name": "Memory Kernel",
+        "function": "Neural embedding space that stores mythic patterns, cultural associations, and semantic relationships between Atlantean elements"
+      },
+      {
+        "id": "resurrection_engine",
+        "role": "technology",
+        "name": "Resurrection Engine",
+        "function": "Master AI system coordinating multiple generative models to transform archived fragments into living, experiential mythology"
+      },
+      {
+        "id": "sensory_interface",
+        "role": "technology",
+        "name": "Sensory Interface",
+        "function": "Multimodal system translating AI-generated Atlantean content into embodied experiences through haptic, audio, olfactory, and spatial technologies"
+      },
+      {
+        "id": "community_agents",
+        "role": "agent",
+        "name": "Community Agents",
+        "function": "Human participants who collaborate with AI systems to evolve mythology, maintain cultural accountability, and direct mythic development"
+      },
+      {
+        "id": "adaptive_mythology",
+        "role": "process",
+        "name": "Adaptive Mythology Process",
+        "function": "Continuous evolution system that modifies Atlantean mythology based on community needs, cultural contexts, and decolonial principles"
+      },
+      {
+        "id": "speculative_archaeology",
+        "role": "process",
+        "name": "Speculative Archaeology Engine",
+        "function": "Counterfactual generation system creating alternative Atlantean histories and futures for decolonial imagination"
+      }
+    ]
+  },
+  "step3": {
+    "morphisms": [
+      {
+        "from": "resurrection_engine",
+        "to": "atlantis_myth_seed",
+        "relation": "awakens",
+        "statement": "Resurrection Engine awakens dormant patterns within distributed Atlantis mythology to create coherent but evolving mythic systems"
+      },
+      {
+        "from": "memory_kernel",
+        "to": "atlantean_archive",
+        "relation": "mediates",
+        "statement": "Memory Kernel mediates between raw cultural fragments and AI generation by encoding mythic patterns in neural embedding space"
+      },
+      {
+        "from": "community_agents",
+        "to": "adaptive_mythology",
+        "relation": "channels",
+        "statement": "Community Agents channel AI-generated mythic content into lived cultural practice while maintaining community ownership and accountability"
+      },
+      {
+        "from": "sensory_interface",
+        "to": "resurrection_engine",
+        "relation": "channels",
+        "statement": "Sensory Interface channels AI-generated Atlantean content into embodied experiences that transcend textual and visual representation"
+      },
+      {
+        "from": "speculative_archaeology",
+        "to": "atlantis_myth_seed",
+        "relation": "blends",
+        "statement": "Speculative Archaeology Engine blends historical Atlantean fragments with counterfactual generation to create decolonial future imaginaries"
+      },
+      {
+        "from": "adaptive_mythology",
+        "to": "memory_kernel",
+        "relation": "governs",
+        "statement": "Adaptive Mythology Process governs Memory Kernel evolution by incorporating community feedback and cultural adaptation requirements"
+      }
+    ]
+  }
+}

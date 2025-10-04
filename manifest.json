@@ -1,0 +1,242 @@
+{
+  "name": "FeedFall Archive",
+  "description": "The Liminal Archive — VHS Stack Collection",
+  "version": "1.0.0",
+  "items": [
+    {
+      "title": "The Liminal Archive (Main)",
+      "url": "./index.html",
+      "description": "VHS Stack viewer with CRT preview",
+      "category": "viewer",
+      "tags": ["main", "vhs", "crt", "archive"]
+    },
+    {
+      "title": "Index Launcher",
+      "url": "./index-launcher.html",
+      "description": "Launch menu for all projects",
+      "category": "navigation",
+      "tags": ["launcher", "menu"]
+    },
+    {
+      "title": "VIDEO_STACKER_PLUS",
+      "url": "./vs-plu.html",
+      "description": "3D video stacker with mobile feed mode, cinematic controls, and poetry collection",
+      "category": "stacker",
+      "tags": ["3d", "poetry", "feed", "mobile", "cinematic"]
+    },
+    {
+      "title": "VIDEO_STACKER Pro Filmic",
+      "url": "./video_stacker_pro_filmic_v_2_100_tv_layouts_calm_mode.html",
+      "description": "Professional video stacker with 100 TV layouts and calm mode",
+      "category": "stacker",
+      "tags": ["pro", "filmic", "layouts", "calm"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ (Main)",
+      "url": "./video_stacker_∞_index.html",
+      "description": "Infinite video stacker main version",
+      "category": "stacker",
+      "tags": ["infinite", "main"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ Mobile",
+      "url": "./video_stacker_∞_mobile_swipe_right_edge_controls_haptics_audio_index.html",
+      "description": "Mobile-optimized with swipe, haptics, and edge controls",
+      "category": "stacker",
+      "tags": ["mobile", "haptics", "swipe"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ YouTube CSS3D",
+      "url": "./video_stacker_∞_you_tube_css_3_d_edition.html",
+      "description": "YouTube edition with CSS3D rendering",
+      "category": "stacker",
+      "tags": ["youtube", "css3d"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ YouTube CSS3D (v2)",
+      "url": "./video_stacker_∞_you_tube_css_3_d_edition (1).html",
+      "description": "YouTube CSS3D edition variant 2",
+      "category": "stacker",
+      "tags": ["youtube", "css3d", "variant"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ YouTube CSS3D (v3)",
+      "url": "./video_stacker_∞_you_tube_css_3_d_edition (2).html",
+      "description": "YouTube CSS3D edition variant 3",
+      "category": "stacker",
+      "tags": ["youtube", "css3d", "variant"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ YouTube CSS3D (v4)",
+      "url": "./video_stacker_∞_you_tube_css_3_d_edition (3).html",
+      "description": "YouTube CSS3D edition variant 4",
+      "category": "stacker",
+      "tags": ["youtube", "css3d", "variant"]
+    },
+    {
+      "title": "VIDEO_STACKER_∞ YouTube CSS3D (v5)",
+      "url": "./video_stacker_∞_you_tube_css_3_d_edition (4).html",
+      "description": "YouTube CSS3D edition variant 5",
+      "category": "stacker",
+      "tags": ["youtube", "css3d", "variant"]
+    },
+    {
+      "title": "Video Stacker 02",
+      "url": "./video-stacker-02.html",
+      "description": "Video stacker version 2",
+      "category": "stacker",
+      "tags": ["v2"]
+    },
+    {
+      "title": "VS Stacker",
+      "url": "./vs-stacker.html",
+      "description": "Video stacker core version",
+      "category": "stacker",
+      "tags": ["core"]
+    },
+    {
+      "title": "VS STTY",
+      "url": "./vs-stty.html",
+      "description": "Video stacker terminal mode",
+      "category": "stacker",
+      "tags": ["terminal", "tty"]
+    },
+    {
+      "title": "VSS",
+      "url": "./vss.html",
+      "description": "Video stacker simple",
+      "category": "stacker",
+      "tags": ["simple"]
+    },
+    {
+      "title": "Video 01",
+      "url": "./video-01.html",
+      "description": "Video player version 1",
+      "category": "player",
+      "tags": ["player", "v1"]
+    },
+    {
+      "title": "Video 02",
+      "url": "./video-02.html",
+      "description": "Video player version 2",
+      "category": "player",
+      "tags": ["player", "v2"]
+    },
+    {
+      "title": "Video Refactor",
+      "url": "./video-refactor.html",
+      "description": "Refactored video player",
+      "category": "player",
+      "tags": ["player", "refactor"]
+    },
+    {
+      "title": "Video Full",
+      "url": "./video_full.html",
+      "description": "Full video player",
+      "category": "player",
+      "tags": ["player", "full"]
+    },
+    {
+      "title": "CRT Stack",
+      "url": "./crt-stack.html",
+      "description": "CRT-style video stack",
+      "category": "viewer",
+      "tags": ["crt", "retro"]
+    },
+    {
+      "title": "Eno CRT",
+      "url": "./eno-crt.html",
+      "description": "Eno-inspired CRT interface",
+      "category": "viewer",
+      "tags": ["crt", "eno", "ambient"]
+    },
+    {
+      "title": "Multi-Mode",
+      "url": "./multi-mode.html",
+      "description": "Multi-mode video viewer",
+      "category": "viewer",
+      "tags": ["multi", "modes"]
+    },
+    {
+      "title": "Pyramid Scene",
+      "url": "./pyramid-scene.html",
+      "description": "3D pyramid video arrangement",
+      "category": "3d",
+      "tags": ["pyramid", "3d", "scene"]
+    },
+    {
+      "title": "Poetry Pyramid (39 TVs)",
+      "url": "./pyramid-poetry.html",
+      "description": "WHERE YOU GO WHEN YOU LEAVE - All 39 videos in 3D pyramid formation",
+      "category": "3d",
+      "tags": ["pyramid", "poetry", "mark-anthony-thomas", "featured", "3d"]
+    },
+    {
+      "title": "Feed to Water",
+      "url": "./feed-to-water.html",
+      "description": "Feed transformation project",
+      "category": "experimental",
+      "tags": ["feed", "transform"]
+    },
+    {
+      "title": "JJ",
+      "url": "./jj.html",
+      "description": "JJ project",
+      "category": "experimental",
+      "tags": ["experimental"]
+    },
+    {
+      "title": "HOM",
+      "url": "./hom.html",
+      "description": "HOM project",
+      "category": "experimental",
+      "tags": ["experimental"]
+    },
+    {
+      "title": "HUT",
+      "url": "./hut.html",
+      "description": "HUT project",
+      "category": "experimental",
+      "tags": ["experimental"]
+    },
+    {
+      "title": "Inicio",
+      "url": "./inicio.html",
+      "description": "Inicio (Start) page",
+      "category": "navigation",
+      "tags": ["start"]
+    },
+    {
+      "title": "IVST",
+      "url": "./ivst.html",
+      "description": "IVST project",
+      "category": "experimental",
+      "tags": ["experimental"]
+    },
+    {
+      "title": "Prod",
+      "url": "./prod.html",
+      "description": "Production version",
+      "category": "production",
+      "tags": ["production"]
+    },
+    {
+      "title": "Wreck",
+      "url": "./wreck.html",
+      "description": "Wreck project",
+      "category": "experimental",
+      "tags": ["experimental"]
+    }
+  ],
+  "categories": {
+    "viewer": "Video viewers and archive interfaces",
+    "stacker": "Video stacking applications",
+    "player": "Video players",
+    "3d": "3D visualizations",
+    "experimental": "Experimental projects",
+    "navigation": "Navigation and launcher pages",
+    "production": "Production versions"
+  },
+  "generated": "2025-10-04T17:53:00-04:00",
+  "total_items": 33
+}

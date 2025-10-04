@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>VIDEO_STACKER_PRO — fixed</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --ui-bg: rgba(20,20,20,0.9);
+    --ui-acc: #0a84ff;
+    --ui-fg: #fff;
+    --glass: rgba(255,255,255,0.08);
+  }
+  body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#000; overflow:hidden; color:var(--ui-fg); }
+  #stage{ position:fixed; inset:0; }
+  #webgl, #css3d{ position:absolute; inset:0; touch-action:none; }
+  #hud{ position:fixed; top:12px; left:12px; font-size:13px; font-weight:600; z-index:30; opacity:0.9; pointer-events:none; text-shadow:0 1px 2px #000; line-height:1.5; }
+  /* Side rail UI (kept off the content) */
+  #rail{ position:fixed; right:10px; top:10px; display:flex; flex-direction:column; gap:10px; z-index:35; }
+  .rail-btn{ width:46px; height:46px; border-radius:14px; border:none; cursor:pointer; display:grid; place-items:center; font-size:22px; color:#fff; background:var(--glass); backdrop-filter: blur(14px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+  .rail-btn:active{ transform:scale(0.96); }
+  .rail-btn.active{ background:var(--ui-acc); }
+  #mode-pill{ position:fixed; right:10px; bottom:10px; z-index:35; background:var(--glass); color:#fff; border-radius:999px; padding:10px 14px; font-size:12px; letter-spacing:.3px; backdrop-filter: blur(14px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+
+  /* Library modal */
+  #media-upload{ position:fixed; inset:0; display:grid; place-items:center; z-index:50; pointer-events:none; opacity:0; transition:.25s ease; }
+  #media-upload.open{ pointer-events:auto; opacity:1; }
+  .sheet{ width:min(92vw,420px); max-height:88vh; overflow:auto; background:var(--ui-bg); border-radius:20px; padding:18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .sheet h2{ margin:.2rem 0 0.6rem; text-align:center; font-size:18px; }
+  .upload-area{ border:2px dashed rgba(255,255,255,0.25); border-radius:14px; padding:28px; text-align:center; margin:12px 0; cursor:pointer; transition:all .2s; }
+  .upload-area:hover{ border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.05); }
+  .upload-area.dragover{ border-color:var(--ui-acc); background:rgba(10,132,255,0.15); }
+  input[type="file"]{ display:none; }
+  textarea{ width:100%; min-height:96px; background:rgba(255,255,255,0.08); border:none; border-radius:12px; padding:12px; color:#fff; font-size:14px; font-family:inherit; resize:vertical; margin:10px 0; }
+  .btn{ width:100%; padding:12px; border-radius:12px; border:none; background:var(--ui-acc); color:#fff; font-size:15px; font-weight:700; cursor:pointer; margin:8px 0; }
+  .btn.secondary{ background:rgba(255,255,255,0.12); font-weight:600; }
+  .close-x{ position:absolute; top:8px; right:10px; border:none; width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.08); color:#fff; font-size:18px; cursor:pointer; }
+  #library{ max-height:200px; overflow-y:auto; margin:8px 0; }
+  .lib-item{ padding:10px; background:rgba(255,255,255,0.06); border-radius:10px; margin:8px 0; display:flex; justify-content:space-between; align-items:center; font-size:13px; gap:8px; }
+  .lib-item button{ padding:6px 10px; background:rgba(255,255,255,0.14); border:none; color:#fff; border-radius:8px; font-size:12px; cursor:pointer; }
+
+  #loading{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; z-index:60; background:#000; color:#888; gap:10px; }
+  #loading .dot{ width:8px; height:8px; border-radius:50%; background:#444; animation:b 1s infinite alternate; }
+  #loading .dot:nth-child(2){ animation-delay:.2s }
+  #loading .dot:nth-child(3){ animation-delay:.4s }
+  @keyframes b{ to{ background:#888; transform: translateY(-3px);} }
+  /* Fallback (no external libs) */
+  #fallback{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:70px 16px 90px; gap:8px; }
+  .f-tv{ width:140px; height:90px; background:#0b0b0b; border:2px solid #2a2a2a; border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,.45), inset 0 0 0 6px #000; display:flex; align-items:center; justify-content:center; color:#666; font-weight:700; letter-spacing:.4px; }
+  .f-base{ width:220px; height:16px; background:#141414; border:1px solid #242424; border-radius:8px; margin-top:4px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+</style>
+</head>
+<body>
+  <div id="loading">LOADING 3D ENGINE <div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  <div id="stage"><div id="webgl"></div><div id="css3d"></div></div>
+  <div id="hud">TVs <span id="tv-count">0</span> • Height <span id="height">0.0</span> m • Cam <span id="cam-label">TOP</span></div>
+
+  <!-- Side rail (edge-aligned, minimal) -->
+  <div id="rail">
+    <button class="rail-btn" id="btn-add" title="Drop TV">➕</button>
+    <button class="rail-btn" id="btn-select" title="Select / Gizmo">◎</button>
+    <button class="rail-btn" id="btn-freeze" title="Freeze Physics">❄</button>
+    <button class="rail-btn" id="btn-gravity" title="Gravity Mode">⚖</button>
+    <button class="rail-btn" id="btn-media" title="Media Library">📁</button>
+    <button class="rail-btn" id="btn-view" title="Camera Mode">🎥</button>
+    <button class="rail-btn" id="btn-reset" title="Reset">↺</button>
+  </div>
+  <div id="mode-pill">GRAVITY: Normal • TRACK: Top</div>
+
+  <!-- Media Library -->
+  <div id="media-upload">
+    <div class="sheet">
+      <button class="close-x" id="close-upload">✕</button>
+      <h2>Media Library</h2>
+      <div class="upload-area" id="drop-zone">
+        <div style="font-size:42px;margin-bottom:8px;">📁</div>
+        <div>Drop files or tap to upload</div>
+        <div style="font-size:11px;opacity:0.7;margin-top:6px;">Video, Image, or Text</div>
+      </div>
+      <input type="file" id="file-input" multiple accept="video/*,image/*,.txt" />
+      <textarea id="text-input" placeholder="Paste YouTube URL or text here"></textarea>
+      <button class="btn" id="add-text-btn">Add to Library</button>
+      <div id="library"></div>
+      <button class="btn secondary" id="done-btn">Done</button>
+    </div>
+  </div>
+
+  <!-- libs (versions kept in sync) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+
+<script>
+(function(){
+  // --- Constants
+  const TV={ w:0.60, d:0.45, h:0.40 };
+  const SCREEN={ w:TV.w*0.84, h:TV.h*0.68 };
+  const CAM = { TOP:"TOP", WIDE:"WIDE", FREE:"FREE" };
+  const GRAV = { NORMAL:0, SOFT:1, OFF:2 };
+  const CAMERA_PRESETS=[
+    {pos:[0,3.0,6.5],look:[0,1.5,0]},
+    {pos:[-4,4.0,5.5],look:[0,2.0,0]},
+    {pos:[4,4.0,5.5],look:[0,2.0,0]}
+  ];
+
+  // --- State
+  let scene, cssScene, camera, renderer, cssRenderer, world, clock;
+  let FALLBACK=false, fallbackRoot=null; // 2D mode when libs are blocked
+  let tvs=[]; // {group, body, cssPivot, cssObj, mediaItem, settled}
+  let selectedTV=null, gizmoGroup=null;
+  let mediaLibrary=[];
+  let height=0;
+  let gravMode=GRAV.NORMAL;
+  let camMode=CAM.TOP; // default keeps the top TV in view
+  let selectMode=false;
+
+  // YouTube URL parser
+  function parseYouTubeUrl(url) {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/,
+      /youtube\.com\/embed\/([^?\s]+)/
+    ];
+    for (let pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  }
+
+  // Pre-populate with YouTube videos
+  function initMediaLibrary() {
+    const youtubeVideos = [
+      'https://youtu.be/fWMhuF_JKIE',
+      'https://youtu.be/MT3snSsqcHs',
+      'https://youtu.be/8I4oqkyTC3o',
+      'https://youtu.be/ibNr-jk_GTg',
+      'https://youtu.be/OGp5NDpYV6Y'
+    ];
+    youtubeVideos.forEach((url, idx) => {
+      const videoId = parseYouTubeUrl(url);
+      if (videoId) {
+        mediaLibrary.push({
+          type: 'youtube',
+          name: `YouTube Video ${idx + 1}`,
+          videoId: videoId,
+          url: url
+        });
+      }
+    });
+  }
+
+  // --- DOM
+  const hudTV = document.getElementById('tv-count');
+  const hudH  = document.getElementById('height');
+  const camLbl= document.getElementById('cam-label');
+  const pill  = document.getElementById('mode-pill');
+
+  // Robust boot (CSS3D optional): wait for THREE + CANNON, then init; fallback retries.
+  let bootTries=0; const MAX_TRIES=20; // ~2s
+  const boot = () => {
+    if (window.THREE && window.CANNON) { try { init(); return; } catch(e){ console.error(e); showFatal(e); } }
+    if (++bootTries <= MAX_TRIES) return setTimeout(boot, 100);
+    activateFallback('3D libraries blocked — running in 2D fallback.');
+  };
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(boot, 0);
+  } else {
+    window.addEventListener('load', boot);
+  }
+
+  function init(){
+    clock=new THREE.Clock();
+    scene=new THREE.Scene();
+    cssScene=new THREE.Scene();
+    scene.background=new THREE.Color(0x101010);
+    scene.fog=new THREE.Fog(0x101010,12,30);
+
+    camera=new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 200);
+    camera.position.set(0,3,6.5);
+
+    renderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    document.getElementById('webgl').appendChild(renderer.domElement);
+
+    // CSS3D is optional; guard if missing
+    const CSS3D = (window.THREE && THREE.CSS3DRenderer) ? THREE.CSS3DRenderer : (window.CSS3DRenderer || null);
+    if (CSS3D){
+      cssRenderer=new CSS3D();
+      cssRenderer.setSize(window.innerWidth,window.innerHeight);
+      cssRenderer.domElement.style.pointerEvents='none';
+      document.getElementById('css3d').appendChild(cssRenderer.domElement);
+    } else {
+      cssRenderer=null;
+      console.warn('CSS3DRenderer not found — falling back to shell-only TVs.');
+    }
+
+    // Lights
+    const amb=new THREE.AmbientLight(0x404040,1.4); scene.add(amb);
+    const key=new THREE.DirectionalLight(0xffffff,1.2); key.position.set(6,10,5); key.castShadow=true; key.shadow.mapSize.width=2048; key.shadow.mapSize.height=2048; key.shadow.camera.left=-10; key.shadow.camera.right=10; key.shadow.camera.top=10; key.shadow.camera.bottom=-10; scene.add(key);
+    const fill=new THREE.DirectionalLight(0x6699ff,0.5); fill.position.set(-5,4,-3); scene.add(fill);
+    const rim=new THREE.DirectionalLight(0xff7744,0.35); rim.position.set(5,3,-4); scene.add(rim);
+
+    // Physics
+    world=new CANNON.World();
+    world.gravity.set(0,-9.82,0);
+    world.broadphase=new CANNON.SAPBroadphase(world);
+    world.allowSleep=true;
+    world.defaultContactMaterial.friction=0.6;
+    world.defaultContactMaterial.restitution=0.1;
+
+    // Floor
+    const floorShape=new CANNON.Plane();
+    const floorBody=new CANNON.Body({mass:0, shape:floorShape});
+    floorBody.quaternion.setFromEuler(-Math.PI/2,0,0);
+    world.addBody(floorBody);
+
+    const floorGeo=new THREE.PlaneGeometry(60,60);
+    const floorMat=new THREE.MeshStandardMaterial({color:0x1e1e1e, roughness:0.95, metalness:0.05});
+    const floor=new THREE.Mesh(floorGeo,floorMat); floor.receiveShadow=true; floor.rotation.x=-Math.PI/2; scene.add(floor);
+    const grid=new THREE.GridHelper(26,52,0x444444,0x2b2b2b); grid.material.opacity=0.35; grid.material.transparent=true; grid.position.y=0.01; scene.add(grid);
+
+    // ensure gravity mode text reflects actual state
+    setWorldGravity(gravMode);
+
+    // Events (pointer for touch+mouse)
+    const target = document.getElementById('webgl');
+    target.addEventListener('pointerdown',onPointerDown);
+    target.addEventListener('pointermove',onPointerMove);
+    target.addEventListener('pointerup',onPointerUp);
+    target.addEventListener('click',onClick);
+    window.addEventListener('resize',onResize);
+
+    // UI hooks
+    $('#btn-add').onclick = addTV;
+    $('#btn-select').onclick = toggleSelectMode;
+    $('#btn-freeze').onclick = toggleFreeze;
+    $('#btn-gravity').onclick = cycleGravity;
+    $('#btn-media').onclick = openMedia;
+    $('#btn-view').onclick = cycleCameraMode;
+    $('#btn-reset').onclick = resetAll;
+
+    $('#close-upload').onclick = closeMedia;
+    $('#done-btn').onclick = closeMedia;
+    $('#drop-zone').onclick = ()=> $('#file-input').click();
+    $('#file-input').addEventListener('change', handleFileUpload);
+    $('#add-text-btn').onclick = addTextToLibrary;
+
+    const dz = $('#drop-zone');
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('dragover');});
+    dz.addEventListener('dragleave', ()=> dz.classList.remove('dragover'));
+    dz.addEventListener('drop', handleFileDrop);
+
+    // Initialize media library with YouTube videos
+    initMediaLibrary();
+
+    // Seed a few TVs for immediate feedback
+    setTimeout(()=>{ addTV(); setTimeout(addTV,350); setTimeout(addTV,700); }, 200);
+
+    // Hide loader and begin
+    $('#loading').style.display='none';
+    updateHUD();
+    animate();
+  }
+
+  // --- Helpers
+  const $ = sel => document.querySelector(sel);
+  const raycaster=new THREE.Raycaster();
+  const mouse=new THREE.Vector2();
+  let dragging=false, dragAxis=null, dragStart=new THREE.Vector2();
+
+  function setWorldGravity(mode){
+    gravMode = mode;
+    const vals = { [GRAV.NORMAL]: -9.82, [GRAV.SOFT]: -3.0, [GRAV.OFF]: 0 };
+    world.gravity.y = vals[mode];
+    pill.textContent = `GRAVITY: ${ mode===GRAV.NORMAL? 'Normal' : mode===GRAV.SOFT? 'Soft' : 'Off' } • TRACK: ${camMode}`;
+  }
+
+  function cycleGravity(){ setWorldGravity( (gravMode+1)%3 ); $('#btn-gravity').classList.toggle('active', gravMode!==GRAV.NORMAL); }
+
+  function cycleCameraMode(){
+    camMode = camMode===CAM.TOP ? CAM.WIDE : camMode===CAM.WIDE ? CAM.FREE : CAM.TOP;
+    camLbl.textContent = camMode;
+    pill.textContent = `GRAVITY: ${ gravMode===GRAV.NORMAL? 'Normal' : gravMode===GRAV.SOFT? 'Soft' : 'Off' } • TRACK: ${camMode}`;
+  }
+
+  function toggleFreeze(){
+    const freeze = !$('#btn-freeze').classList.contains('active');
+    $('#btn-freeze').classList.toggle('active', freeze);
+    tvs.forEach(t=>{ t.body.mass = freeze? 0 : 1; t.body.updateMassProperties(); if(!freeze) t.body.wakeUp(); });
+  }
+
+  function toggleSelectMode(){ selectMode = !selectMode; $('#btn-select').classList.toggle('active', selectMode); if(!selectMode) deselectTV(); }
+
+  function updateHUD(){ hudTV.textContent = String(tvs.length); hudH.textContent = height.toFixed(1); }
+
+  function setCameraPreset(i){
+    const p = CAMERA_PRESETS[(i+CAMERA_PRESETS.length)%CAMERA_PRESETS.length];
+    camera.position.set(p.pos[0],p.pos[1],p.pos[2]);
+    camera.lookAt(new THREE.Vector3(p.look[0],p.look[1],p.look[2]));
+  }
+
+  // --- TV creation
+  function createTV(y, mediaItem){
+    const group=new THREE.Group();
+    // shell
+    const shellGeo=new THREE.BoxGeometry(TV.w,TV.h,TV.d);
+    const shellMat=new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.62, metalness:0.38});
+    const shell=new THREE.Mesh(shellGeo,shellMat); shell.castShadow=true; shell.receiveShadow=true; group.add(shell);
+    // bezel
+    const bezelGeo=new THREE.PlaneGeometry(SCREEN.w*1.08, SCREEN.h*1.08);
+    const bezelMat=new THREE.MeshBasicMaterial({color:0x0a0a0a});
+    const bezel=new THREE.Mesh(bezelGeo,bezelMat); bezel.position.set(0,0,TV.d/2+0.001); group.add(bezel);
+
+    // physics body
+    const shape=new CANNON.Box(new CANNON.Vec3(TV.w/2, TV.h/2, TV.d/2));
+    const body=new CANNON.Body({ mass:1, shape, sleepSpeedLimit:0.1, sleepTimeLimit:0.5 });
+    body.position.set(0, y, 0); body.linearDamping=0.3; body.angularDamping=0.3; world.addBody(body);
+
+    // CSS screen
+    const screenEl=document.createElement('div');
+    screenEl.style.width=(SCREEN.w*320)+'px';
+    screenEl.style.height=(SCREEN.h*320)+'px';
+    screenEl.style.pointerEvents='none';
+    screenEl.style.background='#000';
+    screenEl.style.display='flex'; screenEl.style.alignItems='center'; screenEl.style.justifyContent='center';
+    screenEl.style.overflow='hidden';
+
+    if(!mediaItem){
+      screenEl.innerHTML = '<div style="color:#666;font-size:18px;font-weight:700;letter-spacing:.5px">EMPTY</div>';
+    }else if(mediaItem.type==='text'){
+      const escaped = mediaItem.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      screenEl.innerHTML = '<div style="color:#fff;font-size:14px;padding:16px;overflow:auto;max-height:100%;line-height:1.55">'+escaped+'</div>';
+    }else if(mediaItem.type==='image'){
+      const img=document.createElement('img'); img.src=mediaItem.url; img.style.maxWidth='100%'; img.style.maxHeight='100%'; img.style.objectFit='contain'; screenEl.appendChild(img);
+    }else if(mediaItem.type==='youtube'){
+      const iframe=document.createElement('iframe');
+      iframe.src=`https://www.youtube.com/embed/${mediaItem.videoId}?autoplay=1&mute=1&loop=1&playlist=${mediaItem.videoId}&controls=1&modestbranding=1`;
+      iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='none';
+      iframe.setAttribute('allow', 'autoplay; encrypted-media');
+      iframe.setAttribute('allowfullscreen', 'true');
+      screenEl.appendChild(iframe);
+    }else if(mediaItem.type==='video'){
+      const vid=document.createElement('video'); vid.src=mediaItem.url; vid.autoplay=true; vid.loop=true; vid.muted=true; vid.playsInline=true; vid.style.width='100%'; vid.style.height='100%'; vid.style.objectFit='cover'; screenEl.appendChild(vid);
+      // Mobile autoplay helper
+      vid.addEventListener('error',()=>{ vid.muted=true; vid.play().catch(()=>{}); });
+      vid.play().catch(()=>{});
+    }
+
+    let cssObj=null, cssPivot=null;
+    if (cssRenderer){
+      cssObj = new THREE.CSS3DObject(screenEl);
+      cssObj.position.set(0,0,TV.d/2+0.002);
+      cssObj.scale.set(1/320, 1/320, 1);
+      cssPivot=new THREE.Object3D();
+      cssPivot.position.copy(body.position);
+      cssPivot.add(cssObj);
+      cssScene.add(cssPivot);
+    }
+
+    const unit={ group, body, cssPivot, cssObj, mediaItem, settled:false };
+    scene.add(group);
+    tvs.push(unit);
+    return unit;
+  }
+
+  function addTV(){
+    if (FALLBACK){
+      const tv = document.createElement('div');
+      tv.className = 'f-tv';
+      tv.textContent = 'TV ' + (tvs.length+1);
+      // simple height approximation
+      const fake = { height: (tvs.length+1)*0.45 };
+      height = Math.max(height, fake.height);
+      fallbackRoot.appendChild(tv);
+      tvs.push({});
+      updateHUD();
+      return;
+    }
+    const topY = tvs.length ? Math.max(...tvs.map(t=> t.body.position.y)) + TV.h + 0.7 : 3.0;
+    const media = mediaLibrary.length ? mediaLibrary[Math.floor(Math.random()*mediaLibrary.length)] : null;
+    createTV(topY, media);
+    updateHUD();
+  }
+
+  // --- Selection gizmo
+  function createGizmo(tv){ if(gizmoGroup){ scene.remove(gizmoGroup); }
+    gizmoGroup=new THREE.Group();
+    const L=0.8;
+    const ax=(dir,col)=>{ const a=new THREE.ArrowHelper(dir.clone().normalize(), new THREE.Vector3(0,0,0), L, col, 0.2, 0.16); a.userData.axis = dir.x? 'x' : dir.y? 'y' : 'z'; return a; };
+    gizmoGroup.add(ax(new THREE.Vector3(1,0,0),0xff5555));
+    gizmoGroup.add(ax(new THREE.Vector3(0,1,0),0x55ff55));
+    gizmoGroup.add(ax(new THREE.Vector3(0,0,1),0x5599ff));
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.02,16,32), new THREE.MeshBasicMaterial({color:0xffff66})); ring.rotation.x=Math.PI/2; ring.userData.axis='rotate'; gizmoGroup.add(ring);
+    gizmoGroup.position.copy(tv.body.position);
+    scene.add(gizmoGroup);
+  }
+  function removeGizmo(){ if(gizmoGroup){ scene.remove(gizmoGroup); gizmoGroup=null; } }
+  function selectTV(tv){ if(selectedTV){ selectedTV.group.children[0].material.emissive = new THREE.Color(0x000000); } selectedTV=tv; tv.group.children[0].material.emissive=new THREE.Color(0x0a84ff); tv.group.children[0].material.emissiveIntensity=0.45; createGizmo(tv); }
+  function deselectTV(){ if(selectedTV){ selectedTV.group.children[0].material.emissive=new THREE.Color(0x000000); selectedTV=null; } removeGizmo(); }
+
+  // --- Pointer handlers
+  function ndc(e){ const rect = renderer.domElement.getBoundingClientRect(); mouse.x = ((e.clientX-rect.left)/rect.width)*2-1; mouse.y = -((e.clientY-rect.top)/rect.height)*2+1; }
+  function onPointerDown(e){ if(!selectMode||!selectedTV) return; ndc(e); if(!gizmoGroup) return; const objs=[]; gizmoGroup.traverse(c=>{ if(c.userData && c.userData.axis) objs.push(c); }); const hits=raycast(objs); if(hits.length){ dragging=true; dragAxis=hits[0].object.userData.axis || hits[0].object.parent.userData.axis; dragStart.set(mouse.x,mouse.y); e.preventDefault(); } }
+  function onPointerMove(e){ if(!dragging||!selectedTV) return; ndc(e); const dX=(mouse.x-dragStart.x)*5; const dY=(mouse.y-dragStart.y)*5; const b=selectedTV.body; if(dragAxis==='x'){ b.position.x += dX; } else if(dragAxis==='y'){ b.position.y -= dY; } else if(dragAxis==='z'){ b.position.z -= dY; } else if(dragAxis==='rotate'){ const eul=new CANNON.Vec3(); b.quaternion.toEuler(eul); eul.y += dX; b.quaternion.setFromEuler(eul.x,eul.y,eul.z); }
+    b.velocity.set(0,0,0); b.angularVelocity.set(0,0,0); b.wakeUp(); if(gizmoGroup){ gizmoGroup.position.copy(b.position); } dragStart.set(mouse.x,mouse.y); }
+  function onPointerUp(){ dragging=false; dragAxis=null; }
+  function onClick(e){ if(dragging) return; if(!selectMode) return; ndc(e); const meshes=tvs.map(t=>t.group.children[0]); const hits=raycast(meshes); if(hits.length){ const mesh=hits[0].object; const tv=tvs.find(t=>t.group.children[0]===mesh); if(tv) selectTV(tv); } else { deselectTV(); } }
+  function raycast(objs){ raycaster.setFromCamera(mouse, camera); return raycaster.intersectObjects(objs, true); }
+
+  // --- Media library
+  function openMedia(){ $('#media-upload').classList.add('open'); renderLibrary(); }
+  function closeMedia(){ $('#media-upload').classList.remove('open'); }
+  function handleFileDrop(e){ e.preventDefault(); e.stopPropagation(); $('#drop-zone').classList.remove('dragover'); processFiles(e.dataTransfer.files); }
+  function handleFileUpload(e){ processFiles(e.target.files); e.target.value=''; }
+  function processFiles(files){ for (let f of files){ const url = URL.createObjectURL(f); if(f.type.startsWith('video/')) mediaLibrary.push({type:'video', name:f.name, url}); else if(f.type.startsWith('image/')) mediaLibrary.push({type:'image', name:f.name, url}); else if(f.type==='text/plain'){ const r=new FileReader(); r.onload = ev=>{ mediaLibrary.push({type:'text', name:f.name, content:ev.target.result}); renderLibrary(); }; r.readAsText(f); continue; } } renderLibrary(); }
+  function addTextToLibrary(){
+    const txt = $('#text-input').value.trim();
+    if(!txt) return;
+    // Check if it's a YouTube URL
+    const videoId = parseYouTubeUrl(txt);
+    if (videoId) {
+      mediaLibrary.push({type:'youtube', name:'YouTube Video '+(mediaLibrary.length+1), videoId:videoId, url:txt});
+    } else {
+      mediaLibrary.push({type:'text', name:'Text '+(mediaLibrary.length+1), content:txt});
+    }
+    $('#text-input').value='';
+    renderLibrary();
+  }
+  function renderLibrary(){ const c=$('#library'); c.innerHTML=''; if(mediaLibrary.length===0){ c.innerHTML='<div style="opacity:.65; text-align:center; padding:14px;">No media yet</div>'; return; } mediaLibrary.forEach((item,idx)=>{ const div=document.createElement('div'); div.className='lib-item'; const name=document.createElement('span'); name.textContent=item.name; name.style.flex='1'; name.style.overflow='hidden'; name.style.textOverflow='ellipsis'; name.style.whiteSpace='nowrap'; const use=document.createElement('button'); use.textContent='Use'; use.onclick=()=>{ const topY = tvs.length ? Math.max(...tvs.map(t=> t.body.position.y)) + TV.h + 0.7 : 3.0; createTV(topY, item); updateHUD(); }; const del=document.createElement('button'); del.textContent='✕'; del.onclick=()=>{ if(item.url) URL.revokeObjectURL(item.url); mediaLibrary.splice(idx,1); renderLibrary(); };
+      div.append(name,use,del); c.appendChild(div); }); }
+
+  // --- Reset
+  function resetAll(){ tvs.forEach(t=>{ scene.remove(t.group); cssScene.remove(t.cssPivot); world.removeBody(t.body); }); tvs.length=0; deselectTV(); height=0; updateHUD(); }
+
+  // --- Camera tracking
+  function frameCamera(){
+    const topY = tvs.length? Math.max(...tvs.map(t=>t.body.position.y)) : 0;
+    const margin = 1.2; // headroom above top
+    if (camMode === CAM.TOP){
+      const desired = new THREE.Vector3(0, Math.max(2.5, topY + margin),  Math.max(6.2, 6.2 + topY*0.15));
+      camera.position.lerp(desired, 0.08);
+      const look = new THREE.Vector3(0, Math.max(1.4, topY*0.8), 0);
+      camera.lookAt(look);
+    } else if (camMode === CAM.WIDE){
+      const desired = new THREE.Vector3(4.5, Math.max(4.0, topY*0.6+2),  8.5+topY*0.2);
+      camera.position.lerp(desired, 0.06);
+      camera.lookAt(new THREE.Vector3(0, Math.max(2.0, topY*0.7), 0));
+    } /* FREE: no auto framing */
+  }
+
+  // --- Animate
+  function animate(){ requestAnimationFrame(animate); const dt=Math.min(clock.getDelta(),0.1); world.step(1/60, dt, 3);
+    for(const t of tvs){
+      t.group.position.copy(t.body.position);
+      t.group.quaternion.copy(t.body.quaternion);
+      if(!t.settled && t.body.sleepState===CANNON.Body.SLEEPING) t.settled=true;
+      if(t.settled) height = Math.max(height, t.body.position.y);
+      if (t.cssPivot){
+        t.cssPivot.position.copy(t.group.position);
+        t.cssPivot.quaternion.copy(t.group.quaternion);
+        if(t.cssObj) t.cssObj.position.set(0,0,TV.d/2+0.002);
+      }
+    }
+    if(gizmoGroup && selectedTV){ gizmoGroup.position.copy(selectedTV.body.position); gizmoGroup.quaternion.copy(selectedTV.body.quaternion); }
+    if(camMode!==CAM.FREE) frameCamera();
+    updateHUD();
+    renderer.render(scene,camera);
+    if (cssRenderer) cssRenderer.render(cssScene,camera);
+  }
+
+  function onResize(){
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    if (cssRenderer) cssRenderer.setSize(window.innerWidth,window.innerHeight);
+  }
+
+})();
+
+// Tiny on-screen fatal error helper
+function showFatal(msg){
+  const el = document.getElementById('loading');
+  el.style.display='flex';
+  el.style.color='#f66';
+  el.textContent = 'Error: ' + (msg && msg.message ? msg.message : msg);
+}
+
+// 2D fallback so we still render something if CDNs are blocked
+function activateFallback(note){
+  try{
+    FALLBACK = true;
+    const loading = document.getElementById('loading');
+    loading.style.display='none';
+    const pill = document.getElementById('mode-pill');
+    if (pill) pill.textContent = 'FALLBACK MODE • ' + (note||'');
+    // build simple DOM stacker
+    fallbackRoot = document.createElement('div');
+    fallbackRoot.id = 'fallback';
+    const base = document.createElement('div');
+    base.className = 'f-base';
+    document.getElementById('stage').appendChild(fallbackRoot);
+    document.getElementById('stage').appendChild(base);
+    // seed a few blocks
+    setTimeout(()=>{ addTV(); setTimeout(addTV,200); setTimeout(addTV,400); }, 50);
+  }catch(e){ showFatal(e); }
+}
+</script>
+</body>
+</html>

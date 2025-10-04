@@ -99,11 +99,10 @@ const K = 6, ALPHA = 0.7;
 const AUTODROP_INTERVAL = 2000; // ms
 const MAX_ACTIVE_PLAYERS = 6;   // keep only last N playing for perf
 
-// A small seed list—replace with your own IDs
-const VIDEO_IDS = [
-  "dQw4w9WgXcQ","xvFZjo5PgG0","9bZkp7q19f0","3JZ_D3ELwOQ","RgKAFK5djSk",
-  "CevxZvSJLk8","fJ9rUzIMcZQ","YbJOTdZBX1g","E7wJTI-1dvQ","60ItHLz5WEA"
-];
+// 13-segment working video
+const VIDEO_ID = 'uDUoMnp1z_g';
+const TIMESTAMPS = [0, 136, 272, 408, 544, 680, 816, 952, 1088, 1224, 1360, 1496, 1632];
+const VIDEO_IDS = Array(13).fill(VIDEO_ID);
 
 // ======= STATE =======
 let scene, cssScene, camera, renderer, cssRenderer, world, clock;
@@ -231,10 +230,11 @@ function setCam(i){ const c=CAMS[i]; camera.position.set(...c.pos); camera.lookA
 // ======= UTIL =======
 function nextVideo(){
   // Avoid shadowing the helper `id()` — use `vid` instead of `id`
-  const vid = VIDEO_IDS[feedIndex % VIDEO_IDS.length];
+  const vid = VIDEO_ID;
+  const start = TIMESTAMPS[feedIndex % TIMESTAMPS.length];
   feedIndex++;
-  id('next').textContent = 'next: '+vid;
-  return vid;
+  id('next').textContent = 'next: segment '+(feedIndex%TIMESTAMPS.length);
+  return {id: vid, start};
 }
 
 // ======= CREATE A TV (WebGL shell + CSS3D YouTube surface) =======
@@ -263,7 +263,8 @@ function makeTV(y=DROP_SPAWN_Y){
 
   // create player using API (autoplay muted loop)
   let player=null; const makePlayer=()=>{
-    player = new YT.Player(surface, { width:pxW, height:pxH, videoId: nextVideo(), playerVars:{autoplay:1, controls:0, modestbranding:1, rel:0, playsinline:1, mute:1, loop:1, playlist: VIDEO_IDS[(feedIndex-1)%VIDEO_IDS.length]}, events:{ onReady:(e)=>{try{e.target.mute(); e.target.playVideo();}catch{}} }});
+    const {id: videoId, start} = nextVideo();
+    player = new YT.Player(surface, { width:pxW, height:pxH, videoId: videoId, playerVars:{autoplay:1, controls:0, modestbranding:1, rel:0, playsinline:1, mute:1, start:start}, events:{ onReady:(e)=>{try{e.target.mute(); e.target.playVideo();}catch{}} }});
   };
   if(YT_READY) makePlayer(); else pendingPlayerCbs.push(makePlayer);
 
